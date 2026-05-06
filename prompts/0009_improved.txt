@@ -1,0 +1,152 @@
+Ты senior Python-инженер и архитектор процедурных генераторов городских point clouds.
+
+В репозитории есть рабочий MVP `citygen`: CLI на Python, YAML-конфиги, детерминированный `seed`, тайлы, road models, urban fields, биомы, разные building footprints, разные roof geometry, surface sampling, ASCII PLY export и metadata JSON. Координатная конвенция проекта: горизонтальная плоскость `x/y`, высота `z`. Справочники: `README.md`, `configs/README.md`, `doc/biomes.md`, `doc/building_footprints.md`, `doc/building_roofs.md`.
+
+Нужно создать универсальную showcase-конфигурацию для большого городского тайла, которая максимально полно демонстрирует текущие возможности генератора. Не останавливайся на описании подхода: добавь рабочий YAML-файл в `configs/`, обнови документацию/список демо-конфигов при необходимости и проверь запуск CLI.
+
+## Главная цель
+
+Создай конфиг, например:
+
+```text
+configs/demo_universal_showcase.yaml
+```
+
+Он должен генерировать один большой тайл или небольшой batch соседних тайлов, где в одном запуске видны:
+
+- несколько городских биомов: `downtown`, `residential`, `industrial`, `suburb`;
+- разнообразная дорожная структура;
+- заметный рельеф, но без чрезмерного шума;
+- здания разной высоты и плотности;
+- все поддержанные building footprint types через `buildings.footprint.model: mixed`;
+- все поддержанные roof types через `buildings.roof.model: mixed`;
+- точки земли, дорог, тротуаров, фасадов и крыш;
+- RGB и semantic class fields в PLY;
+- metadata, по которой можно быстро проверить разнообразие результата.
+
+## Важное ограничение
+
+Не обещай то, чего текущий генератор не умеет.
+
+Если текущая схема не позволяет гарантированно показать абсолютно все road models в одном тайле, используй лучший доступный вариант:
+
+- для основного универсального конфига используй `roads.model: mixed`, потому что он выбирает road model по биому;
+- подбери `urban_fields`, чтобы metadata показывала несколько биомов и несколько effective road models;
+- если нужно, добавь короткий комментарий в документации, что отдельные road models вроде `radial` или `free` демонстрируются отдельными demo-конфигами, если они уже есть в проекте.
+
+Не добавляй искусственные сущности, которых нет в текущем коде: машины, деревья, фонари, ЛЭП, материалы, LAS/LAZ, настоящий LiDAR и т.п. Универсальность должна означать максимум текущих поддержанных возможностей, а не выдуманные функции.
+
+## Требования к YAML
+
+Конфиг должен быть валидным для текущего `load_config()`.
+
+Используй актуальные имена полей:
+
+```yaml
+tile:
+  x: 0
+  y: 0
+  size_m: ...
+  margin_m: ...
+
+urban_fields:
+  enabled: true
+  center_x: ...
+  center_y: ...
+```
+
+Не используй старую `x/z`-плоскость в новых настройках.
+
+Рекомендуемые ориентиры:
+
+- `tile.size_m`: достаточно большой, чтобы влезли разные зоны, например `384..768`;
+- `tile.margin_m`: достаточно большой для естественных краев, например `48..96`;
+- `terrain.height_noise_m`: умеренный, например `2..6`;
+- `roads.model: mixed`;
+- `roads.spacing_m`: не слишком мелкий, чтобы здания могли появляться;
+- `roads.width_m + 2 * roads.sidewalk_width_m < roads.spacing_m`;
+- `urban_fields.enabled: true`;
+- `urban_fields.center_x/center_y`: внутри тайла, но не обязательно точно по центру;
+- `urban_fields.city_radius_m` и `noise_scale_m`: подобрать так, чтобы в metadata появлялось несколько биомов;
+- `buildings.enabled: true`;
+- `buildings.footprint.model: mixed`;
+- `buildings.footprint.weights`: положительные веса для всех footprint types:
+  - `rectangle`
+  - `square`
+  - `circle`
+  - `slab`
+  - `courtyard`
+  - `l_shape`
+  - `u_shape`
+  - `t_shape`
+- `buildings.roof.model: mixed`;
+- `buildings.roof.weights`: положительные веса для всех roof types:
+  - `flat`
+  - `shed`
+  - `gable`
+  - `hip`
+  - `half_hip`
+  - `pyramid`
+  - `mansard`
+  - `dome`
+  - `barrel`
+  - `cone`
+- `sampling`: достаточно плотный для проверки геометрии, но не настолько плотный, чтобы демо было слишком медленным;
+- `output.include_rgb: true`;
+- `output.include_class: true`.
+
+## Подбор параметров
+
+После создания конфига запусти генерацию:
+
+```bash
+uv run citygen --config configs/demo_universal_showcase.yaml --out outputs/demo_universal_showcase.ply
+```
+
+Проверь metadata:
+
+```text
+outputs/demo_universal_showcase.metadata.json
+```
+
+Критерии хорошего результата:
+
+- `point_count` достаточно большой, но не чрезмерный для MVP;
+- `class_counts` содержит `ground`, `road`, `sidewalk`, `building_facade`, `building_roof`;
+- `biome_counts` содержит хотя бы 3 биома, идеально 4;
+- `road_models` содержит несколько моделей при `roads.model: mixed`;
+- `building_counts.by_footprint` содержит несколько footprint types, желательно все;
+- `building_counts.by_roof` содержит несколько roof types, желательно все;
+- `building_counts.total > 0`;
+- PLY и metadata создаются без config errors.
+
+Если первый подбор не дает достаточно разнообразия, измени seed, размер тайла, `city_radius_m`, `noise_scale_m`, biases, road spacing, footprint sizes или weights и повтори запуск. Не оставляй явно слабый конфиг, если его можно улучшить простым подбором параметров.
+
+## Документация
+
+Если в README или `configs/README.md` есть таблица demo-конфигов, добавь туда новый конфиг с коротким описанием:
+
+```text
+configs/demo_universal_showcase.yaml | Большой showcase-тайл: mixed roads, urban fields, биомы, mixed footprints и mixed roofs.
+```
+
+Не переписывай всю документацию. Обнови только места, где перечисляются демо-конфиги или команды запуска.
+
+## Проверка
+
+Минимально выполни:
+
+```bash
+uv run python -m unittest discover -s tests
+uv run citygen --config configs/demo_universal_showcase.yaml --out outputs/demo_universal_showcase.ply
+```
+
+В финальном ответе кратко укажи:
+
+- какой файл конфигурации добавлен;
+- сколько точек сгенерировалось при проверке;
+- какие биомы и road models попали в metadata;
+- какие footprint/roof types появились в metadata;
+- какие тесты запускались.
+
+Если не удалось добиться всех типов в одном запуске из-за вероятностной природы генератора или ограничений текущей архитектуры, явно назови это и оставь лучший найденный конфиг, а не абстрактное обещание.

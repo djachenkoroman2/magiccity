@@ -202,6 +202,7 @@ uv run citygen --config configs/demo_multi_tile.yaml --out outputs/multi_tile
 | `configs/demo_linear.yaml` | Линейная структура города с основной осью и редкими поперечными улицами. |
 | `configs/demo_organic.yaml` | Органические wavy streets, зависящие от рельефа. |
 | `configs/demo_mixed_biomes.yaml` | `mixed` road model, urban fields и несколько биомов в одном тайле. |
+| `configs/demo_universal_showcase.yaml` | Большой showcase-тайл: mixed roads, urban fields, биомы, mixed footprints и mixed roofs. |
 | `configs/demo_building_footprints.yaml` | Несколько типов building footprint в одном тайле. |
 | `configs/demo_courtyard_blocks.yaml` | Периметральные здания с внутренними дворами. |
 | `configs/demo_building_roofs.yaml` | Все поддержанные типы roof geometry в одном тайле. |
@@ -223,6 +224,7 @@ uv run citygen --config configs/demo_radial.yaml --out outputs/demo_radial.ply
 uv run citygen --config configs/demo_linear.yaml --out outputs/demo_linear.ply
 uv run citygen --config configs/demo_organic.yaml --out outputs/demo_organic.ply
 uv run citygen --config configs/demo_mixed_biomes.yaml --out outputs/demo_mixed_biomes.ply
+uv run citygen --config configs/demo_universal_showcase.yaml --out outputs/demo_universal_showcase.ply
 uv run citygen --config configs/demo_building_footprints.yaml --out outputs/demo_building_footprints.ply
 uv run citygen --config configs/demo_courtyard_blocks.yaml --out outputs/demo_courtyard_blocks.ply
 uv run citygen --config configs/demo_building_roofs.yaml --out outputs/demo_building_roofs.ply
