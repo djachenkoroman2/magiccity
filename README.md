@@ -76,6 +76,7 @@ citygen/
   roads.py          # road primitives и модели уличной сети
   fields.py         # глобальные urban fields
   biomes.py         # классификация городских биомов
+  parcels.py        # blocks/parcels и subdivision участков
   footprints.py     # геометрия building footprints
   roofs.py          # геометрия и height functions крыш
   sampling.py       # sampling точек поверхностей
@@ -91,6 +92,7 @@ tests/
   test_config.py
   test_determinism.py
   test_export.py
+  test_parcels.py
   test_roads_biomes_tiles.py
 prompts/
   ...               # продуктовый и архитектурный контекст
@@ -551,6 +553,8 @@ parcels:
 Когда `enabled: true`, генератор строит прямоугольные candidate blocks в рабочем bbox, делит их на parcels и размещает здания внутри `parcel.inner`. Footprint здания должен помещаться в свой parcel, проходить road/sidewalk clearance и не пересекаться с уже принятыми зданиями.
 
 Это MVP-аппроксимация поверх текущих road primitives: она не пытается построить идеальные GIS-полигоны кварталов для organic/free/radial дорог, но дает явный слой участков, детерминированную привязку `building.parcel_id` и `parcel_counts` в metadata.
+
+Подробный справочник по parcels находится в `doc/parcels.md`.
 
 ### `sampling`
 

@@ -2,7 +2,7 @@ seed: 851
 tile:
   x: 0
   y: 0
-  size_m: 640
+  size_m: 2000
   margin_m: 80
 terrain:
   base_height_m: 0
@@ -13,9 +13,9 @@ urban_fields:
   center_y: 304
   city_radius_m: 420
   noise_scale_m: 155
-  density_bias: 0.06
-  industrial_bias: 0.16
-  green_bias: 0.08
+  density_bias: 0.42
+  industrial_bias: 0.03
+  green_bias: 0.12
 roads:
   model: mixed
   spacing_m: 72
@@ -29,9 +29,9 @@ buildings:
   enabled: true
   min_height_m: 7
   max_height_m: 82
-  setback_m: 4
-  footprint_min_m: 10
-  footprint_max_m: 42
+  setback_m: 0.8
+  footprint_min_m: 5
+  footprint_max_m: 24
   footprint:
     model: mixed
     weights:
@@ -46,7 +46,7 @@ buildings:
     circle_segments: 32
     courtyard_ratio: 0.42
     wing_width_ratio: 0.34
-    min_part_width_m: 4.5
+    min_part_width_m: 3
   roof:
     model: mixed
     weights:
@@ -68,16 +68,16 @@ buildings:
     dome_segments: 20
 parcels:
   enabled: true
-  block_size_m: 104
-  block_jitter_m: 7
-  min_block_size_m: 34
-  min_parcel_width_m: 14
-  max_parcel_width_m: 46
-  min_parcel_depth_m: 18
-  max_parcel_depth_m: 60
-  parcel_setback_m: 1.6
-  split_jitter_ratio: 0.18
-  max_subdivision_depth: 4
+  block_size_m: 256
+  block_jitter_m: 4
+  min_block_size_m: 28
+  min_parcel_width_m: 10
+  max_parcel_width_m: 36
+  min_parcel_depth_m: 12
+  max_parcel_depth_m: 46
+  parcel_setback_m: 0.5
+  split_jitter_ratio: 0.12
+  max_subdivision_depth: 6
 sampling:
   mode: surface
   ground_spacing_m: 8

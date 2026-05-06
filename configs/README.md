@@ -529,6 +529,8 @@ MVP не строит полноценные GIS-полигоны квартал
 
 Metadata получает агрегированную секцию `parcel_counts`: количество blocks/parcels, buildable и occupied parcels, распределение parcels по биомам, средние размеры участков и число зданий с `parcel_id`.
 
+Подробный архитектурный справочник по этому слою находится в `../doc/parcels.md`.
+
 ## `sampling`
 
 Секция `sampling` управляет плотностью точек и случайным смещением samples.
@@ -676,7 +678,7 @@ Metadata содержит seed, bbox тайла, количество точек
 | `demo_linear.yaml` | Линейная городская структура с основной осью и редкими поперечными улицами. |
 | `demo_organic.yaml` | Волнистые organic streets, связанные с рельефом. |
 | `demo_mixed_biomes.yaml` | `mixed` road model, urban fields и несколько биомов в одном тайле. |
-| `demo_universal_showcase.yaml` | Большой showcase-тайл: mixed roads, urban fields, биомы, mixed footprints и mixed roofs. |
+| `demo_universal_showcase.yaml` | Большой showcase-тайл: mixed roads, urban fields, биомы, mixed footprints, mixed roofs и parcels. См. `demo_universal_showcase.md`. |
 | `demo_parcels.yaml` | Parcel subdivision: прямоугольные blocks/parcels и здания, привязанные к участкам. |
 | `demo_building_footprints.yaml` | Несколько типов building footprint в одном тайле. |
 | `demo_courtyard_blocks.yaml` | Периметральные здания с внутренними дворами. |
