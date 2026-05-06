@@ -1,0 +1,473 @@
+Ты senior Python-инженер и архитектор процедурных генераторов городских point clouds.
+
+В репозитории уже есть рабочий MVP `citygen`: CLI на Python, YAML-конфиги, детерминированный `seed`, тайлы, несколько моделей дорог, urban fields, биомы, прямоугольные здания, surface sampling, ASCII PLY export и metadata JSON. Основная концепция описана в `prompts/0003.md`, первый MVP описан в `prompts/0003_mvp.md`, этап дорожных сетей и биомов описан в `prompts/0005_improved.txt`. Справочники по конфигам и биомам находятся в `configs/README.md` и `doc/biomes.md`.
+
+Нужно реализовать следующий этап: расширить генерацию зданий так, чтобы у здания на земле мог быть не только прямоугольный footprint, но и разные типы контура. Это именно геометрия следа здания на земле, а не декоративный фасад.
+
+Не останавливайся на описании подхода: внеси рабочие изменения в код, YAML-конфиги, документацию и тесты.
+
+## Главная цель
+
+`citygen` должен поддерживать несколько типов building footprint:
+
+- простые прямоугольные и квадратные формы;
+- круговые формы, например ротонды;
+- вытянутые линейные формы, например полосы, пластины и галерейные дома;
+- замкнутые периметральные формы с внутренним двором;
+- составные формы из нескольких крыльев: Г-образные, П-образные и Т-образные.
+
+При этом старые конфиги должны продолжить работать без изменений, а текущий прямоугольный footprint должен остаться дефолтом.
+
+## Обязательные принципы
+
+1. Сохрани обратную совместимость:
+   - `configs/mvp.yaml` должен запускаться без изменений;
+   - существующие `demo_*.yaml` должны продолжить работать;
+   - старые параметры `buildings.footprint_min_m` и `buildings.footprint_max_m` должны остаться поддержанными;
+   - если новая секция footprint отсутствует, поведение должно быть максимально близким к текущему прямоугольному генератору.
+
+2. Сохрани детерминированность:
+   - одинаковый seed и одинаковый конфиг дают одинаковые footprints, точки и metadata;
+   - выбор типа footprint должен быть детерминированным;
+   - не используй недетерминированное глобальное состояние random;
+   - используй существующий подход со stable hash-based RNG от `seed`, координат, id building и namespace.
+
+3. Работай в мировых координатах:
+   - footprint должен жить в координатах `x/z`;
+   - генерация должна работать с `tile.margin_m`, а затем crop-иться до bbox тайла;
+   - соседние тайлы с одинаковым seed должны оставаться согласованными.
+
+4. Не добавляй тяжелые зависимости без необходимости:
+   - для MVP можно реализовать polygon / multi-rect geometry вручную;
+   - не подтягивай полноценный GIS/geometry stack вроде Shapely, если задачу можно надежно решить компактными примитивами;
+   - если зависимость все-таки нужна, обоснуй ее и добавь минимально.
+
+5. Не усложняй фасады сверх задачи:
+   - нужны корректные roof/facade point samples для новых footprints;
+   - не нужны окна, двери, материалы, этажность, текстуры или mesh export.
+
+## Новая YAML-настройка
+
+Добавь опциональную настройку внутри `buildings`. Формат можешь слегка скорректировать под существующую архитектуру, но минимально поддержи смысл ниже:
+
+```yaml
+buildings:
+  enabled: true
+  min_height_m: 8
+  max_height_m: 60
+  setback_m: 6
+  footprint_min_m: 12
+  footprint_max_m: 36
+  footprint:
+    model: mixed
+    weights:
+      rectangle: 0.30
+      square: 0.10
+      circle: 0.08
+      slab: 0.12
+      courtyard: 0.12
+      l_shape: 0.10
+      u_shape: 0.10
+      t_shape: 0.08
+    circle_segments: 24
+    courtyard_ratio: 0.45
+    wing_width_ratio: 0.35
+    min_part_width_m: 5
+    align_to_roads: true
+```
+
+Требования к настройке:
+
+- `buildings.footprint` должна быть опциональной;
+- `model` может быть конкретным типом или `mixed`;
+- если `model` конкретный, генерируй только этот тип;
+- если `model: mixed`, выбирай тип по `weights`;
+- веса должны валидироваться: числа `>= 0`, сумма положительная;
+- неизвестный тип footprint должен давать понятную config error;
+- параметры геометрии должны иметь безопасные defaults;
+- при слишком маленьком footprint для сложной формы можно fallback-нуться к более простой форме, но это должно быть детерминированно и желательно отражено в metadata или хотя бы в коде понятно.
+
+Поддерживаемые значения `model`:
+
+```text
+rectangle
+square
+circle
+slab
+courtyard
+l_shape
+u_shape
+t_shape
+mixed
+```
+
+Можно добавить alias-значения, если это улучшает читаемость, например:
+
+```text
+rotunda -> circle
+perimeter -> courtyard
+strip -> slab
+plate -> slab
+g_shape -> l_shape
+p_shape -> u_shape
+```
+
+Но canonical names в config/docs должны быть английскими и стабильными.
+
+## Типы footprint и ожидаемое поведение
+
+### 1. `rectangle`
+
+Текущий базовый тип.
+
+Особенности:
+
+- прямоугольник со случайной шириной и глубиной в диапазоне effective footprint size;
+- должен сохранить старое поведение настолько близко, насколько это разумно;
+- подходит для residential, downtown и baseline.
+
+### 2. `square`
+
+Квадратная разновидность простого footprint.
+
+Особенности:
+
+- ширина и глубина примерно равны;
+- размер выбирается в диапазоне effective footprint size;
+- полезен для башен, компактных домов и регулярной городской ткани.
+
+### 3. `circle`
+
+Круговой footprint, например ротонда.
+
+Особенности:
+
+- можно аппроксимировать правильным многоугольником;
+- количество сегментов задается `circle_segments`;
+- roof sampling должен заполнять круговую область;
+- facade sampling должен идти по внешнему контуру;
+- bbox, collision и road clearance должны учитывать реальную форму или консервативную аппроксимацию.
+
+### 4. `slab`
+
+Вытянутая линейная форма: полоса, пластина, галерейный дом.
+
+Особенности:
+
+- одна сторона заметно длиннее другой;
+- aspect ratio должен быть выше, чем у обычного rectangle;
+- хорошо подходит для застройки вдоль дорог, набережных или линейных районов;
+- если `align_to_roads: true`, постарайся ориентировать slab вдоль ближайшей дороги или вдоль доминирующей оси road model;
+- если надежно определить направление дороги сложно, используй детерминированный угол от seed/координат и опиши это в коде.
+
+### 5. `courtyard`
+
+Замкнутая периметральная форма с внутренним двором.
+
+Особенности:
+
+- внешний контур прямоугольный или квадратный;
+- внутри есть пустой двор, где не должно быть roof points;
+- фасады должны появляться и по внешнему, и по внутреннему контуру двора;
+- двор должен быть достаточно большим, чтобы не превращаться в численный мусор;
+- если размеры слишком малы, fallback на `rectangle` или уменьшение двора допустимы, но поведение должно быть стабильным.
+
+### 6. `l_shape`
+
+Г-образная форма из двух крыльев.
+
+Особенности:
+
+- footprint образуется как объединение двух прямоугольных крыльев;
+- подходит для угловой застройки;
+- roof sampling должен покрывать только занятые крылья;
+- фасады должны идти по внешнему контуру, а не по внутренним стыкам объединенных прямоугольников.
+
+### 7. `u_shape`
+
+П-образная форма с полузакрытым двором.
+
+Особенности:
+
+- три крыла вокруг открытого двора;
+- двор открыт с одной стороны;
+- подходит для квартальной и институциональной застройки;
+- ориентация открытой стороны должна быть детерминированной.
+
+### 8. `t_shape`
+
+Т-образная форма из пересекающихся крыльев.
+
+Особенности:
+
+- одно главное крыло и одно поперечное;
+- подходит для сложных общественных, промышленных или кампусных объемов;
+- внутренние пересечения крыльев не должны создавать лишние фасадные точки.
+
+## Рекомендуемая архитектура
+
+Сейчас `Building` хранит `footprint: Rect`. Нужно обобщить это до формы, которая может быть не только прямоугольником.
+
+Рекомендуемый подход:
+
+```text
+citygen/
+  footprints.py      # типы footprint, polygon/multi-rect helpers, sampling boundary
+```
+
+Минимальный интерфейс footprint:
+
+```text
+BuildingFootprint:
+  kind: str
+  bbox: Rect
+  center_x: float
+  center_z: float
+  contains_xy(x, z) -> bool
+  intersects(bbox) -> bool
+  sample_roof_points(spacing, jitter, rng, base_y, roof_y) -> points or x/z samples
+  boundary_segments() -> list[segment]
+  clearance_sample_points() -> representative x/z points
+```
+
+Не обязательно использовать именно такой класс, но в коде должна появиться явная абстракция footprint, а не набор ad hoc проверок в `generator.py`.
+
+Возможные внутренние представления:
+
+- polygon outer ring + optional holes;
+- union of rectangles, преобразуемый в boundary segments;
+- простые специализированные классы для circle, courtyard и multi-rect форм;
+- bbox как консервативный быстрый фильтр.
+
+Для MVP допустимо:
+
+- хранить сложные формы как union of axis-aligned or rotated rectangles;
+- аппроксимировать circle многоугольником;
+- collision делать через bbox + shape sample points, если полноценная polygon collision слишком раздувает код;
+- road clearance проверять по репрезентативным точкам контура и bbox, но не ставить здание явно на дорогу/тротуар.
+
+Но нельзя:
+
+- генерировать все сложные формы как обычные прямоугольники под другим именем;
+- семплировать roof points в пустом courtyard;
+- создавать фасадные точки на внутренних стыках крыльев `l_shape`, `u_shape`, `t_shape`;
+- ломать текущие PLY classes.
+
+## Sampling требований
+
+Для всех footprint types должны работать:
+
+- roof sampling;
+- facade sampling;
+- crop до bbox тайла;
+- semantic classes `building_roof` и `building_facade`;
+- RGB output, если `output.include_rgb: true`;
+- class output, если `output.include_class: true`.
+
+Roof sampling:
+
+- точки крыши должны попадать только внутрь занятых частей footprint;
+- для courtyard внутренний двор должен оставаться пустым;
+- для circle точки должны заполнять круговую область, а не bbox целиком;
+- spacing должен управляться `sampling.building_spacing_m`.
+
+Facade sampling:
+
+- точки фасадов должны идти по реальной границе footprint;
+- для courtyard нужны фасады внешнего и внутреннего контура;
+- для составных форм нужно убрать фасады на внутренних стыках прямоугольных крыльев;
+- вертикальный шаг должен использовать `sampling.building_spacing_m`, как сейчас.
+
+## Road clearance и пересечения зданий
+
+Новые footprints должны уважать текущие ограничения:
+
+- здание не должно ставиться на road/sidewalk;
+- здание должно учитывать `buildings.setback_m` и biome `setback_scale`;
+- здания не должны заметно пересекаться друг с другом;
+- проверка должна оставаться достаточно быстрой для demo configs.
+
+Рекомендуемые проверки:
+
+1. Быстрый bbox check.
+2. Набор representative points по контуру, углам, центру и внутренним характерным точкам.
+3. Для каждой representative point проверить расстояние до road network с учетом clearance.
+4. Для overlaps использовать bbox как быстрый фильтр, а затем shape-level проверку или достаточно плотные sample points.
+
+Если реализуешь приближенную collision-модель, обязательно оставь комментарий в коде с границей точности и добавь тесты на очевидные случаи.
+
+## Связь с биомами
+
+Биомы уже влияют на вероятность зданий, footprint scale, высоту и setback. Новые footprint types могут дополнительно распределяться по биомам.
+
+Минимальное требование:
+
+- глобальные `buildings.footprint.weights` работают для всех биомов.
+
+Желательное расширение:
+
+```yaml
+buildings:
+  footprint:
+    model: mixed
+    weights:
+      rectangle: 0.25
+      square: 0.10
+      circle: 0.05
+      slab: 0.15
+      courtyard: 0.15
+      l_shape: 0.10
+      u_shape: 0.10
+      t_shape: 0.10
+    biome_weights:
+      downtown:
+        rectangle: 0.20
+        square: 0.10
+        circle: 0.08
+        courtyard: 0.30
+        l_shape: 0.12
+        u_shape: 0.12
+        t_shape: 0.08
+      industrial:
+        slab: 0.45
+        rectangle: 0.25
+        t_shape: 0.15
+        l_shape: 0.15
+      suburb:
+        rectangle: 0.45
+        square: 0.25
+        l_shape: 0.15
+        u_shape: 0.05
+        slab: 0.10
+```
+
+Если `biome_weights` слишком сильно раздувает задачу, не реализуй его в первом проходе. Но спроектируй код так, чтобы добавить это позже было легко.
+
+## Metadata
+
+Расширь metadata JSON.
+
+Минимально добавь:
+
+```json
+{
+  "building_counts": {
+    "total": 42,
+    "by_footprint": {
+      "rectangle": 18,
+      "circle": 4,
+      "courtyard": 6
+    }
+  }
+}
+```
+
+Желательно добавить:
+
+- `building_counts.by_biome`;
+- `building_counts.by_footprint_and_biome`;
+- список поддержанных footprint types;
+- итоговую секцию config с примененными defaults, как уже делается сейчас.
+
+Не раздувай metadata полным списком всех building polygons, если это делает файл слишком большим. Для диагностики достаточно агрегатов.
+
+## Документация и демо-конфиги
+
+Обнови документацию:
+
+- `README.md`: кратко опиши поддержку разных footprints;
+- `configs/README.md`: подробно опиши новую секцию `buildings.footprint`;
+- добавь новый документ `doc/building_footprints.md` со справочником по формам зданий;
+- если нужно, добавь ссылку из существующих документов.
+
+Добавь минимум один новый demo config:
+
+```text
+configs/demo_building_footprints.yaml
+```
+
+Он должен демонстрировать разные формы зданий в одном тайле.
+
+Желательно добавить еще один targeted config:
+
+```text
+configs/demo_courtyard_blocks.yaml
+```
+
+Он должен показывать периметральную застройку с внутренними дворами.
+
+В README добавь команды запуска:
+
+```bash
+uv run citygen --config configs/demo_building_footprints.yaml --out outputs/demo_building_footprints.ply
+uv run citygen --config configs/demo_courtyard_blocks.yaml --out outputs/demo_courtyard_blocks.ply
+```
+
+## Тесты
+
+Добавь или обнови тесты.
+
+Минимальные проверки:
+
+1. Backward compatibility:
+   - `configs/mvp.yaml` загружается и генерирует здания;
+   - старый конфиг без `buildings.footprint` работает.
+
+2. Config validation:
+   - валидный `buildings.footprint.model` загружается;
+   - неизвестный model дает config error;
+   - отрицательные веса запрещены;
+   - `model: mixed` с нулевой суммой весов запрещен.
+
+3. Determinism:
+   - одинаковый seed и конфиг дают одинаковые первые N точек;
+   - выбор footprint types повторяем.
+
+4. Geometry:
+   - `circle` не семплирует roof points за пределами круга;
+   - `courtyard` не семплирует roof points во внутреннем дворе;
+   - `l_shape`, `u_shape`, `t_shape` дают непустые roof/facade points;
+   - bbox и contains работают для всех типов.
+
+5. Export/metadata:
+   - PLY создается;
+   - metadata содержит `building_counts.by_footprint`;
+   - demo config с несколькими footprint types реально дает больше одного типа в metadata.
+
+6. Road safety:
+   - здания не появляются на road/sidewalk для простого тестового конфига;
+   - сложные footprint types уважают clearance хотя бы по representative points.
+
+После реализации запусти доступные проверки через `uv run ...`. Минимально:
+
+```bash
+uv run python -m unittest
+uv run citygen --config configs/mvp.yaml --out outputs/mvp_tile.ply
+uv run citygen --config configs/demo_building_footprints.yaml --out outputs/demo_building_footprints.ply
+```
+
+Если какую-то проверку запустить не удалось, явно объясни причину.
+
+## Критерии приемки
+
+Задача считается выполненной, если:
+
+- старый базовый запуск `uv run citygen --config configs/mvp.yaml --out outputs/mvp_tile.ply` продолжает работать;
+- новый config с `buildings.footprint.model: mixed` генерирует несколько типов footprints;
+- `rectangle`, `square`, `circle`, `slab`, `courtyard`, `l_shape`, `u_shape`, `t_shape` поддержаны как минимум на уровне генерации, sampling и metadata;
+- roof points не попадают в пустоты courtyard;
+- фасады появляются по границам сложных форм;
+- здания не ставятся на дороги и тротуары;
+- metadata показывает распределение зданий по footprint type;
+- документация описывает все новые параметры и формы;
+- тесты покрывают config, determinism, geometry и metadata;
+- код остается читаемым и расширяемым.
+
+## Перед началом реализации
+
+1. Осмотри текущую структуру репозитория.
+2. Прочитай `citygen/geometry.py`, `citygen/generator.py`, `citygen/sampling.py`, `citygen/config.py`, `citygen/export.py`.
+3. Проверь текущие docs: `README.md`, `configs/README.md`, `doc/biomes.md`.
+4. Кратко сформулируй план изменений.
+5. Затем реализуй поддержку footprints, обнови конфиги/docs/tests, запусти проверки и в конце дай короткий отчет с командами запуска.
+

@@ -1,0 +1,46 @@
+# Perimeter blocks with inner courtyards.
+seed: 1217
+tile:
+  x: 0
+  z: 0
+  size_m: 256
+  margin_m: 56
+terrain:
+  base_height_m: 0
+  height_noise_m: 0.8
+urban_fields:
+  enabled: true
+  center_x: 128
+  center_z: 128
+  city_radius_m: 380
+  noise_scale_m: 140
+  density_bias: 0.08
+roads:
+  model: grid
+  spacing_m: 88
+  width_m: 8
+  sidewalk_width_m: 3
+buildings:
+  enabled: true
+  min_height_m: 10
+  max_height_m: 58
+  setback_m: 4
+  footprint_min_m: 28
+  footprint_max_m: 48
+  footprint:
+    model: courtyard
+    circle_segments: 24
+    courtyard_ratio: 0.46
+    wing_width_ratio: 0.34
+    min_part_width_m: 6
+    align_to_roads: true
+sampling:
+  mode: surface
+  ground_spacing_m: 4
+  road_spacing_m: 3
+  building_spacing_m: 3
+  jitter_ratio: 0.12
+output:
+  format: ply
+  include_rgb: true
+  include_class: true

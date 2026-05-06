@@ -1,0 +1,61 @@
+# Mixed road model, multiple urban biomes, and every supported building footprint type.
+seed: 1001
+tile:
+  x: 0
+  z: 0
+  size_m: 384
+  margin_m: 64
+terrain:
+  base_height_m: 0
+  height_noise_m: 2.2
+urban_fields:
+  enabled: true
+  center_x: 160
+  center_z: 160
+  city_radius_m: 250
+  noise_scale_m: 120
+  density_bias: 0.04
+  industrial_bias: 0.08
+  green_bias: 0.02
+roads:
+  model: mixed
+  spacing_m: 78
+  width_m: 8
+  sidewalk_width_m: 2.5
+  angle_degrees: 18
+  radial_count: 14
+  ring_spacing_m: 64
+  organic_wander_m: 18
+buildings:
+  enabled: true
+  min_height_m: 7
+  max_height_m: 72
+  setback_m: 5
+  footprint_min_m: 14
+  footprint_max_m: 34
+  footprint:
+    model: mixed
+    weights:
+      rectangle: 0.14
+      square: 0.12
+      circle: 0.12
+      slab: 0.14
+      courtyard: 0.14
+      l_shape: 0.12
+      u_shape: 0.11
+      t_shape: 0.11
+    circle_segments: 28
+    courtyard_ratio: 0.42
+    wing_width_ratio: 0.34
+    min_part_width_m: 5
+    align_to_roads: true
+sampling:
+  mode: surface
+  ground_spacing_m: 9
+  road_spacing_m: 7
+  building_spacing_m: 7
+  jitter_ratio: 0.18
+output:
+  format: ply
+  include_rgb: true
+  include_class: true

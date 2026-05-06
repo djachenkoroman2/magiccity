@@ -1,0 +1,32 @@
+# Geometry-only export: no RGB/class properties, flat terrain, perfectly regular samples.
+seed: 505
+tile:
+  x: 2
+  z: -1
+  size_m: 128
+  margin_m: 16
+terrain:
+  base_height_m: 0
+  height_noise_m: 0
+roads:
+  model: grid
+  spacing_m: 32
+  width_m: 6
+  sidewalk_width_m: 2
+buildings:
+  enabled: true
+  min_height_m: 12
+  max_height_m: 28
+  setback_m: 3
+  footprint_min_m: 8
+  footprint_max_m: 18
+sampling:
+  mode: surface
+  ground_spacing_m: 2
+  road_spacing_m: 2
+  building_spacing_m: 2
+  jitter_ratio: 0
+output:
+  format: ply
+  include_rgb: false
+  include_class: false

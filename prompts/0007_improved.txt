@@ -1,0 +1,563 @@
+Ты senior Python-инженер и архитектор процедурных генераторов городских point clouds.
+
+В репозитории уже есть рабочий MVP `citygen`: CLI на Python, YAML-конфиги, детерминированный `seed`, тайлы, несколько моделей дорог, urban fields, биомы, building footprints разных типов, surface sampling, ASCII PLY export и metadata JSON. Основная концепция описана в `prompts/0003.md`, первый MVP описан в `prompts/0003_mvp.md`, этап дорожных сетей и биомов описан в `prompts/0005_improved.txt`, этап building footprints описан в `prompts/0006_improved.txt`. Справочники находятся в `configs/README.md`, `doc/biomes.md` и `doc/building_footprints.md`.
+
+Нужно реализовать следующий этап: расширить генерацию зданий так, чтобы у здания можно было настраивать геометрию и конструкцию крыши. Это именно форма крыши и ее sampling в point cloud, а не декоративные материалы, окна, двери или полноценный mesh.
+
+Не останавливайся на описании подхода: внеси рабочие изменения в код, YAML-конфиги, документацию и тесты.
+
+## Главная цель
+
+`citygen` должен поддерживать несколько типов roof geometry:
+
+- плоская крыша;
+- односкатная крыша;
+- двускатная крыша;
+- четырехскатная вальмовая крыша;
+- полувальмовая крыша;
+- шатровая крыша;
+- ломаная мансардная крыша;
+- купольная крыша;
+- арочная или сводчатая крыша;
+- коническая крыша.
+
+При этом старые конфиги должны продолжить работать без изменений, а текущая плоская крыша должна остаться дефолтом.
+
+## Обязательные принципы
+
+1. Сохрани обратную совместимость:
+   - `configs/mvp.yaml` должен запускаться без изменений;
+   - существующие `demo_*.yaml` должны продолжить работать;
+   - текущие здания с плоской крышей должны оставаться дефолтным поведением;
+   - если новая секция roof отсутствует, результат должен быть максимально близок к текущему.
+
+2. Сохрани детерминированность:
+   - одинаковый seed и одинаковый конфиг дают одинаковые roof types, точки и metadata;
+   - выбор типа крыши должен быть детерминированным;
+   - не используй недетерминированное глобальное состояние random;
+   - используй существующий stable hash-based RNG от `seed`, координат, id building и namespace.
+
+3. Сохрани текущую модель point cloud:
+   - semantic classes `building_roof` и `building_facade` должны продолжить работать;
+   - RGB и class output должны уважать `output.include_rgb` и `output.include_class`;
+   - PLY должен оставаться ASCII PLY;
+   - metadata JSON должен расшириться, но не ломать старые поля.
+
+4. Учитывай building footprint:
+   - roof sampling должен работать поверх текущих footprint types: `rectangle`, `square`, `circle`, `slab`, `courtyard`, `l_shape`, `u_shape`, `t_shape`;
+   - roof points не должны попадать в пустоты courtyard;
+   - для составных footprint допустимо применять roof model к каждой занятой части или использовать разумную bbox-аппроксимацию, но нельзя семплировать крышу вне footprint;
+   - для круговых footprints особенно важны `dome` и `cone`, но остальные типы должны иметь fallback или корректную аппроксимацию.
+
+5. Не добавляй тяжелые зависимости без необходимости:
+   - для MVP достаточно аналитических height functions и surface sampling;
+   - не нужен полноценный mesh boolean, triangulation engine или CAD kernel;
+   - если зависимость все-таки нужна, обоснуй ее и добавь минимально.
+
+6. Не реализуй лишнюю детализацию:
+   - не нужны окна, двери, черепица, водостоки, материалы, текстуры;
+   - не нужен физически точный drainage;
+   - не нужен настоящий LiDAR с occlusion;
+   - достаточно корректного процедурного surface sampling крыши и верхней линии фасадов.
+
+## Новая YAML-настройка
+
+Добавь опциональную настройку внутри `buildings`.
+
+```yaml
+buildings:
+  enabled: true
+  min_height_m: 8
+  max_height_m: 60
+  setback_m: 6
+  footprint_min_m: 12
+  footprint_max_m: 36
+  roof:
+    model: mixed
+    weights:
+      flat: 0.22
+      shed: 0.10
+      gable: 0.16
+      hip: 0.14
+      half_hip: 0.08
+      pyramid: 0.08
+      mansard: 0.08
+      dome: 0.06
+      barrel: 0.04
+      cone: 0.04
+    pitch_degrees: 28
+    pitch_jitter_degrees: 8
+    flat_slope_degrees: 2
+    eave_overhang_m: 0.4
+    ridge_height_ratio: 0.35
+    mansard_break_ratio: 0.45
+    dome_segments: 16
+    align_to_long_axis: true
+```
+
+Требования к настройке:
+
+- `buildings.roof` должна быть опциональной;
+- `model` может быть конкретным типом или `mixed`;
+- если `model` конкретный, генерируй только этот тип;
+- если `model: mixed`, выбирай тип по `weights`;
+- веса должны валидироваться: числа `>= 0`, сумма положительная;
+- неизвестный тип roof должен давать понятную config error;
+- параметры геометрии должны иметь безопасные defaults;
+- если тип крыши плохо подходит для footprint, допустим детерминированный fallback на `flat`, `gable`, `hip` или `pyramid`, но fallback должен быть понятен из кода и желательно отражен в metadata.
+
+Поддерживаемые canonical roof models:
+
+```text
+flat
+shed
+gable
+hip
+half_hip
+pyramid
+mansard
+dome
+barrel
+cone
+mixed
+```
+
+Можно добавить alias-значения:
+
+```text
+single_slope -> shed
+mono_pitch -> shed
+dual_pitch -> gable
+pitched -> gable
+hipped -> hip
+half_hipped -> half_hip
+tent -> pyramid
+vault -> barrel
+arched -> barrel
+conical -> cone
+```
+
+Canonical names в config/docs должны быть английскими и стабильными.
+
+## Типы крыш и ожидаемое поведение
+
+### 1. `flat`
+
+Плоская крыша, текущий baseline.
+
+Особенности:
+
+- roof points лежат почти на одной высоте;
+- можно добавить небольшой уклон `flat_slope_degrees` для стока воды;
+- дефолт должен быть совместим с текущим поведением;
+- подходит для downtown, industrial, slab и courtyard blocks.
+
+### 2. `shed`
+
+Односкатная крыша.
+
+Особенности:
+
+- высота плавно меняется от одной стороны footprint к другой;
+- направление ската должно быть детерминированным;
+- если `align_to_long_axis: true`, скат лучше ориентировать относительно длинной оси bbox;
+- хорошо подходит для хозяйственных, индустриальных и современных зданий.
+
+### 3. `gable`
+
+Двускатная крыша.
+
+Особенности:
+
+- два ската сходятся в коньке;
+- конек обычно идет вдоль длинной оси footprint;
+- высота roof point зависит от расстояния до линии конька;
+- хорошо подходит для residential и suburb.
+
+### 4. `hip`
+
+Четырехскатная вальмовая крыша.
+
+Особенности:
+
+- все четыре стороны наклонены;
+- высота максимальна около центральной области или короткого конька;
+- хорошо подходит для прямоугольных и квадратных footprints;
+- для сложных L/U/T допустимо применять упрощенную hip height function по bbox.
+
+### 5. `half_hip`
+
+Полувальмовая крыша.
+
+Особенности:
+
+- похожа на `gable`, но фронтоны частично срезаны вальмами;
+- можно реализовать как gable height function с clipped/shortened ridge near ends;
+- результат должен визуально отличаться от обычной `gable`.
+
+### 6. `pyramid`
+
+Шатровая крыша.
+
+Особенности:
+
+- все скаты сходятся в одной точке;
+- особенно подходит для квадратных и компактных зданий;
+- для прямоугольных footprints можно использовать центр bbox как вершину;
+- для `circle` может быть похожа на low-poly cone, но canonical `cone` должен оставаться отдельным типом.
+
+### 7. `mansard`
+
+Ломаная мансардная крыша.
+
+Особенности:
+
+- скат имеет перелом;
+- нижняя часть круче верхней;
+- параметр `mansard_break_ratio` задает положение перелома;
+- roof sampling должен дать заметную смену уклона.
+
+### 8. `dome`
+
+Купольная крыша.
+
+Особенности:
+
+- высота образует гладкий купол;
+- лучше всего подходит для `circle`, `square`, компактных `rectangle`;
+- для длинных slab можно fallback на `barrel` или использовать эллиптический купол;
+- roof points должны подниматься к центру и снижаться к краю.
+
+### 9. `barrel`
+
+Арочная или сводчатая крыша.
+
+Особенности:
+
+- высота меняется по дуге в одном направлении;
+- вдоль другой оси форма вытянута;
+- хорошо подходит для `slab`, industrial и галерейных зданий;
+- должна визуально отличаться от `gable`: арка плавная, а не два плоских ската.
+
+### 10. `cone`
+
+Коническая крыша.
+
+Особенности:
+
+- высота максимальна в центре и линейно снижается к краю;
+- хорошо подходит для `circle`, башен и ротонд;
+- для не-круговых footprints можно использовать distance-to-bbox-edge или fallback на `pyramid`.
+
+## Рекомендуемая архитектура
+
+Сейчас roof sampling, вероятно, живет рядом с building sampling. Нужно вынести roof geometry в явную абстракцию, чтобы не разрастался `sampling.py`.
+
+Рекомендуемый модуль:
+
+```text
+citygen/
+  roofs.py      # roof config helpers, height functions, roof sampling support
+```
+
+Минимальный интерфейс:
+
+```text
+RoofSpec:
+  kind: str
+  base_eave_y: float
+  max_roof_y: float
+  height_at(x, z, footprint) -> float
+  ridge_segments(footprint) -> list[segment]
+  metadata() -> dict
+```
+
+Или более простой вариант:
+
+```text
+sample_roof(config, building, spacing, rng) -> list[Point]
+roof_height_at(roof, footprint, x, z) -> y
+```
+
+Не обязательно использовать именно эти классы, но в коде должна появиться явная модель roof type, а не набор ad hoc условий внутри `_sample_roof`.
+
+## Высота здания и высота крыши
+
+Нужно явно определить, что означает `building.height_m`.
+
+Рекомендуемая интерпретация:
+
+- `building.base_y` — рельеф в центре footprint;
+- `building.wall_top_y` или `eave_y` — верх стены;
+- `building.roof_y` или `max_roof_y` — максимальная высота крыши;
+- старый `height_m` можно считать общей высотой до max roof, чтобы не ломать внешний смысл.
+
+Если меняешь dataclass `Building`, сохрани читаемость и обратную совместимость там, где возможно.
+
+Минимальный вариант:
+
+- оставить `Building.height_m` как максимальную высоту;
+- для плоской крыши `roof_height_at()` возвращает старый `building.roof_y`;
+- для скатных крыш нижняя кромка крыши находится ниже max roof на `roof_rise_m`;
+- facade sampling идет до локальной линии крыши или до eave line.
+
+Важно: facade points не должны торчать выше крыши и не должны оставлять большой видимый разрыв между стеной и крышей.
+
+## Sampling требований
+
+Для всех roof types должны работать:
+
+- roof surface sampling;
+- facade sampling с учетом верхней границы крыши или eave line;
+- crop до bbox тайла;
+- semantic class `building_roof` для крыши;
+- semantic class `building_facade` для стен;
+- RGB/class output flags.
+
+Roof sampling:
+
+- точки крыши должны попадать только внутрь footprint;
+- для courtyard внутренний двор должен оставаться пустым;
+- `sampling.building_spacing_m` управляет плотностью;
+- `jitter_ratio` должен оставаться детерминированным;
+- для curved roofs (`dome`, `barrel`, `cone`) высота должна меняться плавно;
+- для pitched roofs (`shed`, `gable`, `hip`, `half_hip`, `pyramid`, `mansard`) высота должна отражать скаты.
+
+Facade sampling:
+
+- вертикальные точки фасада должны учитывать roof/eave height;
+- для простого MVP можно семплировать фасад до `eave_y`, а крышу отдельно;
+- если реализуешь фронтоны у `gable`/`half_hip`, они должны быть roof или facade class последовательно и документированно;
+- у courtyard внутренние фасады должны сохраняться.
+
+## Связь с footprint types
+
+Минимальное требование:
+
+- все roof models должны работать без падения со всеми footprint types.
+
+Желательное поведение:
+
+| Footprint | Хорошие roof models |
+| --- | --- |
+| `rectangle` | `flat`, `shed`, `gable`, `hip`, `half_hip`, `mansard` |
+| `square` | `flat`, `hip`, `pyramid`, `dome` |
+| `circle` | `flat`, `dome`, `cone` |
+| `slab` | `flat`, `shed`, `gable`, `barrel` |
+| `courtyard` | `flat`, `gable`, `hip`, `mansard` |
+| `l_shape` | `flat`, `shed`, `gable`, `hip` |
+| `u_shape` | `flat`, `gable`, `hip`, `mansard` |
+| `t_shape` | `flat`, `gable`, `hip`, `barrel` |
+
+Если конкретная комбинация слишком сложна, используй deterministic fallback и учитывай fallback в `building_counts.by_roof` или отдельном `roof_fallback_counts`.
+
+## Связь с биомами
+
+Биомы уже влияют на вероятность зданий, footprint scale, высоту и setback. Roof types могут дополнительно распределяться по биомам.
+
+Минимальное требование:
+
+- глобальные `buildings.roof.weights` работают для всех биомов.
+
+Желательное расширение:
+
+```yaml
+buildings:
+  roof:
+    model: mixed
+    weights:
+      flat: 0.20
+      gable: 0.20
+      hip: 0.15
+      shed: 0.10
+      dome: 0.05
+      barrel: 0.05
+      cone: 0.05
+      mansard: 0.10
+      pyramid: 0.05
+      half_hip: 0.05
+    biome_weights:
+      downtown:
+        flat: 0.45
+        hip: 0.15
+        mansard: 0.15
+        dome: 0.10
+        pyramid: 0.10
+        cone: 0.05
+      residential:
+        gable: 0.35
+        hip: 0.25
+        half_hip: 0.15
+        mansard: 0.10
+        flat: 0.15
+      industrial:
+        flat: 0.35
+        shed: 0.25
+        barrel: 0.25
+        gable: 0.15
+      suburb:
+        gable: 0.45
+        hip: 0.25
+        half_hip: 0.15
+        shed: 0.10
+        flat: 0.05
+```
+
+Если `biome_weights` раздувает задачу, не реализуй его в первом проходе. Но спроектируй config и код так, чтобы добавить это позже было легко.
+
+## Metadata
+
+Расширь metadata JSON.
+
+Минимально добавь:
+
+```json
+{
+  "building_counts": {
+    "total": 42,
+    "by_footprint": {
+      "rectangle": 12,
+      "circle": 4
+    },
+    "by_roof": {
+      "flat": 14,
+      "gable": 10,
+      "hip": 6,
+      "dome": 3
+    }
+  },
+  "supported_roof_types": [
+    "flat",
+    "shed",
+    "gable",
+    "hip",
+    "half_hip",
+    "pyramid",
+    "mansard",
+    "dome",
+    "barrel",
+    "cone"
+  ]
+}
+```
+
+Желательно добавить:
+
+- `building_counts.by_roof_and_footprint`;
+- `building_counts.by_roof_and_biome`;
+- `roof_fallback_counts`, если есть fallback;
+- агрегаты по `roof_rise_m` или pitch не нужны, если это раздувает metadata.
+
+Не записывай полный список roof points или все polygons в metadata.
+
+## Документация и демо-конфиги
+
+Обнови документацию:
+
+- `README.md`: кратко опиши поддержку roof geometry;
+- `configs/README.md`: подробно опиши новую секцию `buildings.roof`;
+- добавь новый документ `doc/building_roofs.md` со справочником по типам крыш;
+- если нужно, добавь ссылки из `doc/building_footprints.md`.
+
+Добавь минимум один demo config:
+
+```text
+configs/demo_building_roofs.yaml
+```
+
+Он должен демонстрировать разные типы крыш в одном тайле.
+
+Желательно добавить targeted configs:
+
+```text
+configs/demo_pitched_roofs.yaml
+configs/demo_curved_roofs.yaml
+```
+
+Примеры команд для README:
+
+```bash
+uv run citygen --config configs/demo_building_roofs.yaml --out outputs/demo_building_roofs.ply
+uv run citygen --config configs/demo_pitched_roofs.yaml --out outputs/demo_pitched_roofs.ply
+uv run citygen --config configs/demo_curved_roofs.yaml --out outputs/demo_curved_roofs.ply
+```
+
+## Тесты
+
+Добавь или обнови тесты.
+
+Минимальные проверки:
+
+1. Backward compatibility:
+   - `configs/mvp.yaml` загружается и генерирует здания;
+   - старый config без `buildings.roof` работает;
+   - дефолтный roof model равен `flat`.
+
+2. Config validation:
+   - валидный `buildings.roof.model` загружается;
+   - alias-значения нормализуются;
+   - неизвестный roof model дает config error;
+   - отрицательные weights запрещены;
+   - `model: mixed` с нулевой суммой weights запрещен;
+   - pitch/ratio/segment параметры валидируются.
+
+3. Determinism:
+   - одинаковый seed и config дают одинаковые первые N точек;
+   - выбор roof types повторяем;
+   - metadata `by_roof` повторяется.
+
+4. Geometry:
+   - `flat` дает постоянную или почти постоянную высоту roof points;
+   - `shed` имеет монотонный уклон;
+   - `gable` имеет две стороны и максимальную высоту около ridge;
+   - `hip` и `pyramid` имеют максимум ближе к центру;
+   - `mansard` имеет заметный перелом уклона;
+   - `dome` имеет максимум в центре и плавное снижение к краю;
+   - `barrel` имеет арочную высоту по одной оси;
+   - `cone` имеет максимум в центре и линейное снижение к краю;
+   - roof points не выходят за footprint и не попадают в courtyard hole.
+
+5. Sampling:
+   - каждый roof type дает непустые roof points;
+   - facade points не поднимаются выше допустимой roof/eave границы;
+   - class counts содержат `building_roof` и `building_facade`.
+
+6. Export/metadata:
+   - PLY создается;
+   - metadata содержит `building_counts.by_roof`;
+   - demo config с `model: mixed` реально дает несколько roof types.
+
+После реализации запусти доступные проверки через `uv run ...`. Минимально:
+
+```bash
+uv run python -m unittest discover -s tests
+uv run citygen --config configs/mvp.yaml --out outputs/mvp_tile.ply
+uv run citygen --config configs/demo_building_roofs.yaml --out outputs/demo_building_roofs.ply
+```
+
+Если какую-то проверку запустить не удалось, явно объясни причину.
+
+## Критерии приемки
+
+Задача считается выполненной, если:
+
+- старый базовый запуск `uv run citygen --config configs/mvp.yaml --out outputs/mvp_tile.ply` продолжает работать;
+- дефолтная крыша остается плоской;
+- новый config с `buildings.roof.model: mixed` генерирует несколько roof types;
+- `flat`, `shed`, `gable`, `hip`, `half_hip`, `pyramid`, `mansard`, `dome`, `barrel`, `cone` поддержаны как минимум на уровне roof sampling и metadata;
+- roof points не выходят за footprint и не попадают в courtyard holes;
+- curved roofs имеют реально меняющуюся высоту, а не маскируются под flat;
+- pitched roofs имеют различимые скаты;
+- metadata показывает распределение зданий по roof type;
+- документация описывает все новые параметры и типы крыш;
+- тесты покрывают config, determinism, geometry, sampling и metadata;
+- код остается читаемым и расширяемым.
+
+## Перед началом реализации
+
+1. Осмотри текущую структуру репозитория.
+2. Прочитай `citygen/config.py`, `citygen/geometry.py`, `citygen/footprints.py`, `citygen/generator.py`, `citygen/sampling.py`, `citygen/export.py`.
+3. Проверь текущие docs: `README.md`, `configs/README.md`, `doc/building_footprints.md`.
+4. Кратко сформулируй план изменений.
+5. Затем реализуй поддержку roof geometry, обнови конфиги/docs/tests, запусти проверки и в конце дай короткий отчет с командами запуска.
+

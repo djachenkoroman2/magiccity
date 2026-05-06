@@ -1,0 +1,124 @@
+{
+  "biome_counts": {
+    "downtown": 37,
+    "residential": 44
+  },
+  "building_counts": {
+    "by_biome": {
+      "downtown": 4,
+      "residential": 8
+    },
+    "by_footprint": {
+      "courtyard": 12
+    },
+    "by_footprint_and_biome": {
+      "courtyard": {
+        "downtown": 4,
+        "residential": 8
+      }
+    },
+    "total": 12
+  },
+  "class_counts": {
+    "building_facade": 9548,
+    "building_roof": 905,
+    "ground": 2615,
+    "road": 1144,
+    "sidewalk": 787
+  },
+  "class_mapping": {
+    "building_facade": 4,
+    "building_roof": 5,
+    "ground": 1,
+    "road": 2,
+    "sidewalk": 3
+  },
+  "config": {
+    "buildings": {
+      "enabled": true,
+      "footprint": {
+        "align_to_roads": true,
+        "circle_segments": 24,
+        "courtyard_ratio": 0.46,
+        "min_part_width_m": 6.0,
+        "model": "courtyard",
+        "weights": {},
+        "wing_width_ratio": 0.34
+      },
+      "footprint_max_m": 48.0,
+      "footprint_min_m": 28.0,
+      "max_height_m": 58.0,
+      "min_height_m": 10.0,
+      "setback_m": 4.0
+    },
+    "output": {
+      "format": "ply",
+      "include_class": true,
+      "include_rgb": true
+    },
+    "roads": {
+      "angle_degrees": 0.0,
+      "model": "grid",
+      "organic_wander_m": 0.0,
+      "radial_count": 12,
+      "ring_spacing_m": 0.0,
+      "sidewalk_width_m": 3.0,
+      "spacing_m": 88.0,
+      "width_m": 8.0
+    },
+    "sampling": {
+      "building_spacing_m": 3.0,
+      "ground_spacing_m": 4.0,
+      "jitter_ratio": 0.12,
+      "mode": "surface",
+      "road_spacing_m": 3.0
+    },
+    "seed": 1217,
+    "terrain": {
+      "base_height_m": 0.0,
+      "height_noise_m": 0.8
+    },
+    "tile": {
+      "margin_m": 56.0,
+      "size_m": 256.0,
+      "x": 0,
+      "z": 0
+    },
+    "tiles": [],
+    "urban_fields": {
+      "center_x": 128.0,
+      "center_z": 128.0,
+      "city_radius_m": 380.0,
+      "density_bias": 0.08,
+      "enabled": true,
+      "green_bias": 0.0,
+      "industrial_bias": 0.0,
+      "noise_scale_m": 140.0
+    }
+  },
+  "point_count": 14999,
+  "road_models": [
+    "grid"
+  ],
+  "seed": 1217,
+  "supported_footprint_types": [
+    "rectangle",
+    "square",
+    "circle",
+    "slab",
+    "courtyard",
+    "l_shape",
+    "u_shape",
+    "t_shape"
+  ],
+  "tile": {
+    "bbox": {
+      "max_x": 256.0,
+      "max_z": 256.0,
+      "min_x": 0.0,
+      "min_z": 0.0
+    },
+    "x": 0,
+    "z": 0
+  }
+}

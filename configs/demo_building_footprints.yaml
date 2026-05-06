@@ -1,0 +1,58 @@
+# Mixed building footprints: rectangles, rotundas, slabs, courtyards, and winged forms.
+seed: 1204
+tile:
+  x: 0
+  z: 0
+  size_m: 256
+  margin_m: 56
+terrain:
+  base_height_m: 0
+  height_noise_m: 1.4
+urban_fields:
+  enabled: true
+  center_x: 128
+  center_z: 128
+  city_radius_m: 420
+  noise_scale_m: 160
+  density_bias: 0.04
+roads:
+  model: mixed
+  spacing_m: 86
+  width_m: 8
+  sidewalk_width_m: 2.5
+  radial_count: 12
+  ring_spacing_m: 72
+  organic_wander_m: 14
+buildings:
+  enabled: true
+  min_height_m: 7
+  max_height_m: 48
+  setback_m: 5
+  footprint_min_m: 18
+  footprint_max_m: 40
+  footprint:
+    model: mixed
+    weights:
+      rectangle: 0.20
+      square: 0.10
+      circle: 0.10
+      slab: 0.15
+      courtyard: 0.15
+      l_shape: 0.10
+      u_shape: 0.10
+      t_shape: 0.10
+    circle_segments: 28
+    courtyard_ratio: 0.42
+    wing_width_ratio: 0.34
+    min_part_width_m: 5
+    align_to_roads: true
+sampling:
+  mode: surface
+  ground_spacing_m: 4
+  road_spacing_m: 3
+  building_spacing_m: 3.5
+  jitter_ratio: 0.16
+output:
+  format: ply
+  include_rgb: true
+  include_class: true

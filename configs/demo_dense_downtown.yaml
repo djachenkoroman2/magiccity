@@ -1,0 +1,32 @@
+# Dense high-rise downtown: tight street grid, tall buildings, dense point sampling.
+seed: 101
+tile:
+  x: 0
+  z: 0
+  size_m: 256
+  margin_m: 48
+terrain:
+  base_height_m: 0
+  height_noise_m: 0.6
+roads:
+  model: grid
+  spacing_m: 48
+  width_m: 12
+  sidewalk_width_m: 4
+buildings:
+  enabled: true
+  min_height_m: 30
+  max_height_m: 95
+  setback_m: 4
+  footprint_min_m: 18
+  footprint_max_m: 34
+sampling:
+  mode: surface
+  ground_spacing_m: 2.5
+  road_spacing_m: 1.25
+  building_spacing_m: 1.5
+  jitter_ratio: 0.12
+output:
+  format: ply
+  include_rgb: true
+  include_class: true

@@ -1,0 +1,173 @@
+{
+  "biome_counts": {
+    "downtown": 11,
+    "industrial": 42,
+    "residential": 14,
+    "suburb": 14
+  },
+  "building_counts": {
+    "by_biome": {
+      "industrial": 7,
+      "residential": 3,
+      "suburb": 7
+    },
+    "by_footprint": {
+      "circle": 4,
+      "courtyard": 1,
+      "l_shape": 1,
+      "rectangle": 2,
+      "slab": 4,
+      "square": 2,
+      "t_shape": 1,
+      "u_shape": 2
+    },
+    "by_footprint_and_biome": {
+      "circle": {
+        "industrial": 2,
+        "residential": 1,
+        "suburb": 1
+      },
+      "courtyard": {
+        "suburb": 1
+      },
+      "l_shape": {
+        "industrial": 1
+      },
+      "rectangle": {
+        "industrial": 1,
+        "suburb": 1
+      },
+      "slab": {
+        "industrial": 2,
+        "residential": 1,
+        "suburb": 1
+      },
+      "square": {
+        "residential": 1,
+        "suburb": 1
+      },
+      "t_shape": {
+        "suburb": 1
+      },
+      "u_shape": {
+        "industrial": 1,
+        "suburb": 1
+      }
+    },
+    "total": 17
+  },
+  "class_counts": {
+    "building_facade": 715,
+    "building_roof": 111,
+    "ground": 1224,
+    "road": 588,
+    "sidewalk": 303
+  },
+  "class_mapping": {
+    "building_facade": 4,
+    "building_roof": 5,
+    "ground": 1,
+    "road": 2,
+    "sidewalk": 3
+  },
+  "config": {
+    "buildings": {
+      "enabled": true,
+      "footprint": {
+        "align_to_roads": true,
+        "circle_segments": 28,
+        "courtyard_ratio": 0.42,
+        "min_part_width_m": 5.0,
+        "model": "mixed",
+        "weights": {
+          "circle": 0.12,
+          "courtyard": 0.14,
+          "l_shape": 0.12,
+          "rectangle": 0.14,
+          "slab": 0.14,
+          "square": 0.12,
+          "t_shape": 0.11,
+          "u_shape": 0.11
+        },
+        "wing_width_ratio": 0.34
+      },
+      "footprint_max_m": 34.0,
+      "footprint_min_m": 14.0,
+      "max_height_m": 72.0,
+      "min_height_m": 7.0,
+      "setback_m": 5.0
+    },
+    "output": {
+      "format": "ply",
+      "include_class": true,
+      "include_rgb": true
+    },
+    "roads": {
+      "angle_degrees": 18.0,
+      "model": "mixed",
+      "organic_wander_m": 18.0,
+      "radial_count": 14,
+      "ring_spacing_m": 64.0,
+      "sidewalk_width_m": 2.5,
+      "spacing_m": 78.0,
+      "width_m": 8.0
+    },
+    "sampling": {
+      "building_spacing_m": 7.0,
+      "ground_spacing_m": 9.0,
+      "jitter_ratio": 0.18,
+      "mode": "surface",
+      "road_spacing_m": 7.0
+    },
+    "seed": 1001,
+    "terrain": {
+      "base_height_m": 0.0,
+      "height_noise_m": 2.2
+    },
+    "tile": {
+      "margin_m": 64.0,
+      "size_m": 384.0,
+      "x": 0,
+      "z": 0
+    },
+    "tiles": [],
+    "urban_fields": {
+      "center_x": 160.0,
+      "center_z": 160.0,
+      "city_radius_m": 250.0,
+      "density_bias": 0.04,
+      "enabled": true,
+      "green_bias": 0.02,
+      "industrial_bias": 0.08,
+      "noise_scale_m": 120.0
+    }
+  },
+  "point_count": 2941,
+  "road_models": [
+    "grid",
+    "linear",
+    "organic",
+    "radial_ring"
+  ],
+  "seed": 1001,
+  "supported_footprint_types": [
+    "rectangle",
+    "square",
+    "circle",
+    "slab",
+    "courtyard",
+    "l_shape",
+    "u_shape",
+    "t_shape"
+  ],
+  "tile": {
+    "bbox": {
+      "max_x": 384.0,
+      "max_z": 384.0,
+      "min_x": 0.0,
+      "min_z": 0.0
+    },
+    "x": 0,
+    "z": 0
+  }
+}

@@ -1,0 +1,228 @@
+{
+  "biome_counts": {
+    "downtown": 18,
+    "industrial": 3,
+    "residential": 60
+  },
+  "building_counts": {
+    "by_biome": {
+      "downtown": 6,
+      "residential": 25
+    },
+    "by_footprint": {
+      "circle": 5,
+      "rectangle": 5,
+      "slab": 11,
+      "square": 6,
+      "t_shape": 4
+    },
+    "by_footprint_and_biome": {
+      "circle": {
+        "residential": 5
+      },
+      "rectangle": {
+        "downtown": 1,
+        "residential": 4
+      },
+      "slab": {
+        "downtown": 4,
+        "residential": 7
+      },
+      "square": {
+        "residential": 6
+      },
+      "t_shape": {
+        "downtown": 1,
+        "residential": 3
+      }
+    },
+    "by_roof": {
+      "barrel": 8,
+      "cone": 5,
+      "dome": 10,
+      "flat": 8
+    },
+    "by_roof_and_biome": {
+      "barrel": {
+        "downtown": 1,
+        "residential": 7
+      },
+      "cone": {
+        "downtown": 1,
+        "residential": 4
+      },
+      "dome": {
+        "downtown": 2,
+        "residential": 8
+      },
+      "flat": {
+        "downtown": 2,
+        "residential": 6
+      }
+    },
+    "by_roof_and_footprint": {
+      "barrel": {
+        "circle": 1,
+        "rectangle": 1,
+        "slab": 3,
+        "t_shape": 3
+      },
+      "cone": {
+        "circle": 1,
+        "rectangle": 1,
+        "slab": 1,
+        "square": 2
+      },
+      "dome": {
+        "circle": 1,
+        "rectangle": 2,
+        "slab": 3,
+        "square": 4
+      },
+      "flat": {
+        "circle": 2,
+        "rectangle": 1,
+        "slab": 4,
+        "t_shape": 1
+      }
+    },
+    "total": 31
+  },
+  "class_counts": {
+    "building_facade": 3004,
+    "building_roof": 391,
+    "ground": 1555,
+    "road": 544,
+    "sidewalk": 294
+  },
+  "class_mapping": {
+    "building_facade": 4,
+    "building_roof": 5,
+    "ground": 1,
+    "road": 2,
+    "sidewalk": 3
+  },
+  "config": {
+    "buildings": {
+      "enabled": true,
+      "footprint": {
+        "align_to_roads": true,
+        "circle_segments": 32,
+        "courtyard_ratio": 0.45,
+        "min_part_width_m": 5.0,
+        "model": "mixed",
+        "weights": {
+          "circle": 0.28,
+          "rectangle": 0.18,
+          "slab": 0.24,
+          "square": 0.18,
+          "t_shape": 0.12
+        },
+        "wing_width_ratio": 0.34
+      },
+      "footprint_max_m": 34.0,
+      "footprint_min_m": 15.0,
+      "max_height_m": 42.0,
+      "min_height_m": 8.0,
+      "roof": {
+        "align_to_long_axis": true,
+        "dome_segments": 24,
+        "eave_overhang_m": 0.0,
+        "flat_slope_degrees": 1.0,
+        "mansard_break_ratio": 0.45,
+        "model": "mixed",
+        "pitch_degrees": 30.0,
+        "pitch_jitter_degrees": 4.0,
+        "ridge_height_ratio": 0.34,
+        "weights": {
+          "barrel": 0.28,
+          "cone": 0.28,
+          "dome": 0.34,
+          "flat": 0.1
+        }
+      },
+      "setback_m": 5.0
+    },
+    "output": {
+      "format": "ply",
+      "include_class": true,
+      "include_rgb": true
+    },
+    "roads": {
+      "angle_degrees": 0.0,
+      "model": "organic",
+      "organic_wander_m": 16.0,
+      "radial_count": 12,
+      "ring_spacing_m": 0.0,
+      "sidewalk_width_m": 2.5,
+      "spacing_m": 86.0,
+      "width_m": 8.0
+    },
+    "sampling": {
+      "building_spacing_m": 5.0,
+      "ground_spacing_m": 7.0,
+      "jitter_ratio": 0.12,
+      "mode": "surface",
+      "road_spacing_m": 5.0
+    },
+    "seed": 1327,
+    "terrain": {
+      "base_height_m": 0.0,
+      "height_noise_m": 0.8
+    },
+    "tile": {
+      "margin_m": 48.0,
+      "size_m": 320.0,
+      "x": 0,
+      "z": 0
+    },
+    "tiles": [],
+    "urban_fields": {
+      "center_x": 160.0,
+      "center_z": 160.0,
+      "city_radius_m": 360.0,
+      "density_bias": 0.03,
+      "enabled": true,
+      "green_bias": 0.0,
+      "industrial_bias": 0.0,
+      "noise_scale_m": 150.0
+    }
+  },
+  "point_count": 5788,
+  "road_models": [
+    "organic"
+  ],
+  "seed": 1327,
+  "supported_footprint_types": [
+    "rectangle",
+    "square",
+    "circle",
+    "slab",
+    "courtyard",
+    "l_shape",
+    "u_shape",
+    "t_shape"
+  ],
+  "supported_roof_types": [
+    "flat",
+    "shed",
+    "gable",
+    "hip",
+    "half_hip",
+    "pyramid",
+    "mansard",
+    "dome",
+    "barrel",
+    "cone"
+  ],
+  "tile": {
+    "bbox": {
+      "max_x": 320.0,
+      "max_z": 320.0,
+      "min_x": 0.0,
+      "min_z": 0.0
+    },
+    "x": 0,
+    "z": 0
+  }
+}

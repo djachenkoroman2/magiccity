@@ -1,0 +1,32 @@
+# Roads-only scene: isolates terrain, road, and sidewalk classes with buildings disabled.
+seed: 303
+tile:
+  x: 0
+  z: 1
+  size_m: 192
+  margin_m: 24
+terrain:
+  base_height_m: -1
+  height_noise_m: 1
+roads:
+  model: grid
+  spacing_m: 40
+  width_m: 14
+  sidewalk_width_m: 5
+buildings:
+  enabled: false
+  min_height_m: 8
+  max_height_m: 20
+  setback_m: 6
+  footprint_min_m: 10
+  footprint_max_m: 20
+sampling:
+  mode: surface
+  ground_spacing_m: 1.75
+  road_spacing_m: 1
+  building_spacing_m: 2
+  jitter_ratio: 0.08
+output:
+  format: ply
+  include_rgb: true
+  include_class: true

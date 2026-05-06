@@ -1,0 +1,63 @@
+# Curved and radial roofs: domes, barrels, cones, plus flat reference roofs.
+seed: 1327
+tile:
+  x: 0
+  z: 0
+  size_m: 320
+  margin_m: 48
+terrain:
+  base_height_m: 0
+  height_noise_m: 0.8
+urban_fields:
+  enabled: true
+  center_x: 160
+  center_z: 160
+  city_radius_m: 360
+  noise_scale_m: 150
+  density_bias: 0.03
+roads:
+  model: organic
+  spacing_m: 86
+  width_m: 8
+  sidewalk_width_m: 2.5
+  organic_wander_m: 16
+buildings:
+  enabled: true
+  min_height_m: 8
+  max_height_m: 42
+  setback_m: 5
+  footprint_min_m: 15
+  footprint_max_m: 34
+  footprint:
+    model: mixed
+    weights:
+      circle: 0.28
+      square: 0.18
+      slab: 0.24
+      rectangle: 0.18
+      t_shape: 0.12
+    circle_segments: 32
+    wing_width_ratio: 0.34
+    min_part_width_m: 5
+  roof:
+    model: mixed
+    weights:
+      dome: 0.34
+      barrel: 0.28
+      cone: 0.28
+      flat: 0.10
+    pitch_degrees: 30
+    pitch_jitter_degrees: 4
+    flat_slope_degrees: 1
+    ridge_height_ratio: 0.34
+    dome_segments: 24
+sampling:
+  mode: surface
+  ground_spacing_m: 7
+  road_spacing_m: 5
+  building_spacing_m: 5
+  jitter_ratio: 0.12
+output:
+  format: ply
+  include_rgb: true
+  include_class: true
