@@ -108,10 +108,13 @@ Facade sampling:
 Каждый footprint проверяется перед принятием здания:
 
 - bbox должен пересекать рабочую область тайла;
+- при `parcels.enabled: true` bbox и representative points должны лежать внутри `parcel.inner`;
 - representative points по bbox, частям и границе должны быть дальше от road centerline, чем `roads.width_m / 2 + roads.sidewalk_width_m + effective_setback`;
 - пересечения зданий фильтруются консервативно по expanded bbox.
 
 Эта модель быстрее и проще полноценного polygon collision. Она может отбрасывать некоторые допустимые здания, но не должна ставить очевидные здания на дороги или тротуары.
+
+Parcel mode использует прямоугольную MVP-аппроксимацию кварталов и участков поверх текущих road primitives. Это не полноценная GIS-полигонализация дорожного графа, зато каждый принятый building получает `parcel_id`, а metadata показывает агрегаты по blocks/parcels.
 
 ## Формы
 

@@ -192,6 +192,21 @@ class UrbanFieldsConfig:
 
 
 @dataclass(frozen=True)
+class ParcelsConfig:
+    enabled: bool = False
+    block_size_m: float = 96.0
+    block_jitter_m: float = 8.0
+    min_block_size_m: float = 32.0
+    min_parcel_width_m: float = 14.0
+    max_parcel_width_m: float = 42.0
+    min_parcel_depth_m: float = 18.0
+    max_parcel_depth_m: float = 56.0
+    parcel_setback_m: float = 2.0
+    split_jitter_ratio: float = 0.18
+    max_subdivision_depth: int = 3
+
+
+@dataclass(frozen=True)
 class CityGenConfig:
     seed: int
     tile: TileConfig = TileConfig()
@@ -201,6 +216,7 @@ class CityGenConfig:
     sampling: SamplingConfig = SamplingConfig()
     output: OutputConfig = OutputConfig()
     urban_fields: UrbanFieldsConfig = UrbanFieldsConfig()
+    parcels: ParcelsConfig = ParcelsConfig()
     tiles: tuple[TileConfig, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
@@ -232,6 +248,7 @@ def load_config(path: str | Path) -> CityGenConfig:
         sampling=_sampling_config(_section(raw, "sampling")),
         output=_output_config(_section(raw, "output")),
         urban_fields=_urban_fields_config(_section(raw, "urban_fields")),
+        parcels=_parcels_config(_section(raw, "parcels")),
         tiles=tiles,
     )
     _validate(cfg)
@@ -457,6 +474,40 @@ def _urban_fields_config(raw: dict[str, Any]) -> UrbanFieldsConfig:
     )
 
 
+def _parcels_config(raw: dict[str, Any]) -> ParcelsConfig:
+    supported = {
+        "enabled",
+        "block_size_m",
+        "block_jitter_m",
+        "min_block_size_m",
+        "min_parcel_width_m",
+        "max_parcel_width_m",
+        "min_parcel_depth_m",
+        "max_parcel_depth_m",
+        "parcel_setback_m",
+        "split_jitter_ratio",
+        "max_subdivision_depth",
+    }
+    for key in raw:
+        if key not in supported:
+            fields = ", ".join(sorted(supported))
+            raise ConfigError(f"Unsupported parcels.{key}. Supported fields: {fields}.")
+    defaults = ParcelsConfig()
+    return ParcelsConfig(
+        enabled=_bool(raw, "enabled", defaults.enabled),
+        block_size_m=_float(raw, "block_size_m", defaults.block_size_m),
+        block_jitter_m=_float(raw, "block_jitter_m", defaults.block_jitter_m),
+        min_block_size_m=_float(raw, "min_block_size_m", defaults.min_block_size_m),
+        min_parcel_width_m=_float(raw, "min_parcel_width_m", defaults.min_parcel_width_m),
+        max_parcel_width_m=_float(raw, "max_parcel_width_m", defaults.max_parcel_width_m),
+        min_parcel_depth_m=_float(raw, "min_parcel_depth_m", defaults.min_parcel_depth_m),
+        max_parcel_depth_m=_float(raw, "max_parcel_depth_m", defaults.max_parcel_depth_m),
+        parcel_setback_m=_float(raw, "parcel_setback_m", defaults.parcel_setback_m),
+        split_jitter_ratio=_float(raw, "split_jitter_ratio", defaults.split_jitter_ratio),
+        max_subdivision_depth=_int(raw, "max_subdivision_depth", defaults.max_subdivision_depth),
+    )
+
+
 def _validate(cfg: CityGenConfig) -> None:
     for tile in (cfg.tile, *cfg.tiles):
         if tile.size_m <= 0:
@@ -480,6 +531,12 @@ def _validate(cfg: CityGenConfig) -> None:
         ("sampling.building_spacing_m", cfg.sampling.building_spacing_m),
         ("urban_fields.city_radius_m", cfg.urban_fields.city_radius_m),
         ("urban_fields.noise_scale_m", cfg.urban_fields.noise_scale_m),
+        ("parcels.block_size_m", cfg.parcels.block_size_m),
+        ("parcels.min_block_size_m", cfg.parcels.min_block_size_m),
+        ("parcels.min_parcel_width_m", cfg.parcels.min_parcel_width_m),
+        ("parcels.max_parcel_width_m", cfg.parcels.max_parcel_width_m),
+        ("parcels.min_parcel_depth_m", cfg.parcels.min_parcel_depth_m),
+        ("parcels.max_parcel_depth_m", cfg.parcels.max_parcel_depth_m),
     ]
     for name, value in positive_fields:
         if value <= 0:
@@ -560,6 +617,20 @@ def _validate(cfg: CityGenConfig) -> None:
         raise ConfigError("Road width plus sidewalks must be smaller than road spacing.")
     if not 0 <= cfg.sampling.jitter_ratio <= 0.45:
         raise ConfigError("sampling.jitter_ratio must be between 0 and 0.45.")
+    if cfg.parcels.block_jitter_m < 0:
+        raise ConfigError("parcels.block_jitter_m must be >= 0.")
+    if cfg.parcels.parcel_setback_m < 0:
+        raise ConfigError("parcels.parcel_setback_m must be >= 0.")
+    if not 0 <= cfg.parcels.split_jitter_ratio <= 0.45:
+        raise ConfigError("parcels.split_jitter_ratio must be between 0 and 0.45.")
+    if cfg.parcels.max_subdivision_depth < 0:
+        raise ConfigError("parcels.max_subdivision_depth must be >= 0.")
+    if cfg.parcels.max_parcel_width_m < cfg.parcels.min_parcel_width_m:
+        raise ConfigError("parcels.max_parcel_width_m must be >= parcels.min_parcel_width_m.")
+    if cfg.parcels.max_parcel_depth_m < cfg.parcels.min_parcel_depth_m:
+        raise ConfigError("parcels.max_parcel_depth_m must be >= parcels.min_parcel_depth_m.")
+    if cfg.parcels.block_size_m < cfg.parcels.min_block_size_m:
+        raise ConfigError("parcels.block_size_m must be >= parcels.min_block_size_m.")
 
 
 def _int_range(raw: dict[str, Any], key: str) -> tuple[int, int]:

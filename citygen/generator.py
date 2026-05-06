@@ -8,6 +8,7 @@ from .config import CityGenConfig
 from .fields import sample_urban_fields
 from .footprints import build_footprint, select_footprint_kind
 from .geometry import BBox, Building, Rect, stable_rng, terrain_height, tile_bbox
+from .parcels import Block, Parcel, build_blocks_and_parcels, parcel_counts
 from .roads import RoadNetworkLike, build_road_network
 from .roofs import build_roof, select_roof_kind
 
@@ -20,13 +21,21 @@ class Scene:
     buildings: list[Building]
     biome_counts: dict[str, int]
     road_models: tuple[str, ...]
+    blocks: tuple[Block, ...]
+    parcels: tuple[Parcel, ...]
+    parcel_counts: dict
 
 
 def generate_scene(config: CityGenConfig) -> Scene:
     bbox = tile_bbox(config.tile.x, config.tile.y, config.tile.size_m)
     work_bbox = bbox.expand(config.tile.margin_m)
     road_network = build_road_network(config, work_bbox)
-    buildings = _generate_buildings(config, work_bbox, road_network) if config.buildings.enabled else []
+    blocks, parcels = (
+        build_blocks_and_parcels(config, work_bbox, road_network)
+        if config.parcels.enabled
+        else ((), ())
+    )
+    buildings = _build_scene_buildings(config, work_bbox, road_network, parcels)
     biome_step = max(32.0, config.tile.size_m / 8.0)
     biome_counts = sample_biome_counts(config.seed, config.urban_fields, bbox, biome_step)
     return Scene(
@@ -36,11 +45,27 @@ def generate_scene(config: CityGenConfig) -> Scene:
         buildings=buildings,
         biome_counts=biome_counts,
         road_models=road_network.effective_models,
+        blocks=blocks,
+        parcels=parcels,
+        parcel_counts=parcel_counts(blocks, parcels, buildings),
     )
 
 
 def surface_kind(config: CityGenConfig, scene: Scene, x: float, y: float) -> str:
     return scene.road_network.surface_kind(config, x, y)
+
+
+def _build_scene_buildings(
+    config: CityGenConfig,
+    work_bbox: BBox,
+    road_network: RoadNetworkLike,
+    parcels: tuple[Parcel, ...],
+) -> list[Building]:
+    if not config.buildings.enabled:
+        return []
+    if config.parcels.enabled:
+        return _generate_buildings_from_parcels(config, parcels, road_network)
+    return _generate_buildings(config, work_bbox, road_network)
 
 
 def _generate_buildings(
@@ -101,28 +126,109 @@ def _generate_buildings(
             if _overlaps_existing(result, footprint, min(setback, 4.0)):
                 continue
 
-            min_height = buildings_cfg.min_height_m * params.height_min_multiplier
-            max_height = buildings_cfg.max_height_m * params.height_max_multiplier
-            if config.urban_fields.enabled:
-                max_height *= 0.72 + fields.height_potential * 0.72
-            max_height = max(min_height, max_height)
-            height = rng.uniform(min_height, max_height)
-            base_z = terrain_height(config.seed, config.terrain, footprint.center_x, footprint.center_y)
-            roof_kind = select_roof_kind(buildings_cfg.roof, rng)
-            roof = build_roof(roof_kind, footprint, base_z, base_z + height, buildings_cfg.roof, rng)
-            result.append(
-                Building(
-                    id=f"building_{ix}_{iy}",
-                    footprint=footprint,
-                    height_m=height,
-                    base_z=base_z,
-                    biome=biome,
-                    roof=roof,
-                )
-            )
+            result.append(_build_building(config, f"building_{ix}_{iy}", footprint, biome, fields, params, rng))
 
     result.sort(key=lambda item: item.id)
     return result
+
+
+def _generate_buildings_from_parcels(
+    config: CityGenConfig,
+    parcels: tuple[Parcel, ...],
+    road_network: RoadNetworkLike,
+) -> list[Building]:
+    buildings_cfg = config.buildings
+    result: list[Building] = []
+    for parcel in parcels:
+        if not parcel.buildable:
+            continue
+        rng = stable_rng(config.seed, "parcel-building", parcel.id)
+        biome = parcel.biome
+        params = biome_params(biome)
+        fields = sample_urban_fields(config.seed, config.urban_fields, parcel.center_x, parcel.center_y)
+        probability = min(0.98, params.build_probability * 1.08)
+        if config.urban_fields.enabled:
+            probability = min(0.98, probability * (0.74 + fields.density * 0.52))
+        if rng.random() > probability:
+            continue
+
+        setback = max(0.5, buildings_cfg.setback_m * params.setback_scale * 0.35)
+        inner = _inset_rect(parcel.inner, setback)
+        if inner is None:
+            continue
+        max_fit = min(inner.width, inner.depth)
+        min_fp = max(4.0, buildings_cfg.footprint_min_m * params.footprint_scale * 0.82)
+        max_fp = min(max_fit, buildings_cfg.footprint_max_m * params.footprint_scale)
+        if max_fp < min_fp:
+            min_fp = max(4.0, min(max_fp, max_fit))
+        if max_fp < 4.0 or min_fp > max_fp:
+            continue
+
+        footprint_kind = select_footprint_kind(buildings_cfg.footprint, rng)
+        footprint = build_footprint(
+            footprint_kind,
+            inner.center_x,
+            inner.center_y,
+            min_fp,
+            max_fp,
+            buildings_cfg.footprint,
+            rng,
+        )
+        if not _footprint_within_rect(footprint, inner):
+            continue
+
+        clearance = config.roads.width_m * 0.5 + config.roads.sidewalk_width_m + max(0.5, setback)
+        if not _footprint_is_clear(road_network, footprint, clearance):
+            continue
+        if _overlaps_existing(result, footprint, min(setback, 4.0)):
+            continue
+
+        result.append(
+            _build_building(
+                config,
+                f"building_{parcel.id}",
+                footprint,
+                biome,
+                fields,
+                params,
+                rng,
+                parcel_id=parcel.id,
+            )
+        )
+
+    result.sort(key=lambda item: item.id)
+    return result
+
+
+def _build_building(
+    config: CityGenConfig,
+    building_id: str,
+    footprint,
+    biome: str,
+    fields,
+    params,
+    rng,
+    parcel_id: str | None = None,
+) -> Building:
+    buildings_cfg = config.buildings
+    min_height = buildings_cfg.min_height_m * params.height_min_multiplier
+    max_height = buildings_cfg.max_height_m * params.height_max_multiplier
+    if config.urban_fields.enabled:
+        max_height *= 0.72 + fields.height_potential * 0.72
+    max_height = max(min_height, max_height)
+    height = rng.uniform(min_height, max_height)
+    base_z = terrain_height(config.seed, config.terrain, footprint.center_x, footprint.center_y)
+    roof_kind = select_roof_kind(buildings_cfg.roof, rng)
+    roof = build_roof(roof_kind, footprint, base_z, base_z + height, buildings_cfg.roof, rng)
+    return Building(
+        id=building_id,
+        footprint=footprint,
+        height_m=height,
+        base_z=base_z,
+        biome=biome,
+        roof=roof,
+        parcel_id=parcel_id,
+    )
 
 
 def _footprint_is_clear(road_network: RoadNetworkLike, footprint, clearance_m: float) -> bool:
@@ -139,6 +245,27 @@ def _overlaps_existing(buildings: list[Building], footprint, clearance: float) -
     # This remains deliberately conservative: a bbox-level post-filter keeps complex
     # footprints from visibly intersecting without pulling in a full geometry engine.
     return any(_rects_overlap(existing.footprint.bbox, expanded) for existing in buildings)
+
+
+def _footprint_within_rect(footprint, rect: Rect) -> bool:
+    bbox = footprint.bbox
+    if (
+        bbox.min_x < rect.min_x
+        or bbox.max_x > rect.max_x
+        or bbox.min_y < rect.min_y
+        or bbox.max_y > rect.max_y
+    ):
+        return False
+    return all(rect.contains_xy(x, y) for x, y in footprint.clearance_sample_points())
+
+
+def _inset_rect(rect: Rect, inset: float) -> Rect | None:
+    if inset <= 0:
+        return rect
+    inner = Rect(rect.min_x + inset, rect.min_y + inset, rect.max_x - inset, rect.max_y - inset)
+    if inner.width <= 0 or inner.depth <= 0:
+        return None
+    return inner
 
 
 def _rects_overlap(a: Rect, b: Rect) -> bool:

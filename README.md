@@ -2,7 +2,7 @@
 
 MagicCity — MVP CLI-генератора синтетической городской застройки в формате облака точек.
 
-Проект строит простой процедурный городской тайл: рельеф, разные модели уличной сети, тротуары, здания с несколькими типами footprint и крыш, глобальные urban fields, городские биомы, точки поверхностей, семантические классы, опциональные RGB-цвета и экспорт в ASCII PLY. Это рабочий MVP пайплайна от YAML-конфига до готового `.ply`, а не полноценный симулятор LiDAR.
+Проект строит простой процедурный городской тайл: рельеф, разные модели уличной сети, тротуары, опциональные blocks/parcels, здания с несколькими типами footprint и крыш, глобальные urban fields, городские биомы, точки поверхностей, семантические классы, опциональные RGB-цвета и экспорт в ASCII PLY. Это рабочий MVP пайплайна от YAML-конфига до готового `.ply`, а не полноценный симулятор LiDAR.
 
 ## Что Генерируется
 
@@ -12,6 +12,7 @@ MagicCity — MVP CLI-генератора синтетической город
 - процедурный рельеф по `seed`, `terrain.base_height_m` и `terrain.height_noise_m`;
 - road network по одной из поддерживаемых моделей: `grid`, `radial_ring`, `radial`, `linear`, `organic`, `mixed`, `free`;
 - зоны тротуаров вокруг дорог;
+- опциональное прямоугольное block/parcel subdivision для размещения зданий внутри земельных участков;
 - опциональные здания с footprint-формами `rectangle`, `square`, `circle`, `slab`, `courtyard`, `l_shape`, `u_shape`, `t_shape`;
 - roof geometry: `flat`, `shed`, `gable`, `hip`, `half_hip`, `pyramid`, `mansard`, `dome`, `barrel`, `cone`;
 - urban fields и biome map, влияющие на дороги и здания;
@@ -43,6 +44,7 @@ MagicCity — MVP CLI-генератора синтетической город
 - классы `ground`, `road`, `sidewalk`, `building_facade`, `building_roof`;
 - процедурный шум высоты рельефа;
 - процедурные здания с прямоугольными, круговыми, линейными, периметральными и составными footprints;
+- опциональное размещение зданий через parcels с агрегированной статистикой blocks/parcels в metadata;
 - процедурные крыши: плоские, скатные, мансардные, купольные, арочные и конические;
 - sampling крыш и фасадов;
 - surface sampling земли, дорог и тротуаров;
@@ -203,6 +205,7 @@ uv run citygen --config configs/demo_multi_tile.yaml --out outputs/multi_tile
 | `configs/demo_organic.yaml` | Органические wavy streets, зависящие от рельефа. |
 | `configs/demo_mixed_biomes.yaml` | `mixed` road model, urban fields и несколько биомов в одном тайле. |
 | `configs/demo_universal_showcase.yaml` | Большой showcase-тайл: mixed roads, urban fields, биомы, mixed footprints и mixed roofs. |
+| `configs/demo_parcels.yaml` | Parcel subdivision: прямоугольные blocks/parcels и здания, привязанные к участкам. |
 | `configs/demo_building_footprints.yaml` | Несколько типов building footprint в одном тайле. |
 | `configs/demo_courtyard_blocks.yaml` | Периметральные здания с внутренними дворами. |
 | `configs/demo_building_roofs.yaml` | Все поддержанные типы roof geometry в одном тайле. |
@@ -225,6 +228,7 @@ uv run citygen --config configs/demo_linear.yaml --out outputs/demo_linear.ply
 uv run citygen --config configs/demo_organic.yaml --out outputs/demo_organic.ply
 uv run citygen --config configs/demo_mixed_biomes.yaml --out outputs/demo_mixed_biomes.ply
 uv run citygen --config configs/demo_universal_showcase.yaml --out outputs/demo_universal_showcase.ply
+uv run citygen --config configs/demo_parcels.yaml --out outputs/demo_parcels.ply
 uv run citygen --config configs/demo_building_footprints.yaml --out outputs/demo_building_footprints.ply
 uv run citygen --config configs/demo_courtyard_blocks.yaml --out outputs/demo_courtyard_blocks.ply
 uv run citygen --config configs/demo_building_roofs.yaml --out outputs/demo_building_roofs.ply
@@ -299,6 +303,18 @@ buildings:
     mansard_break_ratio: 0.45
     dome_segments: 16
     align_to_long_axis: true
+parcels:
+  enabled: false
+  block_size_m: 96
+  block_jitter_m: 8
+  min_block_size_m: 32
+  min_parcel_width_m: 14
+  max_parcel_width_m: 42
+  min_parcel_depth_m: 18
+  max_parcel_depth_m: 56
+  parcel_setback_m: 2
+  split_jitter_ratio: 0.18
+  max_subdivision_depth: 3
 sampling:
   mode: surface
   ground_spacing_m: 2.0
@@ -495,7 +511,7 @@ buildings:
 | `footprint.model` | `rectangle` | Тип контура здания: `rectangle`, `square`, `circle`, `slab`, `courtyard`, `l_shape`, `u_shape`, `t_shape`, `mixed`. |
 | `roof.model` | `flat` | Тип крыши: `flat`, `shed`, `gable`, `hip`, `half_hip`, `pyramid`, `mansard`, `dome`, `barrel`, `cone`, `mixed`. |
 
-Здания размещаются по детерминированным candidate centers и отбрасываются, если footprint попадает в road/sidewalk clearance или пересекается с другим зданием. Каждое здание имеет:
+По умолчанию здания размещаются по детерминированным candidate centers и отбрасываются, если footprint попадает в road/sidewalk clearance или пересекается с другим зданием. При `parcels.enabled: true` candidate centers заменяются явным проходом по parcels, а footprint дополнительно должен помещаться в `parcel.inner`. Каждое здание имеет:
 
 - footprint выбранного типа;
 - base height по рельефу в центре footprint;
@@ -514,6 +530,27 @@ buildings.footprint_max_m >= buildings.footprint_min_m
 ```
 
 Если здания не появляются, чаще всего не хватает buildable area между дорогами. Увеличь `roads.spacing_m` или уменьши `roads.width_m`, `roads.sidewalk_width_m`, `buildings.setback_m`, `buildings.footprint_min_m`.
+
+### `parcels`
+
+```yaml
+parcels:
+  enabled: true
+  block_size_m: 96
+  block_jitter_m: 8
+  min_block_size_m: 32
+  min_parcel_width_m: 14
+  max_parcel_width_m: 42
+  min_parcel_depth_m: 18
+  max_parcel_depth_m: 56
+  parcel_setback_m: 2
+  split_jitter_ratio: 0.18
+  max_subdivision_depth: 3
+```
+
+Когда `enabled: true`, генератор строит прямоугольные candidate blocks в рабочем bbox, делит их на parcels и размещает здания внутри `parcel.inner`. Footprint здания должен помещаться в свой parcel, проходить road/sidewalk clearance и не пересекаться с уже принятыми зданиями.
+
+Это MVP-аппроксимация поверх текущих road primitives: она не пытается построить идеальные GIS-полигоны кварталов для organic/free/radial дорог, но дает явный слой участков, детерминированную привязку `building.parcel_id` и `parcel_counts` в metadata.
 
 ### `sampling`
 
@@ -617,6 +654,7 @@ Metadata содержит:
 - `road_models`;
 - `biome_counts`;
 - `building_counts` с распределением по footprint type и биомам;
+- `parcel_counts` с blocks/parcels/buildable/occupied статистикой;
 - `supported_footprint_types`;
 - `building_counts.by_roof` с распределением зданий по roof type;
 - `supported_roof_types`;

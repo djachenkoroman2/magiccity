@@ -1,0 +1,224 @@
+Ты senior Python-инженер и архитектор процедурных генераторов городских point clouds.
+
+В репозитории есть рабочий MVP `citygen`: CLI на Python, YAML-конфиги, детерминированный `seed`, тайлы, road models, urban fields, биомы, разные building footprints, разные roof geometry, surface sampling, ASCII PLY export и metadata JSON. Координатная конвенция проекта: горизонтальная плоскость `x/y`, высота `z`. Справочники: `README.md`, `configs/README.md`, `doc/biomes.md`, `doc/building_footprints.md`, `doc/building_roofs.md`.
+
+Нужно реализовать следующий этап: разделить крупные городские блоки, то есть кварталы между улицами, на более мелкие земельные участки `parcels`, а здания размещать внутри этих parcels. Не останавливайся на описании подхода: внеси рабочие изменения в код, YAML-конфиги, документацию и тесты.
+
+## Главная цель
+
+`citygen` должен получить явный слой parcel subdivision:
+
+- road network задает недоступные зоны дорог и тротуаров;
+- оставшееся buildable пространство внутри тайла/рабочего bbox разбивается на кварталы или block-like области;
+- каждый квартал делится на несколько parcels;
+- здания выбирают parcel и размещаются внутри него;
+- footprint здания не должен выходить за границы своего parcel;
+- metadata должна показывать статистику по blocks/parcels/buildings per parcel.
+
+Важно: текущие дороги в MVP представлены road primitives и distance-based классификацией, а не полноценным топологическим графом улиц. Поэтому не обещай идеальную GIS-полигонализацию всех дорожных моделей. Для этого этапа достаточно надежного MVP-подхода, который работает с текущими road primitives, сохраняет детерминированность и заметно улучшает размещение зданий.
+
+## Термины
+
+- `Block` или квартал: крупная buildable область между дорогами. В MVP это может быть прямоугольная или bbox-подобная область, очищенная от road/sidewalk clearance.
+- `Parcel`: меньший земельный участок внутри block. У parcel есть границы в плоскости `x/y`, площадь, центр, optional frontage/road distance и признак занятости зданием.
+- `Building footprint`: геометрия здания, которая должна помещаться внутри выбранного parcel с учетом setback.
+
+## Обязательные принципы
+
+1. Сохрани обратную совместимость:
+   - `configs/mvp.yaml` должен запускаться;
+   - существующие `demo_*.yaml` должны продолжить работать;
+   - если новая секция parcel config отсутствует, поведение должно оставаться совместимым или использовать безопасные defaults;
+   - старые настройки `buildings.footprint_min_m`, `buildings.footprint_max_m`, `buildings.setback_m` должны продолжить влиять на результат.
+
+2. Сохрани детерминированность:
+   - одинаковый seed и одинаковый config дают одинаковые blocks, parcels, здания, точки и metadata;
+   - не используй недетерминированное глобальное состояние `random`;
+   - используй существующий stable hash-based RNG от `seed`, tile coordinates, block id, parcel id, building id и namespace.
+
+3. Уважай текущую координатную систему:
+   - горизонтальная плоскость: `x/y`;
+   - высота: `z`;
+   - tile bbox и parcel bbox должны использовать `min_x/min_y/max_x/max_y`;
+   - PLY остается `x y z`, где `z` — высота.
+
+4. Не добавляй тяжелые зависимости без необходимости:
+   - для MVP можно реализовать subdivision через прямоугольные blocks/parcels и conservative geometry checks;
+   - не подтягивай Shapely/GIS stack, если задачу можно решить компактными примитивами;
+   - если зависимость все-таки нужна, обоснуй ее и добавь минимально.
+
+5. Не ломай point cloud модель:
+   - semantic classes `ground`, `road`, `sidewalk`, `building_facade`, `building_roof` должны продолжить работать;
+   - RGB/class output должен уважать `output.include_rgb` и `output.include_class`;
+   - PLY должен оставаться ASCII PLY;
+   - metadata JSON можно расширять, но не удаляй существующие поля.
+
+## MVP-подход к blocks и parcels
+
+Выбери реализацию, которая хорошо ложится на текущий код. Один разумный вариант:
+
+1. Построить регулярные или road-aligned candidate blocks в `work_bbox`.
+2. Отбрасывать block, если он слишком мал или почти полностью занят road/sidewalk clearance.
+3. Делить block на parcels:
+   - по длинной оси;
+   - рекурсивно;
+   - или через rows/columns с jitter;
+   - но детерминированно.
+4. Для каждого parcel вычислять:
+   - `id`;
+   - `bbox`;
+   - `center_x`, `center_y`;
+   - `width`, `depth`, `area`;
+   - `biome`;
+   - `road_distance` или approximate frontage, если это недорого;
+   - buildable inner rect после parcel setback.
+5. Генерация зданий должна идти через parcels:
+   - выбрать или пройти parcels детерминированно;
+   - применить biome probability и urban fields;
+   - подобрать footprint size так, чтобы он помещался в parcel inner rect;
+   - если выбранный footprint type не помещается, уменьшить размер или детерминированно пропустить parcel;
+   - здание не должно пересекать соседний parcel и не должно попадать в road/sidewalk clearance.
+
+Если для organic/free/radial roads невозможно получить идеальные кварталы без полноценного graph polygonization, используй conservative rectangular parcels и road clearance checks. Главное — здания должны быть явно привязаны к parcel и не выходить за него.
+
+## Новая YAML-настройка
+
+Добавь опциональную секцию, например:
+
+```yaml
+parcels:
+  enabled: true
+  block_size_m: 96
+  block_jitter_m: 8
+  min_block_size_m: 32
+  min_parcel_width_m: 14
+  max_parcel_width_m: 42
+  min_parcel_depth_m: 18
+  max_parcel_depth_m: 56
+  parcel_setback_m: 2
+  split_jitter_ratio: 0.18
+  max_subdivision_depth: 3
+```
+
+Требования:
+
+- `parcels` должна быть опциональной;
+- `enabled` должен позволять быстро включать/выключать новый слой;
+- defaults должны быть безопасными;
+- все размеры должны валидироваться;
+- неизвестные или некорректные значения должны давать понятные `ConfigError`;
+- если `parcels.enabled: false`, генерация зданий должна работать старым способом или максимально близко к нему;
+- если `parcels.enabled: true`, здания должны размещаться через parcels.
+
+Можно выбрать другой набор параметров, если он лучше подходит к существующей архитектуре. Но параметры должны быть документированы.
+
+## Изменения в коде
+
+Ожидаемые направления изменений:
+
+- добавить dataclass/config для parcels в `citygen/config.py`;
+- добавить модуль вроде `citygen/parcels.py` или близкий по смыслу;
+- добавить структуры `Block` и `Parcel`;
+- расширить `Scene`, чтобы она могла хранить blocks/parcels или хотя бы parcel statistics;
+- изменить `_generate_buildings()` так, чтобы при `parcels.enabled: true` здания создавались из parcels;
+- сохранить текущую генерацию как fallback;
+- расширить metadata в `citygen/export.py`;
+- обновить README/config docs;
+- добавить demo config, например `configs/demo_parcels.yaml`;
+- добавить тесты.
+
+## Metadata
+
+Расширь metadata JSON, например:
+
+```json
+"parcel_counts": {
+  "blocks": 42,
+  "parcels": 180,
+  "buildable_parcels": 123,
+  "occupied_parcels": 64,
+  "by_biome": {
+    "downtown": 40,
+    "residential": 80,
+    "industrial": 35,
+    "suburb": 25
+  }
+}
+```
+
+Можно добавить:
+
+- `average_parcel_area_m2`;
+- `average_parcel_width_m`;
+- `average_parcel_depth_m`;
+- `buildings_with_parcel_id`;
+- `building_counts.by_parcel_biome`;
+- `supported_parcel_model`, если появится несколько способов subdivision.
+
+Не нужно записывать полный список всех parcel polygons в metadata, если это сделает файл слишком большим. Достаточно агрегированной статистики.
+
+## Тесты
+
+Добавь или обнови unit tests:
+
+1. Config validation:
+   - минимальный config работает;
+   - `parcels.enabled: true` читается;
+   - отрицательные/нулевые размеры дают `ConfigError`.
+
+2. Детерминированность:
+   - один и тот же seed дает одинаковые parcels и здания;
+   - разные seed или параметры дают отличающийся результат.
+
+3. Геометрические инварианты:
+   - каждый parcel имеет положительный width/depth/area;
+   - building footprint при `parcels.enabled: true` лежит внутри своего parcel или его buildable inner rect;
+   - building footprint не попадает в road/sidewalk clearance;
+   - buildings не пересекаются между собой.
+
+4. Export/metadata:
+   - metadata содержит parcel statistics;
+   - PLY still writes;
+   - классы точек не исчезают.
+
+5. CLI smoke:
+   - `uv run citygen --config configs/demo_parcels.yaml --out outputs/demo_parcels.ply` успешно создает PLY и metadata.
+
+## Документация и demo
+
+Добавь:
+
+- `configs/demo_parcels.yaml`: конфиг, где parcels явно включены и видны через metadata;
+- описание секции `parcels` в `configs/README.md`;
+- короткую запись в таблице demo configs в `README.md` и `configs/README.md`;
+- если есть отдельные docs по footprints/buildings, добавь короткое объяснение, что здания теперь могут размещаться внутри parcels.
+
+## Проверка
+
+Минимально выполни:
+
+```bash
+uv run python -m unittest discover -s tests
+uv run citygen --config configs/mvp.yaml --out outputs/mvp_tile.ply
+uv run citygen --config configs/demo_parcels.yaml --out outputs/demo_parcels.ply
+```
+
+После запуска проверь metadata `outputs/demo_parcels.metadata.json`:
+
+- `parcel_counts.blocks > 0`;
+- `parcel_counts.parcels > 0`;
+- `parcel_counts.occupied_parcels > 0`;
+- `building_counts.total > 0`;
+- все здания в parcel mode имеют валидную привязку к parcel или учитываются в статистике.
+
+## Финальный ответ
+
+В финальном ответе кратко укажи:
+
+- какие файлы добавлены/изменены;
+- как включается parcel subdivision;
+- какие invariants поддерживаются;
+- какие тесты запускались;
+- результат CLI smoke test: сколько точек создано и какие parcel stats попали в metadata.
+
+Если пришлось оставить упрощение, например rectangular block approximation вместо настоящей polygonization кварталов, явно назови это и объясни, почему это корректно для текущего MVP.

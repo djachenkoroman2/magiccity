@@ -61,6 +61,7 @@ def write_metadata(path: str | Path, config: CityGenConfig, scene: Scene, points
     footprint_counts = Counter(building.footprint.kind for building in scene.buildings)
     roof_counts = Counter((building.roof.kind if building.roof is not None else "flat") for building in scene.buildings)
     biome_building_counts = Counter(building.biome for building in scene.buildings)
+    parcel_biome_counts = Counter(building.biome for building in scene.buildings if building.parcel_id is not None)
     footprint_biome_counts: dict[str, dict[str, int]] = {}
     roof_footprint_counts: dict[str, dict[str, int]] = {}
     roof_biome_counts: dict[str, dict[str, int]] = {}
@@ -108,7 +109,9 @@ def write_metadata(path: str | Path, config: CityGenConfig, scene: Scene, points
                 roof: dict(sorted(by_biome.items()))
                 for roof, by_biome in sorted(roof_biome_counts.items())
             },
+            "by_parcel_biome": dict(sorted(parcel_biome_counts.items())),
         },
+        "parcel_counts": scene.parcel_counts,
         "supported_footprint_types": list(FOOTPRINT_KINDS),
         "supported_roof_types": list(ROOF_KINDS),
         "config": config.to_dict(),

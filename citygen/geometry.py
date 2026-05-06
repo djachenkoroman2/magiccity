@@ -83,6 +83,7 @@ class Building:
     base_z: float
     biome: str = "residential"
     roof: RoofSpec | None = None
+    parcel_id: str | None = None
 
     @property
     def roof_z(self) -> float:

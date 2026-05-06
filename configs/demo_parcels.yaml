@@ -1,0 +1,71 @@
+seed: 808
+tile:
+  x: 0
+  y: 0
+  size_m: 256
+  margin_m: 48
+terrain:
+  base_height_m: 0
+  height_noise_m: 1.8
+urban_fields:
+  enabled: true
+  center_x: 128
+  center_y: 128
+  city_radius_m: 260
+  noise_scale_m: 120
+  density_bias: 0.05
+  industrial_bias: 0.03
+  green_bias: 0.02
+roads:
+  model: grid
+  spacing_m: 80
+  width_m: 7
+  sidewalk_width_m: 2.5
+buildings:
+  enabled: true
+  min_height_m: 8
+  max_height_m: 38
+  setback_m: 4
+  footprint_min_m: 9
+  footprint_max_m: 24
+  footprint:
+    model: mixed
+    weights:
+      rectangle: 1
+      square: 1
+      slab: 1
+      courtyard: 0.8
+      l_shape: 0.8
+      u_shape: 0.8
+      t_shape: 0.8
+  roof:
+    model: mixed
+    weights:
+      flat: 1
+      shed: 1
+      gable: 1
+      hip: 1
+      pyramid: 0.8
+      mansard: 0.8
+parcels:
+  enabled: true
+  block_size_m: 72
+  block_jitter_m: 5
+  min_block_size_m: 30
+  min_parcel_width_m: 13
+  max_parcel_width_m: 34
+  min_parcel_depth_m: 16
+  max_parcel_depth_m: 44
+  parcel_setback_m: 1.8
+  split_jitter_ratio: 0.16
+  max_subdivision_depth: 3
+sampling:
+  mode: surface
+  ground_spacing_m: 5
+  road_spacing_m: 3.5
+  building_spacing_m: 3.5
+  jitter_ratio: 0.12
+output:
+  format: ply
+  include_rgb: true
+  include_class: true

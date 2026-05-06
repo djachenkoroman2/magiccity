@@ -22,7 +22,7 @@ uv run citygen --config configs/demo_multi_tile.yaml --out outputs/multi_tile
 - Все размеры и расстояния задаются в метрах.
 - Горизонтальные координаты сцены: `x` и `y`; высота: `z`.
 - Булевы значения пишутся как `true` или `false`.
-- Текущий загрузчик читает только описанные ниже поля. Лишние ключи не влияют на генерацию.
+- Текущий загрузчик читает описанные ниже поля. Секция `parcels` валидирует имена параметров строго, чтобы опечатки в новом слое участков не проходили молча.
 
 Минимальный валидный конфиг:
 
@@ -86,6 +86,18 @@ buildings:
     mansard_break_ratio: 0.45
     dome_segments: 16
     align_to_long_axis: true
+parcels:
+  enabled: false
+  block_size_m: 96
+  block_jitter_m: 8
+  min_block_size_m: 32
+  min_parcel_width_m: 14
+  max_parcel_width_m: 42
+  min_parcel_depth_m: 18
+  max_parcel_depth_m: 56
+  parcel_setback_m: 2
+  split_jitter_ratio: 0.18
+  max_subdivision_depth: 3
 sampling:
   mode: surface
   ground_spacing_m: 2
@@ -109,6 +121,7 @@ output:
 | `urban_fields` | mapping | нет | см. секцию `urban_fields` | Включает процедурные городские поля и биомы. |
 | `roads` | mapping | нет | см. секцию `roads` | Настраивает модель дорог, ширину дорог и тротуары. |
 | `buildings` | mapping | нет | см. секцию `buildings` | Настраивает генерацию зданий. |
+| `parcels` | mapping | нет | см. секцию `parcels` | Включает прямоугольное block/parcel subdivision и размещение зданий внутри участков. |
 | `sampling` | mapping | нет | см. секцию `sampling` | Настраивает плотность и регулярность точек. |
 | `output` | mapping | нет | см. секцию `output` | Настраивает PLY-поля. |
 
@@ -200,7 +213,7 @@ terrain:
 
 | Параметр | Тип | По умолчанию | Возможные значения | Действие |
 | --- | --- | --- | --- | --- |
-| `base_height_m` | number | `0.0` | любое число | Базовая высота поверхности по оси Y. Поднимает или опускает весь рельеф. |
+| `base_height_m` | number | `0.0` | любое число | Базовая высота поверхности по оси Z. Поднимает или опускает весь рельеф. |
 | `height_noise_m` | number | `1.5` | любое число; обычно `>= 0` | Амплитуда процедурного шума высоты. `0` дает плоскую поверхность на `base_height_m`. |
 
 Высота рельефа зависит от `seed`, координат `x/y` и настроек `terrain`. Она используется для точек земли, дорог, тротуаров и базовой высоты зданий.
@@ -462,7 +475,7 @@ Alias-значения roof model:
 
 Как это влияет на сцену:
 
-- Candidate centers создаются детерминированно от `seed`.
+- Candidate centers создаются детерминированно от `seed`; при `parcels.enabled: true` здания создаются из buildable parcels.
 - Типы footprint/roof, размеры footprint и высоты выбираются детерминированным random от `seed`.
 - Здание отбрасывается, если его footprint слишком близко к дороге или тротуару.
 - Здание отбрасывается, если пересекается с уже принятым зданием.
@@ -478,6 +491,43 @@ roads.width_m / 2 + roads.sidewalk_width_m + effective_setback
 Где `effective_setback` может быть изменен биомом.
 
 Если здания почти не появляются, обычно нужно увеличить `roads.spacing_m` или уменьшить `roads.width_m`, `roads.sidewalk_width_m`, `buildings.setback_m`, `buildings.footprint_min_m`.
+
+## `parcels`
+
+Секция `parcels` включает явный слой прямоугольных кварталов и земельных участков. При `enabled: false` генератор использует прежнее размещение зданий по candidate centers.
+
+```yaml
+parcels:
+  enabled: true
+  block_size_m: 96
+  block_jitter_m: 8
+  min_block_size_m: 32
+  min_parcel_width_m: 14
+  max_parcel_width_m: 42
+  min_parcel_depth_m: 18
+  max_parcel_depth_m: 56
+  parcel_setback_m: 2
+  split_jitter_ratio: 0.18
+  max_subdivision_depth: 3
+```
+
+| Параметр | Тип | По умолчанию | Возможные значения | Действие |
+| --- | --- | --- | --- | --- |
+| `enabled` | boolean | `false` | `true`, `false` | Включает размещение зданий через parcels. |
+| `block_size_m` | number | `96.0` | `> 0`, `>= min_block_size_m` | Шаг прямоугольной сетки candidate blocks в рабочем bbox. |
+| `block_jitter_m` | number | `8.0` | `>= 0` | Детерминированный inset краев block, чтобы участки не выглядели идеально одинаковыми. |
+| `min_block_size_m` | number | `32.0` | `> 0` | Минимальная ширина и глубина block после обрезки по рабочему bbox. |
+| `min_parcel_width_m` | number | `14.0` | `> 0`, `<= max_parcel_width_m` | Минимальная ширина parcel. |
+| `max_parcel_width_m` | number | `42.0` | `> 0`, `>= min_parcel_width_m` | Целевая максимальная ширина parcel до остановки subdivision. |
+| `min_parcel_depth_m` | number | `18.0` | `> 0`, `<= max_parcel_depth_m` | Минимальная глубина parcel. |
+| `max_parcel_depth_m` | number | `56.0` | `> 0`, `>= min_parcel_depth_m` | Целевая максимальная глубина parcel до остановки subdivision. |
+| `parcel_setback_m` | number | `2.0` | `>= 0` | Внутренний отступ parcel для получения `parcel.inner`. |
+| `split_jitter_ratio` | number | `0.18` | `0..0.45` | Детерминированный jitter позиции split как доля текущего размера. |
+| `max_subdivision_depth` | integer | `3` | `>= 0` | Максимальная глубина рекурсивного деления block. |
+
+MVP не строит полноценные GIS-полигоны кварталов из дорожного графа. Вместо этого он создает road-aware прямоугольные blocks/parcels, отбрасывает участки без достаточного road/sidewalk clearance и размещает здания только внутри `parcel.inner`.
+
+Metadata получает агрегированную секцию `parcel_counts`: количество blocks/parcels, buildable и occupied parcels, распределение parcels по биомам, средние размеры участков и число зданий с `parcel_id`.
 
 ## `sampling`
 
@@ -598,6 +648,14 @@ Metadata содержит seed, bbox тайла, количество точек
 | `buildings.roof.ridge_height_ratio` вне `0..0.8` | rise крыши должен быть ограничен |
 | `buildings.roof.mansard_break_ratio` вне `0.1..0.9` | перелом мансарды должен быть внутри ската |
 | `buildings.roof.dome_segments < 8` | купольная детализация должна иметь хотя бы 8 сегментов |
+| Неизвестный ключ в `parcels` | имена параметров `parcels` валидируются строго |
+| `parcels.block_jitter_m < 0` | jitter block не может быть отрицательным |
+| `parcels.parcel_setback_m < 0` | parcel setback не может быть отрицательным |
+| `parcels.split_jitter_ratio` вне `0..0.45` | split jitter должен быть в допустимом диапазоне |
+| `parcels.max_subdivision_depth < 0` | глубина subdivision не может быть отрицательной |
+| `parcels.max_parcel_width_m < parcels.min_parcel_width_m` | максимум ширины parcel должен быть не меньше минимума |
+| `parcels.max_parcel_depth_m < parcels.min_parcel_depth_m` | максимум глубины parcel должен быть не меньше минимума |
+| `parcels.block_size_m < parcels.min_block_size_m` | размер block должен быть не меньше минимального block |
 | `sampling.mode != surface` | поддерживается только `surface` |
 | `sampling.jitter_ratio` вне `0..0.45` | jitter должен быть в допустимом диапазоне |
 | `output.format != ply` | поддерживается только `ply` |
@@ -619,6 +677,7 @@ Metadata содержит seed, bbox тайла, количество точек
 | `demo_organic.yaml` | Волнистые organic streets, связанные с рельефом. |
 | `demo_mixed_biomes.yaml` | `mixed` road model, urban fields и несколько биомов в одном тайле. |
 | `demo_universal_showcase.yaml` | Большой showcase-тайл: mixed roads, urban fields, биомы, mixed footprints и mixed roofs. |
+| `demo_parcels.yaml` | Parcel subdivision: прямоугольные blocks/parcels и здания, привязанные к участкам. |
 | `demo_building_footprints.yaml` | Несколько типов building footprint в одном тайле. |
 | `demo_courtyard_blocks.yaml` | Периметральные здания с внутренними дворами. |
 | `demo_building_roofs.yaml` | Все поддержанные roof types в одном тайле. |

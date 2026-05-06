@@ -66,6 +66,18 @@ buildings:
     ridge_height_ratio: 0.38
     mansard_break_ratio: 0.44
     dome_segments: 20
+parcels:
+  enabled: true
+  block_size_m: 104
+  block_jitter_m: 7
+  min_block_size_m: 34
+  min_parcel_width_m: 14
+  max_parcel_width_m: 46
+  min_parcel_depth_m: 18
+  max_parcel_depth_m: 60
+  parcel_setback_m: 1.6
+  split_jitter_ratio: 0.18
+  max_subdivision_depth: 4
 sampling:
   mode: surface
   ground_spacing_m: 8
