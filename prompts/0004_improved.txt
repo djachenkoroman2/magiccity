@@ -47,7 +47,7 @@
    seed: 42
    tile:
      x: 0
-     z: 0
+     y: 0
      size_m: 256
      margin_m: 32
    terrain:

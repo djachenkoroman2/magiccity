@@ -33,7 +33,7 @@
    - используй существующий подход со stable hash-based RNG от `seed`, координат, id building и namespace.
 
 3. Работай в мировых координатах:
-   - footprint должен жить в координатах `x/z`;
+   - footprint должен жить в координатах `x/y`;
    - генерация должна работать с `tile.margin_m`, а затем crop-иться до bbox тайла;
    - соседние тайлы с одинаковым seed должны оставаться согласованными.
 
@@ -222,12 +222,12 @@ BuildingFootprint:
   kind: str
   bbox: Rect
   center_x: float
-  center_z: float
-  contains_xy(x, z) -> bool
+  center_y: float
+  contains_xy(x, y) -> bool
   intersects(bbox) -> bool
-  sample_roof_points(spacing, jitter, rng, base_y, roof_y) -> points or x/z samples
+  sample_roof_points(spacing, jitter, rng, base_z, roof_z) -> points or x/y samples
   boundary_segments() -> list[segment]
-  clearance_sample_points() -> representative x/z points
+  clearance_sample_points() -> representative x/y points
 ```
 
 Не обязательно использовать именно такой класс, но в коде должна появиться явная абстракция footprint, а не набор ad hoc проверок в `generator.py`.

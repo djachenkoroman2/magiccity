@@ -20,7 +20,7 @@ uv run citygen --config configs/demo_multi_tile.yaml --out outputs/multi_tile
 - Обязательное поле только одно: `seed`.
 - Все остальные секции опциональны и получают значения по умолчанию.
 - Все размеры и расстояния задаются в метрах.
-- Горизонтальные координаты сцены: `x` и `z`; высота: `y`.
+- Горизонтальные координаты сцены: `x` и `y`; высота: `z`.
 - Булевы значения пишутся как `true` или `false`.
 - Текущий загрузчик читает только описанные ниже поля. Лишние ключи не влияют на генерацию.
 
@@ -36,7 +36,7 @@ seed: 7
 seed: 42
 tile:
   x: 0
-  z: 0
+  y: 0
   size_m: 256
   margin_m: 32
 terrain:
@@ -45,7 +45,7 @@ terrain:
 urban_fields:
   enabled: false
   center_x: 0
-  center_z: 0
+  center_y: 0
   city_radius_m: 1200
   noise_scale_m: 350
   density_bias: 0
@@ -119,7 +119,7 @@ output:
 ```yaml
 tile:
   x: 0
-  z: 0
+  y: 0
   size_m: 256
   margin_m: 32
 ```
@@ -127,7 +127,7 @@ tile:
 | Параметр | Тип | По умолчанию | Возможные значения | Действие |
 | --- | --- | --- | --- | --- |
 | `x` | integer | `0` | любое целое число | Индекс тайла по мировой оси X. Может быть отрицательным. |
-| `z` | integer | `0` | любое целое число | Индекс тайла по мировой оси Z. Может быть отрицательным. |
+| `y` | integer | `0` | любое целое число | Индекс тайла по мировой оси Y. Может быть отрицательным. |
 | `size_m` | number | `256.0` | `> 0` | Размер стороны тайла в метрах. Чем больше значение, тем больше площадь и обычно больше точек. |
 | `margin_m` | number | `32.0` | `> 0` | Рабочий запас вокруг тайла. Дороги и здания строятся в расширенной области, затем точки обрезаются обратно до bbox тайла. |
 
@@ -135,9 +135,9 @@ BBox тайла считается так:
 
 ```text
 min_x = tile.x * tile.size_m
-min_z = tile.z * tile.size_m
+min_y = tile.y * tile.size_m
 max_x = min_x + tile.size_m
-max_z = min_z + tile.size_m
+max_y = min_y + tile.size_m
 ```
 
 `margin_m` помогает получить более естественные края: здания и дороги могут быть рассчитаны за пределами тайла, но в итоговый PLY попадут только точки внутри исходного bbox.
@@ -151,9 +151,9 @@ max_z = min_z + tile.size_m
 ```yaml
 tiles:
   items:
-    - {x: 0, z: 0}
-    - {x: 1, z: 0}
-    - {x: 0, z: 1, size_m: 192, margin_m: 48}
+    - {x: 0, y: 0}
+    - {x: 1, y: 0}
+    - {x: 0, y: 1, size_m: 192, margin_m: 48}
   size_m: 128
   margin_m: 40
 ```
@@ -163,29 +163,29 @@ tiles:
 ```yaml
 tiles:
   x_range: [0, 2]
-  z_range: [0, 2]
+  y_range: [0, 2]
   size_m: 128
   margin_m: 40
 ```
 
 | Параметр | Тип | По умолчанию | Возможные значения | Действие |
 | --- | --- | --- | --- | --- |
-| `items` | list of mappings | нет | непустой список тайлов | Явно перечисляет тайлы. Каждый элемент обязан иметь `x` и `z`; `size_m` и `margin_m` можно задать на элементе. |
+| `items` | list of mappings | нет | непустой список тайлов | Явно перечисляет тайлы. Каждый элемент обязан иметь `x` и `y`; `size_m` и `margin_m` можно задать на элементе. |
 | `items[].x` | integer | нет | любое целое число | Индекс конкретного тайла по X. |
-| `items[].z` | integer | нет | любое целое число | Индекс конкретного тайла по Z. |
+| `items[].y` | integer | нет | любое целое число | Индекс конкретного тайла по Y. |
 | `items[].size_m` | number | `tiles.size_m`, затем `tile.size_m`, затем `256.0` | `> 0` | Размер конкретного тайла. |
 | `items[].margin_m` | number | `tiles.margin_m`, затем `tile.margin_m`, затем `32.0` | `> 0` | Margin конкретного тайла. |
 | `x_range` | two-item integer list | нет | `[start, stop]`, где `stop > start` | Диапазон индексов X по правилу Python `range(start, stop)`: stop не включается. |
-| `z_range` | two-item integer list | нет | `[start, stop]`, где `stop > start` | Диапазон индексов Z по правилу Python `range(start, stop)`: stop не включается. |
+| `y_range` | two-item integer list | нет | `[start, stop]`, где `stop > start` | Диапазон индексов Y по правилу Python `range(start, stop)`: stop не включается. |
 | `size_m` | number | `tile.size_m`, затем `256.0` | `> 0` | Общий размер тайлов в `items` или range-режиме. |
 | `margin_m` | number | `tile.margin_m`, затем `32.0` | `> 0` | Общий margin тайлов в `items` или range-режиме. |
 
 Правила:
 
-- Нужно задать либо `items`, либо обе секции `x_range` и `z_range`.
+- Нужно задать либо `items`, либо обе секции `x_range` и `y_range`.
 - Если есть `items`, диапазоны не используются.
-- `x_range: [0, 2]` и `z_range: [0, 2]` создают четыре тайла: `(0,0)`, `(0,1)`, `(1,0)`, `(1,1)`.
-- Для нескольких тайлов CLI пишет файлы вида `tile_X_Z.ply` и `tile_X_Z.metadata.json`.
+- `x_range: [0, 2]` и `y_range: [0, 2]` создают четыре тайла: `(0,0)`, `(0,1)`, `(1,0)`, `(1,1)`.
+- Для нескольких тайлов CLI пишет файлы вида `tile_X_Y.ply` и `tile_X_Y.metadata.json`.
 - Если multi-tile конфигу передать `--out something.ply`, это ошибка: нужен путь к директории.
 
 ## `terrain`
@@ -203,7 +203,7 @@ terrain:
 | `base_height_m` | number | `0.0` | любое число | Базовая высота поверхности по оси Y. Поднимает или опускает весь рельеф. |
 | `height_noise_m` | number | `1.5` | любое число; обычно `>= 0` | Амплитуда процедурного шума высоты. `0` дает плоскую поверхность на `base_height_m`. |
 
-Высота рельефа зависит от `seed`, координат `x/z` и настроек `terrain`. Она используется для точек земли, дорог, тротуаров и базовой высоты зданий.
+Высота рельефа зависит от `seed`, координат `x/y` и настроек `terrain`. Она используется для точек земли, дорог, тротуаров и базовой высоты зданий.
 
 ## `urban_fields`
 
@@ -213,7 +213,7 @@ terrain:
 urban_fields:
   enabled: true
   center_x: 128
-  center_z: 128
+  center_y: 128
   city_radius_m: 460
   noise_scale_m: 180
   density_bias: 0.04
@@ -225,7 +225,7 @@ urban_fields:
 | --- | --- | --- | --- | --- |
 | `enabled` | boolean | `false` | `true`, `false` | Включает urban fields. При `false` используется нейтральный residential-like режим. |
 | `center_x` | number | `0.0` | любое число | X-координата городского центра. Влияет на centrality, биомы и центр radial/ring дорог при включенных fields. |
-| `center_z` | number | `0.0` | любое число | Z-координата городского центра. |
+| `center_y` | number | `0.0` | любое число | Y-координата городского центра. |
 | `city_radius_m` | number | `1200.0` | `> 0` | Радиус влияния городского центра. Большое значение растягивает downtown/residential переходы. |
 | `noise_scale_m` | number | `350.0` | `> 0` | Масштаб плавного шума. Больше значение дает более крупные и медленные изменения районов. |
 | `density_bias` | number | `0.0` | любое число; практически полезно около `-1..1` | Смещает поле плотности. Положительное значение повышает шанс плотных и высотных районов. Итоговое поле clamp-ится в `0..1`. |
@@ -293,8 +293,8 @@ roads.width_m + 2 * roads.sidewalk_width_m < roads.spacing_m
 
 | Значение | Что генерирует | На что реагирует |
 | --- | --- | --- |
-| `grid` | Регулярную ортогональную сетку бесконечных линий по X и Z. | `spacing_m`, `width_m`, `sidewalk_width_m`. `angle_degrees` не используется. |
-| `radial_ring` | Лучи из центра и концентрические кольца. | `radial_count`, `angle_degrees`, `spacing_m`, `ring_spacing_m`. Центр берется из `urban_fields.center_x/center_z`, если fields включены; иначе из центра рабочего bbox. |
+| `grid` | Регулярную ортогональную сетку бесконечных линий по X и Y. | `spacing_m`, `width_m`, `sidewalk_width_m`. `angle_degrees` не используется. |
+| `radial_ring` | Лучи из центра и концентрические кольца. | `radial_count`, `angle_degrees`, `spacing_m`, `ring_spacing_m`. Центр берется из `urban_fields.center_x/center_y`, если fields включены; иначе из центра рабочего bbox. |
 | `radial` | Только лучи из центра, без колец. | `radial_count`, `angle_degrees`, `spacing_m`. Центр выбирается так же, как у `radial_ring`. |
 | `linear` | Параллельные дороги вдоль главной оси и более редкие поперечные дороги. | `angle_degrees`, `spacing_m`. Поперечный шаг равен `spacing_m * 2.5`. |
 | `organic` | Волнистые polyline-дороги в двух направлениях. | `spacing_m`, `organic_wander_m`, `terrain.height_noise_m`, `seed`. |
@@ -466,7 +466,7 @@ Alias-значения roof model:
 - Типы footprint/roof, размеры footprint и высоты выбираются детерминированным random от `seed`.
 - Здание отбрасывается, если его footprint слишком близко к дороге или тротуару.
 - Здание отбрасывается, если пересекается с уже принятым зданием.
-- `base_y` здания берется из высоты рельефа в центре footprint.
+- `base_z` здания берется из высоты рельефа в центре footprint.
 - В point cloud попадают roof-точки с высотой по roof model и facade-точки по реальной границе footprint до eave-line.
 
 Clearance от дорог считается так:
@@ -570,7 +570,7 @@ Metadata содержит seed, bbox тайла, количество точек
 | `tiles` не mapping | секция `tiles` должна быть mapping |
 | `tiles.items` не list | список тайлов должен быть list |
 | `tiles.items` пустой | должен быть хотя бы один тайл |
-| `tiles.x_range` или `tiles.z_range` не `[int, int]` | диапазон должен быть списком из двух целых |
+| `tiles.x_range` или `tiles.y_range` не `[int, int]` | диапазон должен быть списком из двух целых |
 | `range.stop <= range.start` | конец диапазона должен быть больше начала |
 | `roads.model` не из списка поддерживаемых | поддерживаются `free`, `grid`, `linear`, `mixed`, `organic`, `radial`, `radial_ring` |
 | `roads.radial_count < 3` | нужно хотя бы три луча |

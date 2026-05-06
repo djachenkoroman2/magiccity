@@ -48,12 +48,12 @@ sampling:
         for kind in ROOF_KINDS:
             with self.subTest(kind=kind):
                 roof = build_roof(kind, footprint, 0.0, 20.0, cfg, random.Random(2))
-                building = Building(kind, footprint, height_m=20.0, base_y=0.0, roof=roof)
+                building = Building(kind, footprint, height_m=20.0, base_z=0.0, roof=roof)
                 points = _sample_roof(config, building, 3.0, random.Random(3))
 
                 self.assertGreater(len(points), 0)
                 for point in points:
-                    self.assertTrue(footprint.contains_xy(point.x, point.z))
+                    self.assertTrue(footprint.contains_xy(point.x, point.y))
 
     def test_roof_sampling_skips_courtyard_hole(self) -> None:
         footprint = BuildingFootprint(
@@ -62,7 +62,7 @@ sampling:
             holes=(Rect(-4, -4, 4, 4),),
         )
         roof = build_roof("dome", footprint, 0.0, 20.0, RoofConfig(pitch_jitter_degrees=0), random.Random(4))
-        building = Building("courtyard", footprint, height_m=20.0, base_y=0.0, roof=roof)
+        building = Building("courtyard", footprint, height_m=20.0, base_z=0.0, roof=roof)
         config = _config_from_text(
             """
 seed: 1
@@ -75,12 +75,12 @@ sampling:
         points = _sample_roof(config, building, 2.0, random.Random(5))
 
         self.assertGreater(len(points), 0)
-        self.assertFalse(any(footprint.holes[0].contains_xy(point.x, point.z) for point in points))
+        self.assertFalse(any(footprint.holes[0].contains_xy(point.x, point.y) for point in points))
 
     def test_facades_stop_at_eave_height(self) -> None:
         footprint = _rect_footprint()
         roof = build_roof("gable", footprint, 0.0, 20.0, RoofConfig(pitch_jitter_degrees=0), random.Random(6))
-        building = Building("gable", footprint, height_m=20.0, base_y=0.0, roof=roof)
+        building = Building("gable", footprint, height_m=20.0, base_z=0.0, roof=roof)
         config = _config_from_text(
             """
 seed: 1
@@ -93,7 +93,7 @@ sampling:
         points = _sample_facades(config, building, 3.0, random.Random(7))
 
         self.assertGreater(len(points), 0)
-        self.assertLessEqual(max(point.y for point in points), roof.eave_y)
+        self.assertLessEqual(max(point.z for point in points), roof.eave_z)
 
     def test_mixed_roofs_are_deterministic_and_reach_metadata(self) -> None:
         config = _config_from_text(

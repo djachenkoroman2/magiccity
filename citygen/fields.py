@@ -16,7 +16,7 @@ class UrbanFieldSample:
     orderliness: float
 
 
-def sample_urban_fields(seed: int, config: UrbanFieldsConfig, x: float, z: float) -> UrbanFieldSample:
+def sample_urban_fields(seed: int, config: UrbanFieldsConfig, x: float, y: float) -> UrbanFieldSample:
     if not config.enabled:
         return UrbanFieldSample(
             centrality=0.5,
@@ -28,14 +28,14 @@ def sample_urban_fields(seed: int, config: UrbanFieldsConfig, x: float, z: float
         )
 
     dx = x - config.center_x
-    dz = z - config.center_z
-    distance = math.hypot(dx, dz)
+    dy = y - config.center_y
+    distance = math.hypot(dx, dy)
     radial = _clamp(1.0 - distance / config.city_radius_m)
-    broad_noise = _smooth_noise(seed, x, z, config.noise_scale_m, "broad") - 0.5
-    density_noise = _smooth_noise(seed, x, z, config.noise_scale_m * 0.75, "density")
-    industrial_noise = _smooth_noise(seed, x + 733.0, z - 419.0, config.noise_scale_m * 1.2, "industrial")
-    green_noise = _smooth_noise(seed, x - 137.0, z + 281.0, config.noise_scale_m * 0.9, "green")
-    order_noise = _smooth_noise(seed, x + z, z - x, config.noise_scale_m * 1.5, "order")
+    broad_noise = _smooth_noise(seed, x, y, config.noise_scale_m, "broad") - 0.5
+    density_noise = _smooth_noise(seed, x, y, config.noise_scale_m * 0.75, "density")
+    industrial_noise = _smooth_noise(seed, x + 733.0, y - 419.0, config.noise_scale_m * 1.2, "industrial")
+    green_noise = _smooth_noise(seed, x - 137.0, y + 281.0, config.noise_scale_m * 0.9, "green")
+    order_noise = _smooth_noise(seed, x + y, y - x, config.noise_scale_m * 1.5, "order")
 
     centrality = _clamp(radial + broad_noise * 0.18)
     density = _clamp(0.64 * centrality + 0.36 * density_noise + config.density_bias)
@@ -60,14 +60,14 @@ def sample_urban_fields(seed: int, config: UrbanFieldsConfig, x: float, z: float
     )
 
 
-def _smooth_noise(seed: int, x: float, z: float, scale: float, salt: str) -> float:
+def _smooth_noise(seed: int, x: float, y: float, scale: float, salt: str) -> float:
     phase = ((seed * 37 + sum(ord(ch) for ch in salt) * 97) % 1009) / 1009.0
     sx = x / scale
-    sz = z / scale
+    sy = y / scale
     value = (
-        math.sin(sx * 1.71 + phase * math.tau) * math.cos(sz * 1.37 - phase * 3.1) * 0.55
-        + math.sin((sx + sz) * 1.03 + phase * 5.7) * 0.30
-        + math.cos((sx - sz) * 0.83 - phase * 4.3) * 0.15
+        math.sin(sx * 1.71 + phase * math.tau) * math.cos(sy * 1.37 - phase * 3.1) * 0.55
+        + math.sin((sx + sy) * 1.03 + phase * 5.7) * 0.30
+        + math.cos((sx - sy) * 0.83 - phase * 4.3) * 0.15
     )
     return _clamp(value * 0.5 + 0.5)
 

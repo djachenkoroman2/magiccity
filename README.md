@@ -8,7 +8,7 @@ MagicCity — MVP CLI-генератора синтетической город
 
 Для каждого тайла `citygen` создает детерминированную сцену:
 
-- прямоугольный городской тайл с координатами `tile.x` и `tile.z`;
+- прямоугольный городской тайл с координатами `tile.x` и `tile.y`;
 - процедурный рельеф по `seed`, `terrain.base_height_m` и `terrain.height_noise_m`;
 - road network по одной из поддерживаемых моделей: `grid`, `radial_ring`, `radial`, `linear`, `organic`, `mixed`, `free`;
 - зоны тротуаров вокруг дорог;
@@ -167,11 +167,11 @@ citygen --config CONFIG_PATH [--out OUTPUT_PATH_OR_DIRECTORY]
 
 Логика `--out`:
 
-- если `--out` не указан, результат пишется в `outputs/tile_X_Z.ply`;
+- если `--out` не указан, результат пишется в `outputs/tile_X_Y.ply`;
 - если `--out` заканчивается на `.ply`, используется этот точный путь;
-- если `--out` не заканчивается на `.ply`, он считается директорией, а файл называется `tile_X_Z.ply`;
+- если `--out` не заканчивается на `.ply`, он считается директорией, а файл называется `tile_X_Y.ply`;
 - если в конфиге есть несколько тайлов через `tiles`, `--out` должен быть директорией или отсутствовать;
-- multi-tile запуск пишет отдельный `tile_X_Z.ply` и `tile_X_Z.metadata.json` для каждого тайла;
+- multi-tile запуск пишет отдельный `tile_X_Y.ply` и `tile_X_Y.metadata.json` для каждого тайла;
 - директория вывода создается автоматически;
 - metadata всегда пишется рядом с PLY как `<name>.metadata.json`.
 
@@ -247,7 +247,7 @@ seed: 7
 seed: 42
 tile:
   x: 0
-  z: 0
+  y: 0
   size_m: 256
   margin_m: 32
 terrain:
@@ -265,7 +265,7 @@ roads:
 urban_fields:
   enabled: false
   center_x: 0
-  center_z: 0
+  center_y: 0
   city_radius_m: 1200
   noise_scale_m: 350
   density_bias: 0.0
@@ -322,7 +322,7 @@ seed: 42
 ```yaml
 tile:
   x: 0
-  z: 0
+  y: 0
   size_m: 256
   margin_m: 32
 ```
@@ -330,7 +330,7 @@ tile:
 | Поле | Значение по умолчанию | Описание |
 | --- | --- | --- |
 | `x` | `0` | Целочисленная координата тайла по X. |
-| `z` | `0` | Целочисленная координата тайла по Z. |
+| `y` | `0` | Целочисленная координата тайла по Y. |
 | `size_m` | `256.0` | Размер тайла в метрах. |
 | `margin_m` | `32.0` | Дополнительная зона генерации вокруг тайла. После sampling точки crop-ятся обратно в bbox тайла. |
 
@@ -338,9 +338,9 @@ tile:
 
 ```text
 min_x = tile.x * tile.size_m
-min_z = tile.z * tile.size_m
+min_y = tile.y * tile.size_m
 max_x = min_x + tile.size_m
-max_z = min_z + tile.size_m
+max_y = min_y + tile.size_m
 ```
 
 `margin_m` нужен, чтобы здания рядом с границей тайла могли корректно попадать в обрезанный результат, а не исчезали слишком резко на краю.
@@ -352,8 +352,8 @@ max_z = min_z + tile.size_m
 ```yaml
 tiles:
   items:
-    - {x: 0, z: 0}
-    - {x: 1, z: 0}
+    - {x: 0, y: 0}
+    - {x: 1, y: 0}
   size_m: 256
   margin_m: 48
 ```
@@ -363,7 +363,7 @@ tiles:
 ```yaml
 tiles:
   x_range: [0, 2]
-  z_range: [0, 2]
+  y_range: [0, 2]
   size_m: 256
   margin_m: 48
 ```
@@ -387,7 +387,7 @@ terrain:
 | `base_height_m` | `0.0` | Базовая высота рельефа. |
 | `height_noise_m` | `1.5` | Амплитуда процедурного шума высоты. `0` дает плоскую поверхность. |
 
-Высота рельефа детерминирована и зависит от seed, координат `x/z` и настроек terrain.
+Высота рельефа детерминирована и зависит от seed, координат `x/y` и настроек terrain.
 
 ### `urban_fields`
 
@@ -395,7 +395,7 @@ terrain:
 urban_fields:
   enabled: true
   center_x: 128
-  center_z: 128
+  center_y: 128
   city_radius_m: 500
   noise_scale_m: 180
   density_bias: 0.0
@@ -587,8 +587,8 @@ end_header
 Координаты:
 
 - `x`: горизонтальная координата в метрах;
-- `y`: высота в метрах;
-- `z`: горизонтальная координата в метрах.
+- `y`: горизонтальная координата в метрах;
+- `z`: высота в метрах.
 
 Опциональные поля:
 

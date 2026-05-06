@@ -30,7 +30,7 @@ class FootprintTests(unittest.TestCase):
     def test_circle_roof_points_stay_inside_circle(self) -> None:
         cfg = FootprintConfig(model="circle", circle_segments=24)
         footprint = build_footprint("circle", 0.0, 0.0, 20.0, 20.0, cfg, random.Random(4))
-        building = Building("circle", footprint, height_m=12.0, base_y=0.0)
+        building = Building("circle", footprint, height_m=12.0, base_z=0.0)
         config = _config_from_text(
             """
 seed: 1
@@ -47,12 +47,12 @@ sampling:
 
         self.assertGreater(len(points), 0)
         for point in points:
-            self.assertTrue(footprint.contains_xy(point.x, point.z))
+            self.assertTrue(footprint.contains_xy(point.x, point.y))
 
     def test_courtyard_roof_points_skip_inner_court(self) -> None:
         cfg = FootprintConfig(model="courtyard", courtyard_ratio=0.5, min_part_width_m=4)
         footprint = build_footprint("courtyard", 0.0, 0.0, 28.0, 28.0, cfg, random.Random(6))
-        building = Building("courtyard", footprint, height_m=12.0, base_y=0.0)
+        building = Building("courtyard", footprint, height_m=12.0, base_z=0.0)
         config = _config_from_text(
             """
 seed: 1
@@ -69,7 +69,7 @@ sampling:
         hole = footprint.holes[0]
 
         self.assertGreater(len(points), 0)
-        self.assertFalse(any(hole.contains_xy(point.x, point.z) for point in points))
+        self.assertFalse(any(hole.contains_xy(point.x, point.y) for point in points))
 
     def test_composite_footprints_have_roofs_and_facades(self) -> None:
         config = _config_from_text(
@@ -83,7 +83,7 @@ sampling:
         for kind in ("l_shape", "u_shape", "t_shape"):
             with self.subTest(kind=kind):
                 footprint = build_footprint(kind, 0.0, 0.0, 30.0, 36.0, FootprintConfig(), random.Random(8))
-                building = Building(kind, footprint, height_m=12.0, base_y=0.0)
+                building = Building(kind, footprint, height_m=12.0, base_z=0.0)
 
                 self.assertGreater(len(_sample_roof(config, building, 3.0, random.Random(9))), 0)
                 self.assertGreater(len(_sample_facades(config, building, 3.0, random.Random(10))), 0)
@@ -163,9 +163,9 @@ sampling:
         scene = generate_scene(config)
 
         for building in scene.buildings:
-            for x, z in building.footprint.clearance_sample_points():
-                if building.footprint.contains_xy(x, z):
-                    self.assertEqual(scene.road_network.surface_kind(config, x, z), "ground")
+            for x, y in building.footprint.clearance_sample_points():
+                if building.footprint.contains_xy(x, y):
+                    self.assertEqual(scene.road_network.surface_kind(config, x, y), "ground")
 
 
 def _config_from_text(text: str):

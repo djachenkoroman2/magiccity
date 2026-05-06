@@ -23,13 +23,13 @@ FOOTPRINT_KINDS = (
 @dataclass(frozen=True)
 class BoundarySegment:
     x0: float
-    z0: float
+    y0: float
     x1: float
-    z1: float
+    y1: float
 
     @property
     def length(self) -> float:
-        return math.hypot(self.x1 - self.x0, self.z1 - self.z0)
+        return math.hypot(self.x1 - self.x0, self.y1 - self.y0)
 
 
 @dataclass(frozen=True)
@@ -44,46 +44,46 @@ class BuildingFootprint:
     @property
     def bbox(self) -> Rect:
         if self.circle_center is not None:
-            cx, cz = self.circle_center
+            cx, cy = self.circle_center
             r = self.circle_radius
-            return Rect(cx - r, cz - r, cx + r, cz + r)
+            return Rect(cx - r, cy - r, cx + r, cy + r)
         min_x = min(part.min_x for part in self.parts)
-        min_z = min(part.min_z for part in self.parts)
+        min_y = min(part.min_y for part in self.parts)
         max_x = max(part.max_x for part in self.parts)
-        max_z = max(part.max_z for part in self.parts)
-        return Rect(min_x, min_z, max_x, max_z)
+        max_y = max(part.max_y for part in self.parts)
+        return Rect(min_x, min_y, max_x, max_y)
 
     @property
     def min_x(self) -> float:
         return self.bbox.min_x
 
     @property
-    def min_z(self) -> float:
-        return self.bbox.min_z
+    def min_y(self) -> float:
+        return self.bbox.min_y
 
     @property
     def max_x(self) -> float:
         return self.bbox.max_x
 
     @property
-    def max_z(self) -> float:
-        return self.bbox.max_z
+    def max_y(self) -> float:
+        return self.bbox.max_y
 
     @property
     def center_x(self) -> float:
         return self.bbox.center_x
 
     @property
-    def center_z(self) -> float:
-        return self.bbox.center_z
+    def center_y(self) -> float:
+        return self.bbox.center_y
 
-    def contains_xy(self, x: float, z: float) -> bool:
+    def contains_xy(self, x: float, y: float) -> bool:
         if self.circle_center is not None:
-            cx, cz = self.circle_center
-            return math.hypot(x - cx, z - cz) <= self.circle_radius
-        if not any(_rect_contains(part, x, z) for part in self.parts):
+            cx, cy = self.circle_center
+            return math.hypot(x - cx, y - cy) <= self.circle_radius
+        if not any(_rect_contains(part, x, y) for part in self.parts):
             return False
-        return not any(_rect_contains(hole, x, z) for hole in self.holes)
+        return not any(_rect_contains(hole, x, y) for hole in self.holes)
 
     def intersects(self, bbox: Rect) -> bool:
         return _rects_intersect(self.bbox, bbox)
@@ -96,41 +96,41 @@ class BuildingFootprint:
     def clearance_sample_points(self) -> tuple[tuple[float, float], ...]:
         bbox = self.bbox
         points = [
-            (bbox.center_x, bbox.center_z),
-            (bbox.min_x, bbox.min_z),
-            (bbox.min_x, bbox.max_z),
-            (bbox.max_x, bbox.min_z),
-            (bbox.max_x, bbox.max_z),
-            (bbox.center_x, bbox.min_z),
-            (bbox.center_x, bbox.max_z),
-            (bbox.min_x, bbox.center_z),
-            (bbox.max_x, bbox.center_z),
+            (bbox.center_x, bbox.center_y),
+            (bbox.min_x, bbox.min_y),
+            (bbox.min_x, bbox.max_y),
+            (bbox.max_x, bbox.min_y),
+            (bbox.max_x, bbox.max_y),
+            (bbox.center_x, bbox.min_y),
+            (bbox.center_x, bbox.max_y),
+            (bbox.min_x, bbox.center_y),
+            (bbox.max_x, bbox.center_y),
         ]
         if self.circle_center is not None:
-            cx, cz = self.circle_center
+            cx, cy = self.circle_center
             for index in range(self.circle_segments):
                 angle = math.tau * index / self.circle_segments
-                points.append((cx + math.cos(angle) * self.circle_radius, cz + math.sin(angle) * self.circle_radius))
+                points.append((cx + math.cos(angle) * self.circle_radius, cy + math.sin(angle) * self.circle_radius))
         else:
             for part in self.parts:
-                points.append((part.center_x, part.center_z))
+                points.append((part.center_x, part.center_y))
             for segment in self.boundary_segments():
-                points.append((segment.x0, segment.z0))
-                points.append((segment.x1, segment.z1))
-                points.append(((segment.x0 + segment.x1) * 0.5, (segment.z0 + segment.z1) * 0.5))
+                points.append((segment.x0, segment.y0))
+                points.append((segment.x1, segment.y1))
+                points.append(((segment.x0 + segment.x1) * 0.5, (segment.y0 + segment.y1) * 0.5))
         return tuple(_dedupe_points(points))
 
     def _circle_boundary_segments(self) -> tuple[BoundarySegment, ...]:
         if self.circle_center is None:
             return ()
-        cx, cz = self.circle_center
+        cx, cy = self.circle_center
         segments: list[BoundarySegment] = []
         vertices = []
         for index in range(self.circle_segments):
             angle = math.tau * index / self.circle_segments
-            vertices.append((cx + math.cos(angle) * self.circle_radius, cz + math.sin(angle) * self.circle_radius))
-        for (x0, z0), (x1, z1) in zip(vertices, vertices[1:] + vertices[:1]):
-            segments.append(BoundarySegment(x0, z0, x1, z1))
+            vertices.append((cx + math.cos(angle) * self.circle_radius, cy + math.sin(angle) * self.circle_radius))
+        for (x0, y0), (x1, y1) in zip(vertices, vertices[1:] + vertices[:1]):
+            segments.append(BoundarySegment(x0, y0, x1, y1))
         return tuple(segments)
 
 
@@ -151,43 +151,43 @@ def select_footprint_kind(config: FootprintConfig, rng: Random) -> str:
 def build_footprint(
     kind: str,
     center_x: float,
-    center_z: float,
+    center_y: float,
     min_size: float,
     max_size: float,
     config: FootprintConfig,
     rng: Random,
 ) -> BuildingFootprint:
     if kind == "square":
-        return _square_footprint(center_x, center_z, min_size, max_size, rng)
+        return _square_footprint(center_x, center_y, min_size, max_size, rng)
     if kind == "circle":
-        return _circle_footprint(center_x, center_z, min_size, max_size, config, rng)
+        return _circle_footprint(center_x, center_y, min_size, max_size, config, rng)
     if kind == "slab":
-        return _slab_footprint(center_x, center_z, min_size, max_size, config, rng)
+        return _slab_footprint(center_x, center_y, min_size, max_size, config, rng)
     if kind == "courtyard":
-        return _courtyard_footprint(center_x, center_z, min_size, max_size, config, rng)
+        return _courtyard_footprint(center_x, center_y, min_size, max_size, config, rng)
     if kind == "l_shape":
-        return _l_footprint(center_x, center_z, min_size, max_size, config, rng)
+        return _l_footprint(center_x, center_y, min_size, max_size, config, rng)
     if kind == "u_shape":
-        return _u_footprint(center_x, center_z, min_size, max_size, config, rng)
+        return _u_footprint(center_x, center_y, min_size, max_size, config, rng)
     if kind == "t_shape":
-        return _t_footprint(center_x, center_z, min_size, max_size, config, rng)
-    return _rectangle_footprint(center_x, center_z, min_size, max_size, rng)
+        return _t_footprint(center_x, center_y, min_size, max_size, config, rng)
+    return _rectangle_footprint(center_x, center_y, min_size, max_size, rng)
 
 
-def _rectangle_footprint(center_x: float, center_z: float, min_size: float, max_size: float, rng: Random) -> BuildingFootprint:
+def _rectangle_footprint(center_x: float, center_y: float, min_size: float, max_size: float, rng: Random) -> BuildingFootprint:
     width = rng.uniform(min_size, max_size)
     depth = rng.uniform(min_size, max_size)
-    return BuildingFootprint(kind="rectangle", parts=(_rect_from_center(center_x, center_z, width, depth),))
+    return BuildingFootprint(kind="rectangle", parts=(_rect_from_center(center_x, center_y, width, depth),))
 
 
-def _square_footprint(center_x: float, center_z: float, min_size: float, max_size: float, rng: Random) -> BuildingFootprint:
+def _square_footprint(center_x: float, center_y: float, min_size: float, max_size: float, rng: Random) -> BuildingFootprint:
     size = rng.uniform(min_size, max_size)
-    return BuildingFootprint(kind="square", parts=(_rect_from_center(center_x, center_z, size, size),))
+    return BuildingFootprint(kind="square", parts=(_rect_from_center(center_x, center_y, size, size),))
 
 
 def _circle_footprint(
     center_x: float,
-    center_z: float,
+    center_y: float,
     min_size: float,
     max_size: float,
     config: FootprintConfig,
@@ -197,7 +197,7 @@ def _circle_footprint(
     return BuildingFootprint(
         kind="circle",
         parts=(),
-        circle_center=(center_x, center_z),
+        circle_center=(center_x, center_y),
         circle_radius=diameter * 0.5,
         circle_segments=config.circle_segments,
     )
@@ -205,7 +205,7 @@ def _circle_footprint(
 
 def _slab_footprint(
     center_x: float,
-    center_z: float,
+    center_y: float,
     min_size: float,
     max_size: float,
     config: FootprintConfig,
@@ -217,15 +217,15 @@ def _slab_footprint(
     width_min = min(config.min_part_width_m, width_max)
     width = rng.uniform(width_min, width_max)
     if rng.random() < 0.5:
-        rect = _rect_from_center(center_x, center_z, length, width)
+        rect = _rect_from_center(center_x, center_y, length, width)
     else:
-        rect = _rect_from_center(center_x, center_z, width, length)
+        rect = _rect_from_center(center_x, center_y, width, length)
     return BuildingFootprint(kind="slab", parts=(rect,))
 
 
 def _courtyard_footprint(
     center_x: float,
-    center_z: float,
+    center_y: float,
     min_size: float,
     max_size: float,
     config: FootprintConfig,
@@ -233,18 +233,18 @@ def _courtyard_footprint(
 ) -> BuildingFootprint:
     required = config.min_part_width_m * 2.0 / (1.0 - config.courtyard_ratio)
     if max_size < required:
-        return _rectangle_footprint(center_x, center_z, min_size, max_size, rng)
+        return _rectangle_footprint(center_x, center_y, min_size, max_size, rng)
     low = max(min_size, required)
     width = rng.uniform(low, max_size)
     depth = rng.uniform(low, max_size)
-    outer = _rect_from_center(center_x, center_z, width, depth)
-    hole = _rect_from_center(center_x, center_z, width * config.courtyard_ratio, depth * config.courtyard_ratio)
+    outer = _rect_from_center(center_x, center_y, width, depth)
+    hole = _rect_from_center(center_x, center_y, width * config.courtyard_ratio, depth * config.courtyard_ratio)
     return BuildingFootprint(kind="courtyard", parts=(outer,), holes=(hole,))
 
 
 def _l_footprint(
     center_x: float,
-    center_z: float,
+    center_y: float,
     min_size: float,
     max_size: float,
     config: FootprintConfig,
@@ -252,24 +252,24 @@ def _l_footprint(
 ) -> BuildingFootprint:
     size = _outer_size(min_size, max_size, config, rng)
     if size is None:
-        return _rectangle_footprint(center_x, center_z, min_size, max_size, rng)
+        return _rectangle_footprint(center_x, center_y, min_size, max_size, rng)
     width, depth = size
     wing = _wing_width(min(width, depth), config)
     left = center_x - width * 0.5
     right = center_x + width * 0.5
-    bottom = center_z - depth * 0.5
-    top = center_z + depth * 0.5
+    bottom = center_y - depth * 0.5
+    top = center_y + depth * 0.5
     parts = (
         Rect(left, bottom, left + wing, top),
         Rect(left + wing, bottom, right, bottom + wing),
     )
     turns = rng.randrange(4)
-    return BuildingFootprint(kind="l_shape", parts=tuple(_rotate_rect(part, center_x, center_z, turns) for part in parts))
+    return BuildingFootprint(kind="l_shape", parts=tuple(_rotate_rect(part, center_x, center_y, turns) for part in parts))
 
 
 def _u_footprint(
     center_x: float,
-    center_z: float,
+    center_y: float,
     min_size: float,
     max_size: float,
     config: FootprintConfig,
@@ -277,25 +277,25 @@ def _u_footprint(
 ) -> BuildingFootprint:
     size = _outer_size(min_size, max_size, config, rng, needs_gap=True)
     if size is None:
-        return _rectangle_footprint(center_x, center_z, min_size, max_size, rng)
+        return _rectangle_footprint(center_x, center_y, min_size, max_size, rng)
     width, depth = size
     wing = _wing_width(min(width, depth), config)
     left = center_x - width * 0.5
     right = center_x + width * 0.5
-    bottom = center_z - depth * 0.5
-    top = center_z + depth * 0.5
+    bottom = center_y - depth * 0.5
+    top = center_y + depth * 0.5
     parts = (
         Rect(left, bottom, left + wing, top),
         Rect(right - wing, bottom, right, top),
         Rect(left + wing, bottom, right - wing, bottom + wing),
     )
     turns = rng.randrange(4)
-    return BuildingFootprint(kind="u_shape", parts=tuple(_rotate_rect(part, center_x, center_z, turns) for part in parts))
+    return BuildingFootprint(kind="u_shape", parts=tuple(_rotate_rect(part, center_x, center_y, turns) for part in parts))
 
 
 def _t_footprint(
     center_x: float,
-    center_z: float,
+    center_y: float,
     min_size: float,
     max_size: float,
     config: FootprintConfig,
@@ -303,13 +303,13 @@ def _t_footprint(
 ) -> BuildingFootprint:
     size = _outer_size(min_size, max_size, config, rng)
     if size is None:
-        return _rectangle_footprint(center_x, center_z, min_size, max_size, rng)
+        return _rectangle_footprint(center_x, center_y, min_size, max_size, rng)
     width, depth = size
     wing = _wing_width(min(width, depth), config)
     left = center_x - width * 0.5
     right = center_x + width * 0.5
-    bottom = center_z - depth * 0.5
-    top = center_z + depth * 0.5
+    bottom = center_y - depth * 0.5
+    top = center_y + depth * 0.5
     stem_left = center_x - wing * 0.5
     stem_right = center_x + wing * 0.5
     parts = (
@@ -319,7 +319,7 @@ def _t_footprint(
         Rect(stem_left, bottom, stem_right, top - wing),
     )
     turns = rng.randrange(4)
-    return BuildingFootprint(kind="t_shape", parts=tuple(_rotate_rect(part, center_x, center_z, turns) for part in parts))
+    return BuildingFootprint(kind="t_shape", parts=tuple(_rotate_rect(part, center_x, center_y, turns) for part in parts))
 
 
 def _outer_size(
@@ -342,88 +342,88 @@ def _wing_width(size: float, config: FootprintConfig) -> float:
     return min(max(config.min_part_width_m, size * config.wing_width_ratio), size * 0.42)
 
 
-def _rect_from_center(center_x: float, center_z: float, width: float, depth: float) -> Rect:
+def _rect_from_center(center_x: float, center_y: float, width: float, depth: float) -> Rect:
     return Rect(
         min_x=center_x - width * 0.5,
-        min_z=center_z - depth * 0.5,
+        min_y=center_y - depth * 0.5,
         max_x=center_x + width * 0.5,
-        max_z=center_z + depth * 0.5,
+        max_y=center_y + depth * 0.5,
     )
 
 
-def _rotate_rect(rect: Rect, center_x: float, center_z: float, turns: int) -> Rect:
+def _rotate_rect(rect: Rect, center_x: float, center_y: float, turns: int) -> Rect:
     turns = turns % 4
     if turns == 0:
         return rect
     points = [
-        _rotate_point(rect.min_x, rect.min_z, center_x, center_z, turns),
-        _rotate_point(rect.min_x, rect.max_z, center_x, center_z, turns),
-        _rotate_point(rect.max_x, rect.min_z, center_x, center_z, turns),
-        _rotate_point(rect.max_x, rect.max_z, center_x, center_z, turns),
+        _rotate_point(rect.min_x, rect.min_y, center_x, center_y, turns),
+        _rotate_point(rect.min_x, rect.max_y, center_x, center_y, turns),
+        _rotate_point(rect.max_x, rect.min_y, center_x, center_y, turns),
+        _rotate_point(rect.max_x, rect.max_y, center_x, center_y, turns),
     ]
     xs = [point[0] for point in points]
-    zs = [point[1] for point in points]
-    return Rect(min(xs), min(zs), max(xs), max(zs))
+    ys = [point[1] for point in points]
+    return Rect(min(xs), min(ys), max(xs), max(ys))
 
 
-def _rotate_point(x: float, z: float, center_x: float, center_z: float, turns: int) -> tuple[float, float]:
+def _rotate_point(x: float, y: float, center_x: float, center_y: float, turns: int) -> tuple[float, float]:
     dx = x - center_x
-    dz = z - center_z
+    dy = y - center_y
     if turns == 1:
-        return center_x - dz, center_z + dx
+        return center_x - dy, center_y + dx
     if turns == 2:
-        return center_x - dx, center_z - dz
+        return center_x - dx, center_y - dy
     if turns == 3:
-        return center_x + dz, center_z - dx
-    return x, z
+        return center_x + dy, center_y - dx
+    return x, y
 
 
 def _rect_union_boundary_segments(parts: tuple[Rect, ...], holes: tuple[Rect, ...]) -> list[BoundarySegment]:
     xs = sorted({value for rect in (*parts, *holes) for value in (rect.min_x, rect.max_x)})
-    zs = sorted({value for rect in (*parts, *holes) for value in (rect.min_z, rect.max_z)})
-    if len(xs) < 2 or len(zs) < 2:
+    ys = sorted({value for rect in (*parts, *holes) for value in (rect.min_y, rect.max_y)})
+    if len(xs) < 2 or len(ys) < 2:
         return []
 
     occupied: dict[tuple[int, int], bool] = {}
     for ix in range(len(xs) - 1):
-        for iz in range(len(zs) - 1):
+        for iy in range(len(ys) - 1):
             mx = (xs[ix] + xs[ix + 1]) * 0.5
-            mz = (zs[iz] + zs[iz + 1]) * 0.5
-            occupied[(ix, iz)] = any(_rect_contains(part, mx, mz) for part in parts) and not any(
-                _rect_contains(hole, mx, mz) for hole in holes
+            my = (ys[iy] + ys[iy + 1]) * 0.5
+            occupied[(ix, iy)] = any(_rect_contains(part, mx, my) for part in parts) and not any(
+                _rect_contains(hole, mx, my) for hole in holes
             )
 
     segments: list[BoundarySegment] = []
     for ix in range(len(xs) - 1):
-        for iz in range(len(zs) - 1):
-            if not occupied[(ix, iz)]:
+        for iy in range(len(ys) - 1):
+            if not occupied[(ix, iy)]:
                 continue
-            if ix == 0 or not occupied.get((ix - 1, iz), False):
-                segments.append(BoundarySegment(xs[ix], zs[iz], xs[ix], zs[iz + 1]))
-            if ix == len(xs) - 2 or not occupied.get((ix + 1, iz), False):
-                segments.append(BoundarySegment(xs[ix + 1], zs[iz], xs[ix + 1], zs[iz + 1]))
-            if iz == 0 or not occupied.get((ix, iz - 1), False):
-                segments.append(BoundarySegment(xs[ix], zs[iz], xs[ix + 1], zs[iz]))
-            if iz == len(zs) - 2 or not occupied.get((ix, iz + 1), False):
-                segments.append(BoundarySegment(xs[ix], zs[iz + 1], xs[ix + 1], zs[iz + 1]))
+            if ix == 0 or not occupied.get((ix - 1, iy), False):
+                segments.append(BoundarySegment(xs[ix], ys[iy], xs[ix], ys[iy + 1]))
+            if ix == len(xs) - 2 or not occupied.get((ix + 1, iy), False):
+                segments.append(BoundarySegment(xs[ix + 1], ys[iy], xs[ix + 1], ys[iy + 1]))
+            if iy == 0 or not occupied.get((ix, iy - 1), False):
+                segments.append(BoundarySegment(xs[ix], ys[iy], xs[ix + 1], ys[iy]))
+            if iy == len(ys) - 2 or not occupied.get((ix, iy + 1), False):
+                segments.append(BoundarySegment(xs[ix], ys[iy + 1], xs[ix + 1], ys[iy + 1]))
     return [segment for segment in segments if segment.length > 0]
 
 
-def _rect_contains(rect: Rect, x: float, z: float) -> bool:
-    return rect.min_x <= x <= rect.max_x and rect.min_z <= z <= rect.max_z
+def _rect_contains(rect: Rect, x: float, y: float) -> bool:
+    return rect.min_x <= x <= rect.max_x and rect.min_y <= y <= rect.max_y
 
 
 def _rects_intersect(a: Rect, b: Rect) -> bool:
-    return not (a.max_x < b.min_x or a.min_x > b.max_x or a.max_z < b.min_z or a.min_z > b.max_z)
+    return not (a.max_x < b.min_x or a.min_x > b.max_x or a.max_y < b.min_y or a.min_y > b.max_y)
 
 
 def _dedupe_points(points: list[tuple[float, float]]) -> list[tuple[float, float]]:
     seen: set[tuple[float, float]] = set()
     result: list[tuple[float, float]] = []
-    for x, z in points:
-        key = (round(x, 6), round(z, 6))
+    for x, y in points:
+        key = (round(x, 6), round(y, 6))
         if key in seen:
             continue
         seen.add(key)
-        result.append((x, z))
+        result.append((x, y))
     return result

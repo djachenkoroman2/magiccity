@@ -76,12 +76,12 @@ def write_metadata(path: str | Path, config: CityGenConfig, scene: Scene, points
         "seed": config.seed,
         "tile": {
             "x": config.tile.x,
-            "z": config.tile.z,
+            "y": config.tile.y,
             "bbox": {
                 "min_x": scene.bbox.min_x,
-                "min_z": scene.bbox.min_z,
+                "min_y": scene.bbox.min_y,
                 "max_x": scene.bbox.max_x,
-                "max_z": scene.bbox.max_z,
+                "max_y": scene.bbox.max_y,
             },
         },
         "point_count": len(points),

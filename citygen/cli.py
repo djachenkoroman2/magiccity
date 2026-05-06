@@ -23,7 +23,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--out",
         default=None,
-        help="Output .ply path or directory. Defaults to outputs/tile_X_Z.ply.",
+        help="Output .ply path or directory. Defaults to outputs/tile_X_Y.ply.",
     )
     return parser
 
@@ -63,17 +63,17 @@ def _resolve_output_paths(out: str | None, configs) -> list[Path]:
     configs = tuple(configs)
     if len(configs) == 1:
         config = configs[0]
-        return [_resolve_single_output_path(out, config.tile.x, config.tile.z)]
+        return [_resolve_single_output_path(out, config.tile.x, config.tile.y)]
 
     if out is not None and Path(out).suffix.lower() == ".ply":
         raise ConfigError("Multi-tile configs require --out to be omitted or point to a directory.")
 
     output_dir = Path(out) if out is not None else Path("outputs")
-    return [output_dir / f"tile_{config.tile.x}_{config.tile.z}.ply" for config in configs]
+    return [output_dir / f"tile_{config.tile.x}_{config.tile.y}.ply" for config in configs]
 
 
-def _resolve_single_output_path(out: str | None, tile_x: int, tile_z: int) -> Path:
-    default_name = f"tile_{tile_x}_{tile_z}.ply"
+def _resolve_single_output_path(out: str | None, tile_x: int, tile_y: int) -> Path:
+    default_name = f"tile_{tile_x}_{tile_y}.ply"
     if out is None:
         return Path("outputs") / default_name
 

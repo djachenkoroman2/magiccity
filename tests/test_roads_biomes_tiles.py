@@ -17,7 +17,7 @@ ROAD_CONFIG = """
 seed: 17
 tile:
   x: 0
-  z: 0
+  y: 0
   size_m: 96
   margin_m: 32
 terrain:
@@ -25,7 +25,7 @@ terrain:
 urban_fields:
   enabled: true
   center_x: 48
-  center_z: 48
+  center_y: 48
   city_radius_m: 180
   noise_scale_m: 90
 roads:
@@ -86,7 +86,7 @@ tile:
 urban_fields:
   enabled: true
   center_x: 96
-  center_z: 96
+  center_y: 96
   city_radius_m: 145
   noise_scale_m: 80
 roads:
@@ -118,8 +118,8 @@ sampling:
 seed: 31
 tiles:
   items:
-    - {x: 0, z: 0}
-    - {x: 1, z: 0}
+    - {x: 0, y: 0}
+    - {x: 1, y: 0}
   size_m: 64
   margin_m: 16
 roads:

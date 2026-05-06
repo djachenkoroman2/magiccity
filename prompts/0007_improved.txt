@@ -265,8 +265,8 @@ citygen/
 ```text
 RoofSpec:
   kind: str
-  base_eave_y: float
-  max_roof_y: float
+  base_eave_z: float
+  max_roof_z: float
   height_at(x, z, footprint) -> float
   ridge_segments(footprint) -> list[segment]
   metadata() -> dict
@@ -287,9 +287,9 @@ roof_height_at(roof, footprint, x, z) -> y
 
 Рекомендуемая интерпретация:
 
-- `building.base_y` — рельеф в центре footprint;
-- `building.wall_top_y` или `eave_y` — верх стены;
-- `building.roof_y` или `max_roof_y` — максимальная высота крыши;
+- `building.base_z` — рельеф в центре footprint;
+- `building.wall_top_z` или `eave_z` — верх стены;
+- `building.roof_z` или `max_roof_z` — максимальная высота крыши;
 - старый `height_m` можно считать общей высотой до max roof, чтобы не ломать внешний смысл.
 
 Если меняешь dataclass `Building`, сохрани читаемость и обратную совместимость там, где возможно.
@@ -297,7 +297,7 @@ roof_height_at(roof, footprint, x, z) -> y
 Минимальный вариант:
 
 - оставить `Building.height_m` как максимальную высоту;
-- для плоской крыши `roof_height_at()` возвращает старый `building.roof_y`;
+- для плоской крыши `roof_height_at()` возвращает старый `building.roof_z`;
 - для скатных крыш нижняя кромка крыши находится ниже max roof на `roof_rise_m`;
 - facade sampling идет до локальной линии крыши или до eave line.
 
@@ -326,7 +326,7 @@ Roof sampling:
 Facade sampling:
 
 - вертикальные точки фасада должны учитывать roof/eave height;
-- для простого MVP можно семплировать фасад до `eave_y`, а крышу отдельно;
+- для простого MVP можно семплировать фасад до `eave_z`, а крышу отдельно;
 - если реализуешь фронтоны у `gable`/`half_hip`, они должны быть roof или facade class последовательно и документированно;
 - у courtyard внутренние фасады должны сохраняться.
 

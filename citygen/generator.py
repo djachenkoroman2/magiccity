@@ -23,7 +23,7 @@ class Scene:
 
 
 def generate_scene(config: CityGenConfig) -> Scene:
-    bbox = tile_bbox(config.tile.x, config.tile.z, config.tile.size_m)
+    bbox = tile_bbox(config.tile.x, config.tile.y, config.tile.size_m)
     work_bbox = bbox.expand(config.tile.margin_m)
     road_network = build_road_network(config, work_bbox)
     buildings = _generate_buildings(config, work_bbox, road_network) if config.buildings.enabled else []
@@ -39,8 +39,8 @@ def generate_scene(config: CityGenConfig) -> Scene:
     )
 
 
-def surface_kind(config: CityGenConfig, scene: Scene, x: float, z: float) -> str:
-    return scene.road_network.surface_kind(config, x, z)
+def surface_kind(config: CityGenConfig, scene: Scene, x: float, y: float) -> str:
+    return scene.road_network.surface_kind(config, x, y)
 
 
 def _generate_buildings(
@@ -52,27 +52,27 @@ def _generate_buildings(
     candidate_step = max(12.0, config.roads.spacing_m * 0.34, buildings_cfg.footprint_min_m * 1.25)
     start_i = math.floor(work_bbox.min_x / candidate_step) - 1
     end_i = math.ceil(work_bbox.max_x / candidate_step) + 1
-    start_j = math.floor(work_bbox.min_z / candidate_step) - 1
-    end_j = math.ceil(work_bbox.max_z / candidate_step) + 1
+    start_y = math.floor(work_bbox.min_y / candidate_step) - 1
+    end_y = math.ceil(work_bbox.max_y / candidate_step) + 1
     result: list[Building] = []
 
     for ix in range(start_i, end_i):
-        for iz in range(start_j, end_j):
-            rng = stable_rng(config.seed, "building", ix, iz)
+        for iy in range(start_y, end_y):
+            rng = stable_rng(config.seed, "building", ix, iy)
             center_x = (ix + 0.5) * candidate_step + rng.uniform(
                 -candidate_step * 0.32,
                 candidate_step * 0.32,
             )
-            center_z = (iz + 0.5) * candidate_step + rng.uniform(
+            center_y = (iy + 0.5) * candidate_step + rng.uniform(
                 -candidate_step * 0.32,
                 candidate_step * 0.32,
             )
-            if not work_bbox.contains_xy(center_x, center_z):
+            if not work_bbox.contains_xy(center_x, center_y):
                 continue
 
-            biome = classify_biome(config.seed, config.urban_fields, center_x, center_z)
+            biome = classify_biome(config.seed, config.urban_fields, center_x, center_y)
             params = biome_params(biome)
-            fields = sample_urban_fields(config.seed, config.urban_fields, center_x, center_z)
+            fields = sample_urban_fields(config.seed, config.urban_fields, center_x, center_y)
             probability = params.build_probability
             if config.urban_fields.enabled:
                 probability = min(0.97, probability * (0.72 + fields.density * 0.55))
@@ -86,7 +86,7 @@ def _generate_buildings(
             footprint = build_footprint(
                 footprint_kind,
                 center_x,
-                center_z,
+                center_y,
                 min_fp,
                 max_fp,
                 buildings_cfg.footprint,
@@ -107,15 +107,15 @@ def _generate_buildings(
                 max_height *= 0.72 + fields.height_potential * 0.72
             max_height = max(min_height, max_height)
             height = rng.uniform(min_height, max_height)
-            base_y = terrain_height(config.seed, config.terrain, footprint.center_x, footprint.center_z)
+            base_z = terrain_height(config.seed, config.terrain, footprint.center_x, footprint.center_y)
             roof_kind = select_roof_kind(buildings_cfg.roof, rng)
-            roof = build_roof(roof_kind, footprint, base_y, base_y + height, buildings_cfg.roof, rng)
+            roof = build_roof(roof_kind, footprint, base_z, base_z + height, buildings_cfg.roof, rng)
             result.append(
                 Building(
-                    id=f"building_{ix}_{iz}",
+                    id=f"building_{ix}_{iy}",
                     footprint=footprint,
                     height_m=height,
-                    base_y=base_y,
+                    base_z=base_z,
                     biome=biome,
                     roof=roof,
                 )
@@ -126,15 +126,15 @@ def _generate_buildings(
 
 
 def _footprint_is_clear(road_network: RoadNetworkLike, footprint, clearance_m: float) -> bool:
-    return all(road_network.nearest_distance(x, z) > clearance_m for x, z in footprint.clearance_sample_points())
+    return all(road_network.nearest_distance(x, y) > clearance_m for x, y in footprint.clearance_sample_points())
 
 
 def _overlaps_existing(buildings: list[Building], footprint, clearance: float) -> bool:
     expanded = Rect(
         footprint.bbox.min_x - clearance,
-        footprint.bbox.min_z - clearance,
+        footprint.bbox.min_y - clearance,
         footprint.bbox.max_x + clearance,
-        footprint.bbox.max_z + clearance,
+        footprint.bbox.max_y + clearance,
     )
     # This remains deliberately conservative: a bbox-level post-filter keeps complex
     # footprints from visibly intersecting without pulling in a full geometry engine.
@@ -145,6 +145,6 @@ def _rects_overlap(a: Rect, b: Rect) -> bool:
     return not (
         a.max_x < b.min_x
         or a.min_x > b.max_x
-        or a.max_z < b.min_z
-        or a.min_z > b.max_z
+        or a.max_y < b.min_y
+        or a.min_y > b.max_y
     )

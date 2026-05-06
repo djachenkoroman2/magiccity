@@ -89,22 +89,22 @@ Alias-значения:
 `Building.height_m` остается общей высотой до максимальной точки крыши:
 
 ```text
-base_y + height_m = max_roof_y
+base_z + height_m = max_roof_z
 ```
 
-Для скатных и curved roofs вычисляется `eave_y`:
+Для скатных и curved roofs вычисляется `eave_z`:
 
 ```text
-eave_y = max_roof_y - roof_rise_m
+eave_z = max_roof_z - roof_rise_m
 ```
 
-Фасады семплируются до `eave_y`, крыша семплируется отдельно. Для `flat` без уклона `eave_y == max_roof_y`.
+Фасады семплируются до `eave_z`, крыша семплируется отдельно. Для `flat` без уклона `eave_z == max_roof_z`.
 
 ## Типы крыш
 
 ### `flat`
 
-Плоская крыша. При `flat_slope_degrees: 0` все roof points лежат на `max_roof_y`. Если задать небольшой уклон, высота будет плавно меняться вдоль одной оси.
+Плоская крыша. При `flat_slope_degrees: 0` все roof points лежат на `max_roof_z`. Если задать небольшой уклон, высота будет плавно меняться вдоль одной оси.
 
 ### `shed`
 
@@ -214,4 +214,3 @@ Curved roofs:
 ```bash
 uv run citygen --config configs/demo_curved_roofs.yaml --out outputs/demo_curved_roofs.ply
 ```
-

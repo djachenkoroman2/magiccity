@@ -1,6 +1,6 @@
 # Справочник по building footprints
 
-Building footprint — это контур здания на земле в координатах `x/z`. В `citygen` footprint определяет:
+Building footprint — это контур здания на земле в координатах `x/y`. В `citygen` footprint определяет:
 
 - где появляются roof-точки;
 - где проходят facade-точки;
@@ -91,7 +91,7 @@ Alias-значения:
 Roof sampling:
 
 - использует `sampling.building_spacing_m`;
-- проверяет `footprint.contains_xy(x, z)`;
+- проверяет `footprint.contains_xy(x, y)`;
 - для `circle` точки попадают внутрь круга;
 - для `courtyard` внутренний двор остается пустым;
 - для L/U/T формы точки попадают только в занятые крылья.

@@ -13,7 +13,7 @@ CONFIG_TEXT = """
 seed: {seed}
 tile:
   x: 0
-  z: 0
+  y: 0
   size_m: 96
 roads:
   spacing_m: 48

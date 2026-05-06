@@ -59,11 +59,11 @@ BIOME_PARAMS: dict[str, BiomeParams] = {
 }
 
 
-def classify_biome(seed: int, config: UrbanFieldsConfig, x: float, z: float) -> str:
+def classify_biome(seed: int, config: UrbanFieldsConfig, x: float, y: float) -> str:
     if not config.enabled:
         return "residential"
 
-    fields = sample_urban_fields(seed, config, x, z)
+    fields = sample_urban_fields(seed, config, x, y)
     if fields.centrality >= 0.68 and fields.density >= 0.58:
         return "downtown"
     if fields.industrialness >= 0.58 and fields.centrality <= 0.78:
@@ -84,11 +84,11 @@ def preferred_road_model_for_biome(name: str) -> str:
 def sample_biome_counts(seed: int, config: UrbanFieldsConfig, bbox: BBox, step_m: float) -> dict[str, int]:
     counts: dict[str, int] = {}
     x_count = max(1, int(math.floor(bbox.width / step_m)) + 1)
-    z_count = max(1, int(math.floor(bbox.depth / step_m)) + 1)
+    y_count = max(1, int(math.floor(bbox.depth / step_m)) + 1)
     for ix in range(x_count):
         x = min(bbox.min_x + ix * step_m, bbox.max_x)
-        for iz in range(z_count):
-            z = min(bbox.min_z + iz * step_m, bbox.max_z)
-            name = classify_biome(seed, config, x, z)
+        for iy in range(y_count):
+            y = min(bbox.min_y + iy * step_m, bbox.max_y)
+            name = classify_biome(seed, config, x, y)
             counts[name] = counts.get(name, 0) + 1
     return dict(sorted(counts.items()))

@@ -103,7 +103,7 @@ DEFAULT_MIXED_ROOF_WEIGHTS = {
 @dataclass(frozen=True)
 class TileConfig:
     x: int = 0
-    z: int = 0
+    y: int = 0
     size_m: float = 256.0
     margin_m: float = 32.0
 
@@ -183,7 +183,7 @@ class OutputConfig:
 class UrbanFieldsConfig:
     enabled: bool = False
     center_x: float = 0.0
-    center_z: float = 0.0
+    center_y: float = 0.0
     city_radius_m: float = 1200.0
     noise_scale_m: float = 350.0
     density_bias: float = 0.0
@@ -255,7 +255,7 @@ def _tile_config(raw: dict[str, Any]) -> TileConfig:
     defaults = TileConfig()
     return TileConfig(
         x=_int(raw, "x", defaults.x),
-        z=_int(raw, "z", defaults.z),
+        y=_int(raw, "y", defaults.y),
         size_m=_float(raw, "size_m", defaults.size_m),
         margin_m=_float(raw, "margin_m", defaults.margin_m),
     )
@@ -281,19 +281,19 @@ def _tiles_config(raw: Any, base_tile: TileConfig) -> tuple[TileConfig, ...]:
             tiles.append(
                 TileConfig(
                     x=_int(item, "x"),
-                    z=_int(item, "z"),
+                    y=_int(item, "y"),
                     size_m=_float(item, "size_m", default_size),
                     margin_m=_float(item, "margin_m", default_margin),
                 )
             )
-    elif "x_range" in raw or "z_range" in raw:
+    elif "x_range" in raw or "y_range" in raw:
         x_start, x_stop = _int_range(raw, "x_range")
-        z_start, z_stop = _int_range(raw, "z_range")
+        y_start, y_stop = _int_range(raw, "y_range")
         for x in range(x_start, x_stop):
-            for z in range(z_start, z_stop):
-                tiles.append(TileConfig(x=x, z=z, size_m=default_size, margin_m=default_margin))
+            for y in range(y_start, y_stop):
+                tiles.append(TileConfig(x=x, y=y, size_m=default_size, margin_m=default_margin))
     else:
-        raise ConfigError("tiles must define either 'items' or 'x_range' and 'z_range'.")
+        raise ConfigError("tiles must define either 'items' or 'x_range' and 'y_range'.")
 
     if not tiles:
         raise ConfigError("tiles must contain at least one tile.")
@@ -448,7 +448,7 @@ def _urban_fields_config(raw: dict[str, Any]) -> UrbanFieldsConfig:
     return UrbanFieldsConfig(
         enabled=_bool(raw, "enabled", defaults.enabled),
         center_x=_float(raw, "center_x", defaults.center_x),
-        center_z=_float(raw, "center_z", defaults.center_z),
+        center_y=_float(raw, "center_y", defaults.center_y),
         city_radius_m=_float(raw, "city_radius_m", defaults.city_radius_m),
         noise_scale_m=_float(raw, "noise_scale_m", defaults.noise_scale_m),
         density_bias=_float(raw, "density_bias", defaults.density_bias),

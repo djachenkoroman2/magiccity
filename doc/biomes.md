@@ -19,7 +19,7 @@
 urban_fields:
   enabled: true
   center_x: 128
-  center_z: 128
+  center_y: 128
   city_radius_m: 460
   noise_scale_m: 180
   density_bias: 0.04
@@ -27,7 +27,7 @@ urban_fields:
   green_bias: 0.02
 ```
 
-Биом вычисляется в мировых координатах `x/z`. Поэтому соседние тайлы при одинаковом `seed` и согласованных `urban_fields` получают непрерывную картину районов.
+Биом вычисляется в мировых координатах `x/y`. Поэтому соседние тайлы при одинаковом `seed` и согласованных `urban_fields` получают непрерывную картину районов.
 
 Основные места применения:
 
@@ -220,7 +220,7 @@ centrality >= 0.68 and density >= 0.58
 urban_fields:
   enabled: true
   center_x: 128
-  center_z: 128
+  center_y: 128
   city_radius_m: 400
   noise_scale_m: 160
   density_bias: 0.08
@@ -272,7 +272,7 @@ fallback, если не подошли downtown, industrial и suburb
 urban_fields:
   enabled: true
   center_x: 128
-  center_z: 128
+  center_y: 128
   city_radius_m: 700
   noise_scale_m: 240
 roads:
@@ -319,7 +319,7 @@ industrialness >= 0.58 and centrality <= 0.78
 urban_fields:
   enabled: true
   center_x: 160
-  center_z: 160
+  center_y: 160
   city_radius_m: 300
   noise_scale_m: 140
   industrial_bias: 0.12
@@ -374,7 +374,7 @@ green_index >= 0.68 and centrality <= 0.55
 urban_fields:
   enabled: true
   center_x: 128
-  center_z: 128
+  center_y: 128
   city_radius_m: 460
   noise_scale_m: 180
   green_bias: 0.08
@@ -394,7 +394,7 @@ buildings:
 
 | Цель | Что изменить |
 | --- | --- |
-| Больше downtown | увеличить `density_bias`, расположить `center_x/center_z` внутри тайла, уменьшить или умеренно подобрать `city_radius_m` |
+| Больше downtown | увеличить `density_bias`, расположить `center_x/center_y` внутри тайла, уменьшить или умеренно подобрать `city_radius_m` |
 | Шире центральная зона | увеличить `city_radius_m` |
 | Более резкие и мелкие пятна районов | уменьшить `noise_scale_m` |
 | Более плавные и крупные районы | увеличить `noise_scale_m` |
@@ -437,7 +437,7 @@ outputs/example.metadata.json
 Если `biome_counts` содержит только `residential`, проверь:
 
 - включен ли `urban_fields.enabled`;
-- находится ли `center_x/center_z` рядом с тайлом;
+- находится ли `center_x/center_y` рядом с тайлом;
 - не слишком ли большой или маленький `city_radius_m`;
 - нужны ли `density_bias`, `industrial_bias` или `green_bias`;
 - достаточно ли большой тайл, чтобы увидеть несколько зон.
