@@ -35,7 +35,7 @@ def _sample_tile_surfaces(config: CityGenConfig, scene: Scene) -> list[Point]:
             kind = surface_kind(config, scene, sx, sy)
             wanted_spacing = (
                 config.sampling.road_spacing_m
-                if kind in {"road", "sidewalk"}
+                if kind in {"road", "road_median", "sidewalk"}
                 else config.sampling.ground_spacing_m
             )
             if spacing < wanted_spacing and rng.random() > (spacing / wanted_spacing) ** 2:

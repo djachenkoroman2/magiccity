@@ -1,15 +1,17 @@
 # Справочник по биомам citygen
 
-Этот документ описывает биомы, которые используются в `citygen` для процедурного выбора характера района. Биом влияет на вероятность появления зданий, размеры footprints, высотность, отступы от дорог и, при `roads.model: mixed`, на предпочитаемую модель дорожной сети.
+Этот документ описывает биомы, которые используются в `citygen` для процедурного выбора характера района. Биом влияет на вероятность появления зданий, размеры footprints, высотность, отступы от дорог, road profiles и, при `roads.model: mixed`, на предпочитаемую модель дорожной сети.
+
+Параметры биомов теперь описаны в едином catalog layer: `citygen/catalogs.py`, `BiomeDefinition`. Старые функции `classify_biome()`, `biome_params()` и `preferred_road_model_for_biome()` сохранены как совместимые фасады.
 
 Текущая версия поддерживает четыре биома:
 
-| Биом | Краткое назначение | Preferred road model |
-| --- | --- | --- |
-| `downtown` | плотный центральный район с высокой застройкой | `radial_ring` |
-| `residential` | обычная городская жилая ткань | `grid` |
-| `industrial` | промышленная зона с крупными низкими объемами | `linear` |
-| `suburb` | пригородная и зеленая низкоплотная зона | `organic` |
+| Биом | Tags | Краткое назначение | Preferred road model | Road profile preferences |
+| --- | --- | --- | --- | --- |
+| `downtown` | `central`, `dense`, `highrise` | плотный центральный район с высокой застройкой | `radial_ring` | `collector`, `arterial`, `boulevard` |
+| `residential` | `urban`, `regular`, `housing` | обычная городская жилая ткань | `grid` | `local`, `collector`, `arterial` |
+| `industrial` | `industrial`, `large_footprints` | промышленная зона с крупными низкими объемами | `linear` | `collector`, `arterial`, `boulevard` |
+| `suburb` | `suburban`, `green`, `lowrise` | пригородная и зеленая низкоплотная зона | `organic` | `local`, `collector` |
 
 ## Где используются биомы
 
@@ -33,6 +35,8 @@ urban_fields:
 
 - генерация зданий: `build_probability`, `footprint_scale`, `height_min_multiplier`, `height_max_multiplier`, `setback_scale`;
 - дорожная сеть `mixed`: выбор road model по биому в каждой точке;
+- road profiles: выбор ширины/типа дороги по biome-aware weights;
+- generated objects: catalog хранит object weights для будущих placement stages;
 - metadata: распределение биомов пишется в `biome_counts`;
 - анализ сцены: биом помогает понять, почему в разных частях тайла различаются плотность, высотность и дороги.
 
@@ -90,12 +94,12 @@ else:
 
 ## Общая таблица характеристик
 
-| Биом | `build_probability` | `footprint_scale` | `height_min_multiplier` | `height_max_multiplier` | `setback_scale` | Preferred road model |
-| --- | ---: | ---: | ---: | ---: | ---: | --- |
-| `downtown` | `0.94` | `1.08` | `1.45` | `1.75` | `0.65` | `radial_ring` |
-| `residential` | `0.78` | `0.92` | `0.85` | `0.82` | `1.00` | `grid` |
-| `industrial` | `0.64` | `1.45` | `0.90` | `0.75` | `0.85` | `linear` |
-| `suburb` | `0.38` | `0.72` | `0.55` | `0.45` | `1.45` | `organic` |
+| Биом | `build_probability` | `footprint_scale` | `height_min_multiplier` | `height_max_multiplier` | `setback_scale` | Preferred road model | Object weights |
+| --- | ---: | ---: | ---: | ---: | ---: | --- | --- |
+| `downtown` | `0.94` | `1.08` | `1.45` | `1.75` | `0.65` | `radial_ring` | `building`, `road_network`, `parcel_blocks` |
+| `residential` | `0.78` | `0.92` | `0.85` | `0.82` | `1.00` | `grid` | `building`, `road_network`, `parcel_blocks` |
+| `industrial` | `0.64` | `1.45` | `0.90` | `0.75` | `0.85` | `linear` | `building`, `road_network`, `parcel_blocks` |
+| `suburb` | `0.38` | `0.72` | `0.55` | `0.45` | `1.45` | `organic` | `building`, `road_network`, `parcel_blocks` |
 
 Пояснения к параметрам:
 
@@ -160,7 +164,7 @@ roads.width_m / 2 + roads.sidewalk_width_m + effective_setback
 
 ## Как биом меняет дороги
 
-Биомы влияют на дороги только при:
+Биомы всегда могут влиять на выбор road profile, если включен `roads.profiles.enabled`. На выбор геометрической модели дороги биомы влияют только при:
 
 ```yaml
 roads:
@@ -176,14 +180,16 @@ roads:
 
 При классификации каждой точки выбирается preferred road model текущего биома:
 
-| Биом | Road model в `mixed` |
-| --- | --- |
-| `downtown` | `radial_ring` |
-| `residential` | `grid` |
-| `industrial` | `linear` |
-| `suburb` | `organic` |
+| Биом | Road model в `mixed` | Типичные road profiles |
+| --- | --- | --- |
+| `downtown` | `radial_ring` | `collector`, `arterial`, `boulevard`; wide median встречается чаще |
+| `residential` | `grid` | `local`, `collector`, иногда `arterial` |
+| `industrial` | `linear` | широкие `collector`/`arterial`, иногда `boulevard` |
+| `suburb` | `organic` | в основном `local`, иногда `collector` |
 
-Если выбрать обычный `roads.model`, например `grid` или `organic`, биомы все равно будут влиять на здания, но не будут переключать дорожную модель.
+Если выбрать обычный `roads.model`, например `grid` или `organic`, биомы все равно будут влиять на здания и, при включенных `roads.profiles`, на ширину/тип road primitive. Но геометрическая модель сети переключаться не будет.
+
+Road profile выбирается детерминированно по seed, road model, anchor-точке primitive и биому этой anchor-точки. Это MVP-подход поверх текущих road primitives: он дает стабильную ширину у каждой primitive и избегает мелкого мерцания ширины между соседними sample points.
 
 ## `downtown`
 
@@ -417,7 +423,10 @@ outputs/example.metadata.json
 | --- | --- |
 | `biome_counts` | сколько sample-точек bbox попало в каждый биом |
 | `road_models` | какие road models использовала сцена |
-| `class_counts` | распределение point classes: ground, road, sidewalk, facades, roofs |
+| `road_profile_counts` | какие road profiles были назначены road primitives |
+| `road_profile_counts_by_biome` | распределение road profiles по биомам anchor-точек |
+| `road_widths` | минимальная/максимальная ширина проезжей части, median и полного коридора |
+| `class_counts` | распределение point classes: ground, road, road_median, sidewalk, facades, roofs |
 | `config` | итоговый конфиг после применения defaults |
 
 Пример:
@@ -451,4 +460,3 @@ outputs/example.metadata.json
 | `configs/demo_organic.yaml` | organic streets, хорошо сочетающиеся с suburb |
 | `configs/demo_mixed_biomes.yaml` | смешение urban fields, биомов и `mixed` roads |
 | `configs/demo_multi_tile.yaml` | проверка непрерывности биомов на соседних тайлах |
-

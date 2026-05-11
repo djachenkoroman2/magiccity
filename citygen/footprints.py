@@ -4,20 +4,13 @@ from dataclasses import dataclass
 import math
 from random import Random
 
+from .catalogs import FOOTPRINT_DEFINITIONS
 from .config import FootprintConfig
 from .geometry import Rect
+from .selectors import select_weighted_id
 
 
-FOOTPRINT_KINDS = (
-    "rectangle",
-    "square",
-    "circle",
-    "slab",
-    "courtyard",
-    "l_shape",
-    "u_shape",
-    "t_shape",
-)
+FOOTPRINT_KINDS = tuple(FOOTPRINT_DEFINITIONS)
 
 
 @dataclass(frozen=True)
@@ -137,15 +130,7 @@ class BuildingFootprint:
 def select_footprint_kind(config: FootprintConfig, rng: Random) -> str:
     if config.model != "mixed":
         return config.model
-    total = sum(config.weights.values())
-    pick = rng.random() * total
-    cursor = 0.0
-    for kind in FOOTPRINT_KINDS:
-        weight = config.weights.get(kind, 0.0)
-        cursor += weight
-        if pick <= cursor:
-            return kind
-    return "rectangle"
+    return select_weighted_id(config.weights, rng, fallback="rectangle", ordered_ids=FOOTPRINT_KINDS)
 
 
 def build_footprint(

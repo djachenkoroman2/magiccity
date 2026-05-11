@@ -1,0 +1,480 @@
+Ты senior Python-инженер и архитектор процедурных генераторов городских point clouds.
+
+В репозитории есть рабочий MVP `citygen`: CLI на Python, YAML-конфиги, детерминированный `seed`, тайлы, road primitives, несколько road models, urban fields, биомы, parcels, разные building footprints, разные roof geometry, surface sampling, ASCII PLY export и metadata JSON. Координатная конвенция проекта: горизонтальная плоскость `x/y`, высота `z`. Справочники: `README.md`, `configs/README.md`, `doc/biomes.md`, `doc/building_footprints.md`, `doc/building_roofs.md`, `doc/parcels.md`.
+
+Сейчас ширина дорожной сети задается глобально через `roads.width_m` и `roads.sidewalk_width_m`, а `roads.model: mixed` выбирает модель дорог по биому. Нужно реализовать следующий этап: вариативность ширины и типа дорог в конфигурациях, добавить тип дороги с широким центральным разделителем и сделать так, чтобы в разных биомах генерировались подходящие road models, road widths и road types.
+
+Не останавливайся на описании подхода: внеси рабочие изменения в код, YAML-конфиги, документацию и тесты.
+
+## Главная цель
+
+`citygen` должен поддерживать road profiles / road types, которые определяют поперечное сечение дороги:
+
+- ширину проезжей части;
+- ширину тротуара;
+- наличие и ширину центрального разделителя;
+- человекочитаемый тип дороги для metadata;
+- правила выбора профиля по road model, биому и deterministic random choice.
+
+В итоговом point cloud должны появляться дороги разных ширин, а в конфигурации должно быть можно явно задать, какие типы дорог характерны для `downtown`, `residential`, `industrial` и `suburb`.
+
+## Важные понятия
+
+- `Road model`: геометрическая модель дорожной сети: `grid`, `radial_ring`, `radial`, `linear`, `organic`, `mixed`, `free`.
+- `Road primitive`: текущая геометрическая ось дороги: infinite line, segment, ring или polyline.
+- `Road profile` или `Road type`: поперечное сечение дороги, например `local`, `collector`, `arterial`, `boulevard`.
+- `Carriageway`: суммарная ширина проезжей части без центрального разделителя.
+- `Median` или `divider`: центральный разделитель. Для обычных дорог равен `0`. Для boulevard/wide median должен быть заметно широким.
+- `Sidewalk`: тротуар с каждой стороны внешней границы дороги.
+- `Hardscape half width`: половина всего занятого дорожного коридора с учетом carriageway, median и sidewalk.
+
+Рекомендуемая геометрическая интерпретация:
+
+```text
+без median:
+
+  sidewalk | road carriageway | sidewalk
+
+с median:
+
+  sidewalk | road lane band | median | road lane band | sidewalk
+```
+
+Если `median_width_m > 0`, то `carriageway_width_m` означает суммарную ширину проезжей части по обе стороны median. Каждая из двух road bands имеет ширину `carriageway_width_m / 2`. Общая ширина занятого коридора:
+
+```text
+carriageway_width_m + median_width_m + 2 * sidewalk_width_m
+```
+
+Старое поле `roads.width_m` должно соответствовать `carriageway_width_m` для default road profile.
+
+## Обязательные принципы
+
+1. Сохрани обратную совместимость:
+   - `configs/mvp.yaml` должен запускаться без изменений;
+   - существующие `demo_*.yaml` должны продолжить работать;
+   - если новые настройки road profiles отсутствуют, генерация должна быть максимально близка к текущей;
+   - `roads.width_m`, `roads.sidewalk_width_m`, `roads.spacing_m`, `roads.model` должны остаться валидными и продолжить влиять на результат;
+   - существующие semantic classes не должны менять id или смысл.
+
+2. Сохрани детерминированность:
+   - одинаковый seed и одинаковый config дают одинаковые road profiles, surface classes, здания, точки и metadata;
+   - не используй недетерминированное глобальное состояние `random`;
+   - выбор road profile должен использовать существующий stable hash-based RNG от `seed`, tile coordinates, road model, primitive id/index, biome и namespace.
+
+3. Уважай текущую координатную систему:
+   - горизонтальная плоскость: `x/y`;
+   - высота: `z`;
+   - расстояния до дорог считаются в плоскости `x/y`;
+   - PLY остается `x y z`, где `z` — высота.
+
+4. Не добавляй тяжелые зависимости:
+   - задача решается поверх текущих road primitives и distance-based classification;
+   - не нужен GIS/topology stack, lane graph, mesh boolean или CRS-aware road layout.
+
+5. Не обещай транспортную симуляцию:
+   - не нужны полосы движения как отдельные сущности;
+   - не нужны перекрестки с turn lanes, traffic lights, zebra crossings, curb ramps, bridges, tunnels;
+   - wide median — это геометрически и семантически видимый центральный разделитель в point cloud, а не полноценная дорожная инженерия.
+
+## Новая YAML-настройка
+
+Добавь опциональную секцию внутри `roads`. Можно выбрать имена, которые лучше ложатся в текущий код, но поведение должно покрывать следующий сценарий:
+
+```yaml
+roads:
+  model: mixed
+  spacing_m: 64
+  width_m: 10
+  sidewalk_width_m: 3
+  profiles:
+    enabled: true
+    default: collector
+    definitions:
+      local:
+        carriageway_width_m: 7
+        sidewalk_width_m: 2
+        median_width_m: 0
+      collector:
+        carriageway_width_m: 10
+        sidewalk_width_m: 3
+        median_width_m: 0
+      arterial:
+        carriageway_width_m: 14
+        sidewalk_width_m: 4
+        median_width_m: 1.5
+      boulevard:
+        carriageway_width_m: 16
+        sidewalk_width_m: 4
+        median_width_m: 6
+    model_weights:
+      grid:
+        local: 0.45
+        collector: 0.40
+        arterial: 0.15
+      radial_ring:
+        collector: 0.20
+        arterial: 0.45
+        boulevard: 0.35
+      radial:
+        collector: 0.30
+        arterial: 0.50
+        boulevard: 0.20
+      linear:
+        collector: 0.35
+        arterial: 0.50
+        boulevard: 0.15
+      organic:
+        local: 0.80
+        collector: 0.20
+      free:
+        local: 0.55
+        collector: 0.35
+        arterial: 0.10
+    biome_weights:
+      downtown:
+        collector: 0.15
+        arterial: 0.45
+        boulevard: 0.40
+      residential:
+        local: 0.55
+        collector: 0.35
+        arterial: 0.10
+      industrial:
+        collector: 0.30
+        arterial: 0.55
+        boulevard: 0.15
+      suburb:
+        local: 0.85
+        collector: 0.15
+```
+
+Требования к настройке:
+
+- `roads.profiles` должна быть опциональной;
+- `enabled: false` или отсутствие секции должно давать совместимое старое поведение;
+- `default` должен ссылаться на существующий profile;
+- каждый profile должен иметь положительные `carriageway_width_m` и `sidewalk_width_m`;
+- `median_width_m` должен быть `>= 0`;
+- profile с `median_width_m > 0` должен считаться дорогой с центральным разделителем;
+- веса должны быть числами `>= 0`, а сумма выбранного набора должна быть положительной;
+- неизвестный profile в weights должен давать понятную `ConfigError`;
+- неизвестный biome в `biome_weights` должен давать понятную `ConfigError`;
+- неизвестный road model в `model_weights` должен давать понятную `ConfigError`;
+- если weight mapping для конкретного biome/model отсутствует, используй `default` или безопасные defaults;
+- валидируй, что максимальная ширина дорожного коридора не перекрывает spacing полностью:
+
+```text
+max(carriageway_width_m + median_width_m + 2 * sidewalk_width_m) < roads.spacing_m
+```
+
+Если выберешь более компактный формат, например `types` вместо `profiles`, сохрани тот же смысл и подробно задокументируй его.
+
+## Биомы и road profile selection
+
+Расширь логику так, чтобы биом влиял не только на `preferred_road_model`, но и на road profile selection.
+
+Ожидаемое поведение по умолчанию:
+
+| Биом | Road model при `mixed` | Типичные road profiles |
+| --- | --- | --- |
+| `downtown` | `radial_ring` | `collector`, `arterial`, `boulevard` с wide median |
+| `residential` | `grid` | `local`, `collector`, иногда `arterial` |
+| `industrial` | `linear` | широкие `collector`/`arterial`, иногда `boulevard` |
+| `suburb` | `organic` | узкие `local`, иногда `collector`, без wide median по умолчанию |
+
+Если current architecture не позволяет идеально присвоить один стабильный profile road primitive, проходящей через несколько биомов, используй практичный MVP-вариант:
+
+- profile можно выбирать по anchor point primitive, по representative point или по biome в точке классификации;
+- выбор должен быть детерминированным;
+- не должно быть мелкого хаотичного мерцания ширины на соседних sample points;
+- metadata должна честно показывать фактические profiles, которые использовались.
+
+## Изменения в road classification
+
+Текущая логика `RoadNetwork.surface_kind()` использует только `nearest_distance()` и глобальные `config.roads.width_m` / `sidewalk_width_m`. Ее нужно расширить так, чтобы surface kind зависел от effective road profile ближайшей дороги.
+
+Нужен API уровня road network, который для точки `(x, y)` может определить:
+
+- ближайшую road primitive или effective road segment;
+- расстояние до centerline;
+- road model;
+- road profile/type;
+- effective `carriageway_width_m`;
+- effective `median_width_m`;
+- effective `sidewalk_width_m`;
+- итоговый surface kind: `road`, `road_median`, `sidewalk` или `ground`.
+
+Для wide median классификация должна быть примерно такой:
+
+```text
+d = distance to road centerline
+median_half = median_width_m / 2
+road_half_each_side = carriageway_width_m / 2
+sidewalk_outer_half = median_half + road_half_each_side + sidewalk_width_m
+
+if median_width_m > 0 and d <= median_half:
+    road_median
+elif d <= median_half + road_half_each_side:
+    road
+elif d <= sidewalk_outer_half:
+    sidewalk
+else:
+    ground
+```
+
+Для обычной дороги без median:
+
+```text
+d = distance to road centerline
+road_half = carriageway_width_m / 2
+sidewalk_outer_half = road_half + sidewalk_width_m
+
+if d <= road_half:
+    road
+elif d <= sidewalk_outer_half:
+    sidewalk
+else:
+    ground
+```
+
+Если несколько дорог перекрываются на перекрестке, выбери стабильное и визуально разумное правило. Например:
+
+- `road` имеет приоритет над `road_median` на пересечениях, чтобы медиана не перекрывала перекресток странной полосой;
+- `road_median` имеет приоритет над `sidewalk`;
+- `sidewalk` имеет приоритет над `ground`;
+- при равной категории выбирай ближайшую primitive или deterministic tie-break.
+
+Не обязательно моделировать идеальные перекрестки, но wide median не должен превращать весь центр перекрестка в непроезжий прямоугольник, если это легко избежать.
+
+## Новый semantic class
+
+Добавь semantic class для центрального разделителя:
+
+```text
+road_median
+```
+
+Требования:
+
+- не меняй ids существующих classes;
+- выбери новый стабильный id, например следующий свободный;
+- задай заметный RGB, отличающийся от `road` и `sidewalk`;
+- `output.include_class` и `output.include_rgb` должны продолжить работать;
+- `class_counts` в metadata должен учитывать `road_median`, если такие точки реально появились;
+- если median отсутствует, `road_median` не обязан появляться в `class_counts`.
+
+Если решишь не добавлять отдельный class, потому что текущая модель point cloud принципиально не готова к этому, явно обоснуй в коде/документации и сделай divider визуально различимым другим поддержанным способом. Но предпочтительный вариант — отдельный class.
+
+## Road primitives и effective profiles
+
+Выбери реализацию, которая хорошо ложится на текущий код. Один разумный путь:
+
+1. Добавить dataclass для road profile/cross-section, например:
+
+```python
+RoadProfile(
+    name: str,
+    carriageway_width_m: float,
+    sidewalk_width_m: float,
+    median_width_m: float = 0.0,
+)
+```
+
+2. Добавить wrapper вокруг primitive, например:
+
+```python
+RoadPrimitiveInstance(
+    primitive: RoadPrimitive,
+    model: str,
+    profile: RoadProfile,
+    index: int,
+    biome: str | None,
+)
+```
+
+3. Сохранить или адаптировать существующие primitive-классы, чтобы старые тесты и простые модели не пришлось переписывать полностью.
+
+4. Сделать nearest/surface query, который возвращает не только distance, но и profile.
+
+5. Обновить места, где сейчас используется `config.roads.width_m * 0.5 + config.roads.sidewalk_width_m`, чтобы они учитывали effective maximum road corridor или profile-aware clearance.
+
+Особенно проверь:
+
+- sampling ground/road/sidewalk/median;
+- building road clearance;
+- parcels road clearance;
+- metadata;
+- tests for road/sidewalk generation.
+
+Для building/parcels clearance допустим консервативный подход через максимум всех enabled profiles, если точный nearest profile усложняет код. Но здания не должны попадать на widened roads, sidewalks или median.
+
+## Mixed roads и биомы
+
+Текущий `MixedRoadNetwork` выбирает network по биому в точке. После изменения:
+
+- `road_models` в metadata должен продолжить показывать effective road models;
+- surface classification должна учитывать profile, выбранный для соответствующей model/biome;
+- `downtown` должен иметь шанс получить широкие arterial/boulevard дороги;
+- `suburb` по умолчанию должен оставаться уже и органичнее;
+- `industrial` должен получать более широкие линейные дороги, если включены profiles;
+- `residential` должен быть промежуточным.
+
+Если `roads.model` задан конкретным значением, например `grid`, биомы все равно могут влиять на profile selection, если `roads.profiles.enabled: true` и `urban_fields.enabled: true`. Если `urban_fields.enabled: false`, используй residential-like default profile rules.
+
+## Metadata
+
+Расширь metadata JSON, не удаляя существующие поля.
+
+Добавь агрегаты вроде:
+
+```json
+"road_profile_counts": {
+  "local": 18,
+  "collector": 12,
+  "arterial": 6,
+  "boulevard": 4
+},
+"road_profile_counts_by_biome": {
+  "downtown": {
+    "arterial": 3,
+    "boulevard": 4
+  },
+  "residential": {
+    "local": 9,
+    "collector": 5
+  }
+},
+"road_widths": {
+  "min_carriageway_width_m": 7.0,
+  "max_carriageway_width_m": 16.0,
+  "max_median_width_m": 6.0,
+  "max_total_corridor_width_m": 30.0
+},
+"road_median": {
+  "enabled": true,
+  "profiles": ["arterial", "boulevard"]
+}
+```
+
+Можно считать profile counts по primitive instances, а не по длине, если длина для infinite line/ring/polyline пока неудобна. Главное — metadata должна помогать быстро понять, что вариативность реально сработала.
+
+`class_counts` должен показывать `road_median`, когда в PLY есть такие точки.
+
+## Demo config
+
+Добавь демонстрационный конфиг, например:
+
+```text
+configs/demo_road_profiles.yaml
+```
+
+Он должен показывать:
+
+- `roads.model: mixed`;
+- `urban_fields.enabled: true`;
+- минимум 3 биома в `biome_counts`, по возможности все 4;
+- несколько road models в `road_models`;
+- несколько road profiles в `road_profile_counts`;
+- хотя бы один wide median profile;
+- точки классов `ground`, `road`, `sidewalk`, `road_median`;
+- здания/parcel mode можно оставить включенными или выключенными, но если включены, они должны корректно избегать расширенных дорожных коридоров.
+
+Подбери параметры так, чтобы wide median был виден в point cloud:
+
+- `median_width_m` не меньше `4..6`;
+- `sampling.road_spacing_m` достаточно плотный, например `1.0..1.8`;
+- `roads.spacing_m` достаточно больше максимальной ширины коридора;
+- тайл достаточно большой, например `384..640`.
+
+Если первый seed не дает разнообразия, подбери seed, biases и размеры так, чтобы metadata явно показывала новые возможности.
+
+## Документация
+
+Обнови документацию точечно:
+
+- `configs/README.md`: опиши `roads.profiles`, defaults, validation и пример YAML;
+- `README.md`: если есть список demo-конфигов, добавь `configs/demo_road_profiles.yaml`;
+- `doc/biomes.md`: укажи, что биомы теперь могут влиять на road profile/type, а не только на preferred road model;
+- при необходимости добавь `doc/roads.md`, если описание road profiles становится слишком большим для README.
+
+Не переписывай всю документацию. Обнови только места, которые нужны, чтобы пользователь понял новые настройки и демо.
+
+## Тесты
+
+Добавь или обнови unit tests.
+
+Минимальный набор:
+
+1. Config validation:
+   - старый минимальный config работает;
+   - `roads.profiles.enabled: true` читается;
+   - profile с `median_width_m > 0` валиден;
+   - отрицательные/нулевые width values дают `ConfigError`;
+   - unknown profile в `default`, `model_weights` или `biome_weights` дает `ConfigError`;
+   - сумма весов `0` дает `ConfigError`;
+   - максимальная ширина road corridor не может быть `>= roads.spacing_m`.
+
+2. Surface classification:
+   - обычный profile дает `road` в центре, `sidewalk` рядом и `ground` снаружи;
+   - wide median profile дает `road_median` в центре, `road` по обе стороны, `sidewalk` снаружи и `ground` дальше;
+   - на перекрестке classification стабильна и не зависит от порядка dict iteration.
+
+3. Детерминированность:
+   - один seed и config дают одинаковые road profile assignments и одинаковую metadata;
+   - другой seed или weights меняют assignments там, где есть вероятностный выбор.
+
+4. Биомы:
+   - при `roads.model: mixed` и `urban_fields.enabled: true` metadata содержит несколько road models;
+   - profile distribution отражает biome rules: например downtown допускает `boulevard`, suburb по умолчанию чаще получает `local`;
+   - если `urban_fields.enabled: false`, используется residential-like поведение.
+
+5. Buildings/parcels:
+   - здания не попадают на road, sidewalk или road_median;
+   - при parcels enabled buildable parcels используют расширенный road clearance;
+   - существующие footprint/roof tests не ломаются.
+
+6. Export/metadata:
+   - `class_counts` включает `road_median`, когда wide median реально сгенерирован;
+   - metadata содержит `road_profile_counts`, `road_widths` и не теряет старые поля.
+
+## Проверка
+
+Минимально выполни:
+
+```bash
+uv run python -m unittest discover -s tests
+uv run citygen --config configs/demo_road_profiles.yaml --out outputs/demo_road_profiles.ply
+```
+
+Затем проверь metadata:
+
+```text
+outputs/demo_road_profiles.metadata.json
+```
+
+Критерии хорошего результата:
+
+- тесты проходят;
+- PLY и metadata создаются без config errors;
+- `class_counts` содержит `ground`, `road`, `sidewalk`, `road_median`;
+- `biome_counts` содержит хотя бы 3 биома, идеально 4;
+- `road_models` содержит несколько моделей при `roads.model: mixed`;
+- `road_profile_counts` содержит несколько profiles;
+- `road_widths.max_median_width_m > 0`;
+- здания, если включены, не размещаются поверх widened roads/median.
+
+Если не удается добиться всех биомов или profiles в одном запуске из-за вероятностной природы генератора, оставь лучший найденный конфиг и явно объясни ограничение в финальном ответе.
+
+## Финальный ответ
+
+В финальном ответе кратко укажи:
+
+- какие файлы изменены;
+- какой demo config добавлен;
+- какие новые YAML-поля поддержаны;
+- какие road profiles и биомы появились в demo metadata;
+- сколько точек сгенерировалось при проверке;
+- какие тесты запускались.
+
+Не обещай возможности, которых текущая реализация не поддерживает. Если где-то выбран консервативный MVP-подход, назови его прямо.

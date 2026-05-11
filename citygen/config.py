@@ -6,98 +6,35 @@ from typing import Any
 
 import yaml
 
+from .catalogs import (
+    BIOME_DEFINITIONS,
+    DEFAULT_MIXED_FOOTPRINT_WEIGHTS,
+    DEFAULT_MIXED_ROOF_WEIGHTS,
+    DEFAULT_ROAD_PROFILE_BIOME_WEIGHTS,
+    DEFAULT_ROAD_PROFILE_MODEL_WEIGHTS,
+    FOOTPRINT_DEFINITIONS,
+    FOOTPRINT_MODEL_ALIASES,
+    ROAD_MODEL_DEFINITIONS,
+    ROOF_DEFINITIONS,
+    ROOF_MODEL_ALIASES,
+    validate_catalogs,
+)
+
 
 class ConfigError(ValueError):
     """Raised when a YAML config is missing fields or has invalid values."""
 
 
-SUPPORTED_ROAD_MODELS = {
-    "grid",
-    "radial_ring",
-    "radial",
-    "linear",
-    "organic",
-    "mixed",
-    "free",
-}
+SUPPORTED_ROAD_MODELS = set(ROAD_MODEL_DEFINITIONS)
+SUPPORTED_BIOMES = set(BIOME_DEFINITIONS)
 
-
-SUPPORTED_FOOTPRINT_MODELS = {
-    "rectangle",
-    "square",
-    "circle",
-    "slab",
-    "courtyard",
-    "l_shape",
-    "u_shape",
-    "t_shape",
-    "mixed",
-}
+SUPPORTED_FOOTPRINT_MODELS = set(FOOTPRINT_DEFINITIONS) | {"mixed"}
 
 SUPPORTED_CONCRETE_FOOTPRINT_MODELS = SUPPORTED_FOOTPRINT_MODELS - {"mixed"}
 
-FOOTPRINT_MODEL_ALIASES = {
-    "rotunda": "circle",
-    "perimeter": "courtyard",
-    "strip": "slab",
-    "plate": "slab",
-    "g_shape": "l_shape",
-    "p_shape": "u_shape",
-}
-
-DEFAULT_MIXED_FOOTPRINT_WEIGHTS = {
-    "rectangle": 0.30,
-    "square": 0.10,
-    "circle": 0.08,
-    "slab": 0.12,
-    "courtyard": 0.12,
-    "l_shape": 0.10,
-    "u_shape": 0.10,
-    "t_shape": 0.08,
-}
-
-
-SUPPORTED_ROOF_MODELS = {
-    "flat",
-    "shed",
-    "gable",
-    "hip",
-    "half_hip",
-    "pyramid",
-    "mansard",
-    "dome",
-    "barrel",
-    "cone",
-    "mixed",
-}
+SUPPORTED_ROOF_MODELS = set(ROOF_DEFINITIONS) | {"mixed"}
 
 SUPPORTED_CONCRETE_ROOF_MODELS = SUPPORTED_ROOF_MODELS - {"mixed"}
-
-ROOF_MODEL_ALIASES = {
-    "single_slope": "shed",
-    "mono_pitch": "shed",
-    "dual_pitch": "gable",
-    "pitched": "gable",
-    "hipped": "hip",
-    "half_hipped": "half_hip",
-    "tent": "pyramid",
-    "vault": "barrel",
-    "arched": "barrel",
-    "conical": "cone",
-}
-
-DEFAULT_MIXED_ROOF_WEIGHTS = {
-    "flat": 0.22,
-    "shed": 0.10,
-    "gable": 0.16,
-    "hip": 0.14,
-    "half_hip": 0.08,
-    "pyramid": 0.08,
-    "mansard": 0.08,
-    "dome": 0.06,
-    "barrel": 0.04,
-    "cone": 0.04,
-}
 
 
 @dataclass(frozen=True)
@@ -115,6 +52,30 @@ class TerrainConfig:
 
 
 @dataclass(frozen=True)
+class RoadProfileConfig:
+    carriageway_width_m: float
+    sidewalk_width_m: float
+    median_width_m: float = 0.0
+
+    @property
+    def total_corridor_width_m(self) -> float:
+        return self.carriageway_width_m + self.median_width_m + 2.0 * self.sidewalk_width_m
+
+    @property
+    def hardscape_half_width_m(self) -> float:
+        return self.total_corridor_width_m * 0.5
+
+
+@dataclass(frozen=True)
+class RoadProfilesConfig:
+    enabled: bool = False
+    default: str = "default"
+    definitions: dict[str, RoadProfileConfig] = field(default_factory=dict)
+    model_weights: dict[str, dict[str, float]] = field(default_factory=dict)
+    biome_weights: dict[str, dict[str, float]] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
 class RoadsConfig:
     model: str = "grid"
     spacing_m: float = 64.0
@@ -124,6 +85,18 @@ class RoadsConfig:
     radial_count: int = 12
     ring_spacing_m: float = 0.0
     organic_wander_m: float = 0.0
+    profiles: RoadProfilesConfig = field(default_factory=RoadProfilesConfig)
+
+    @property
+    def default_profile(self) -> RoadProfileConfig:
+        profile = self.profiles.definitions.get(self.profiles.default)
+        if profile is not None:
+            return profile
+        return RoadProfileConfig(
+            carriageway_width_m=self.width_m,
+            sidewalk_width_m=self.sidewalk_width_m,
+            median_width_m=0.0,
+        )
 
 
 @dataclass(frozen=True)
@@ -207,6 +180,12 @@ class ParcelsConfig:
 
 
 @dataclass(frozen=True)
+class WorldgenConfig:
+    catalog_docs: bool = True
+    strict_catalog_validation: bool = True
+
+
+@dataclass(frozen=True)
 class CityGenConfig:
     seed: int
     tile: TileConfig = TileConfig()
@@ -217,6 +196,7 @@ class CityGenConfig:
     output: OutputConfig = OutputConfig()
     urban_fields: UrbanFieldsConfig = UrbanFieldsConfig()
     parcels: ParcelsConfig = ParcelsConfig()
+    worldgen: WorldgenConfig = WorldgenConfig()
     tiles: tuple[TileConfig, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
@@ -249,6 +229,7 @@ def load_config(path: str | Path) -> CityGenConfig:
         output=_output_config(_section(raw, "output")),
         urban_fields=_urban_fields_config(_section(raw, "urban_fields")),
         parcels=_parcels_config(_section(raw, "parcels")),
+        worldgen=_worldgen_config(_section(raw, "worldgen")),
         tiles=tiles,
     )
     _validate(cfg)
@@ -327,16 +308,151 @@ def _terrain_config(raw: dict[str, Any]) -> TerrainConfig:
 
 def _roads_config(raw: dict[str, Any]) -> RoadsConfig:
     defaults = RoadsConfig()
+    width_m = _float(raw, "width_m", defaults.width_m)
+    sidewalk_width_m = _float(raw, "sidewalk_width_m", defaults.sidewalk_width_m)
     return RoadsConfig(
         model=_str(raw, "model", defaults.model),
         spacing_m=_float(raw, "spacing_m", defaults.spacing_m),
-        width_m=_float(raw, "width_m", defaults.width_m),
-        sidewalk_width_m=_float(raw, "sidewalk_width_m", defaults.sidewalk_width_m),
+        width_m=width_m,
+        sidewalk_width_m=sidewalk_width_m,
         angle_degrees=_float(raw, "angle_degrees", defaults.angle_degrees),
         radial_count=_int(raw, "radial_count", defaults.radial_count),
         ring_spacing_m=_float(raw, "ring_spacing_m", defaults.ring_spacing_m),
         organic_wander_m=_float(raw, "organic_wander_m", defaults.organic_wander_m),
+        profiles=_road_profiles_config(raw.get("profiles"), width_m, sidewalk_width_m),
     )
+
+
+def _road_profiles_config(raw: Any, width_m: float, sidewalk_width_m: float) -> RoadProfilesConfig:
+    if raw is None:
+        return RoadProfilesConfig(
+            enabled=False,
+            default="default",
+            definitions={
+                "default": RoadProfileConfig(
+                    carriageway_width_m=width_m,
+                    sidewalk_width_m=sidewalk_width_m,
+                    median_width_m=0.0,
+                )
+            },
+        )
+    if not isinstance(raw, dict):
+        raise ConfigError("roads.profiles must be a mapping.")
+
+    supported = {
+        "enabled",
+        "default",
+        "definitions",
+        "model_weights",
+        "biome_weights",
+    }
+    for key in raw:
+        if key not in supported:
+            fields = ", ".join(sorted(supported))
+            raise ConfigError(f"Unsupported roads.profiles.{key}. Supported fields: {fields}.")
+
+    enabled = _bool(raw, "enabled", False)
+    definitions = _default_road_profile_definitions(width_m, sidewalk_width_m)
+    definitions.update(_road_profile_definitions(raw.get("definitions")))
+    return RoadProfilesConfig(
+        enabled=enabled,
+        default=_str(raw, "default", "collector"),
+        definitions=definitions,
+        model_weights=_road_profile_weight_table(
+            raw.get("model_weights"),
+            DEFAULT_ROAD_PROFILE_MODEL_WEIGHTS if enabled else {},
+            "roads.profiles.model_weights",
+        ),
+        biome_weights=_road_profile_weight_table(
+            raw.get("biome_weights"),
+            DEFAULT_ROAD_PROFILE_BIOME_WEIGHTS if enabled else {},
+            "roads.profiles.biome_weights",
+        ),
+    )
+
+
+def _default_road_profile_definitions(width_m: float, sidewalk_width_m: float) -> dict[str, RoadProfileConfig]:
+    local_width = max(4.0, width_m * 0.72)
+    arterial_width = max(width_m + 4.0, width_m * 1.35)
+    boulevard_width = max(width_m + 6.0, width_m * 1.6)
+    return {
+        "local": RoadProfileConfig(
+            carriageway_width_m=local_width,
+            sidewalk_width_m=max(1.5, sidewalk_width_m * 0.72),
+            median_width_m=0.0,
+        ),
+        "collector": RoadProfileConfig(
+            carriageway_width_m=width_m,
+            sidewalk_width_m=sidewalk_width_m,
+            median_width_m=0.0,
+        ),
+        "arterial": RoadProfileConfig(
+            carriageway_width_m=arterial_width,
+            sidewalk_width_m=sidewalk_width_m + 1.0,
+            median_width_m=1.5,
+        ),
+        "boulevard": RoadProfileConfig(
+            carriageway_width_m=boulevard_width,
+            sidewalk_width_m=sidewalk_width_m + 1.0,
+            median_width_m=6.0,
+        ),
+    }
+
+
+def _road_profile_definitions(raw: Any) -> dict[str, RoadProfileConfig]:
+    if raw is None:
+        return {}
+    if not isinstance(raw, dict):
+        raise ConfigError("roads.profiles.definitions must be a mapping.")
+
+    definitions: dict[str, RoadProfileConfig] = {}
+    for name, value in raw.items():
+        if not isinstance(name, str) or not name:
+            raise ConfigError("roads.profiles.definitions keys must be non-empty strings.")
+        if not isinstance(value, dict):
+            raise ConfigError(f"roads.profiles.definitions.{name} must be a mapping.")
+        definitions[name] = RoadProfileConfig(
+            carriageway_width_m=_float(value, "carriageway_width_m", 0.0),
+            sidewalk_width_m=_float(value, "sidewalk_width_m", 0.0),
+            median_width_m=_float(value, "median_width_m", 0.0),
+        )
+    return definitions
+
+
+def _road_profile_weight_table(
+    raw: Any,
+    defaults: dict[str, dict[str, float]],
+    label: str,
+) -> dict[str, dict[str, float]]:
+    if raw is None:
+        return {name: dict(weights) for name, weights in defaults.items()}
+    if not isinstance(raw, dict):
+        raise ConfigError(f"{label} must be a mapping.")
+
+    result: dict[str, dict[str, float]] = {}
+    for selector, weights in raw.items():
+        if not isinstance(selector, str):
+            raise ConfigError(f"{label} keys must be strings.")
+        result[selector] = _road_profile_weights(weights, f"{label}.{selector}")
+    return result
+
+
+def _road_profile_weights(raw: Any, label: str) -> dict[str, float]:
+    if not isinstance(raw, dict):
+        raise ConfigError(f"{label} must be a mapping.")
+
+    weights: dict[str, float] = {}
+    for profile_name, value in raw.items():
+        if not isinstance(profile_name, str):
+            raise ConfigError(f"{label} keys must be strings.")
+        if isinstance(value, bool):
+            raise ConfigError(f"{label}.{profile_name} must be a number.")
+        try:
+            weight = float(value)
+        except (TypeError, ValueError) as exc:
+            raise ConfigError(f"{label}.{profile_name} must be a number.") from exc
+        weights[profile_name] = weight
+    return weights
 
 
 def _buildings_config(raw: dict[str, Any]) -> BuildingsConfig:
@@ -508,7 +624,28 @@ def _parcels_config(raw: dict[str, Any]) -> ParcelsConfig:
     )
 
 
+def _worldgen_config(raw: dict[str, Any]) -> WorldgenConfig:
+    supported = {
+        "catalog_docs",
+        "strict_catalog_validation",
+    }
+    for key in raw:
+        if key not in supported:
+            fields = ", ".join(sorted(supported))
+            raise ConfigError(f"Unsupported worldgen.{key}. Supported fields: {fields}.")
+    defaults = WorldgenConfig()
+    return WorldgenConfig(
+        catalog_docs=_bool(raw, "catalog_docs", defaults.catalog_docs),
+        strict_catalog_validation=_bool(raw, "strict_catalog_validation", defaults.strict_catalog_validation),
+    )
+
+
 def _validate(cfg: CityGenConfig) -> None:
+    if cfg.worldgen.strict_catalog_validation:
+        issues = validate_catalogs()
+        if issues:
+            raise ConfigError("Invalid worldgen catalogs: " + "; ".join(issues))
+
     for tile in (cfg.tile, *cfg.tiles):
         if tile.size_m <= 0:
             raise ConfigError("tile.size_m must be positive.")
@@ -545,6 +682,7 @@ def _validate(cfg: CityGenConfig) -> None:
     if cfg.roads.model not in SUPPORTED_ROAD_MODELS:
         supported = ", ".join(sorted(SUPPORTED_ROAD_MODELS))
         raise ConfigError(f"Unsupported roads.model='{cfg.roads.model}'. Supported models: {supported}.")
+    _validate_road_profiles(cfg)
     if cfg.buildings.footprint.model not in SUPPORTED_FOOTPRINT_MODELS:
         supported = ", ".join(sorted(SUPPORTED_FOOTPRINT_MODELS))
         raise ConfigError(
@@ -631,6 +769,59 @@ def _validate(cfg: CityGenConfig) -> None:
         raise ConfigError("parcels.max_parcel_depth_m must be >= parcels.min_parcel_depth_m.")
     if cfg.parcels.block_size_m < cfg.parcels.min_block_size_m:
         raise ConfigError("parcels.block_size_m must be >= parcels.min_block_size_m.")
+
+
+def _validate_road_profiles(cfg: CityGenConfig) -> None:
+    profiles = cfg.roads.profiles
+    if not profiles.definitions:
+        raise ConfigError("roads.profiles.definitions must contain at least one profile.")
+    if profiles.default not in profiles.definitions:
+        raise ConfigError(f"roads.profiles.default='{profiles.default}' is not defined.")
+
+    for name, profile in profiles.definitions.items():
+        if profile.carriageway_width_m <= 0:
+            raise ConfigError(f"roads.profiles.definitions.{name}.carriageway_width_m must be positive.")
+        if profile.sidewalk_width_m <= 0:
+            raise ConfigError(f"roads.profiles.definitions.{name}.sidewalk_width_m must be positive.")
+        if profile.median_width_m < 0:
+            raise ConfigError(f"roads.profiles.definitions.{name}.median_width_m must be >= 0.")
+
+    for model, weights in profiles.model_weights.items():
+        if model not in SUPPORTED_ROAD_MODELS - {"mixed"}:
+            supported = ", ".join(sorted(SUPPORTED_ROAD_MODELS - {"mixed"}))
+            raise ConfigError(f"Unsupported roads.profiles.model_weights.{model}. Supported models: {supported}.")
+        _validate_road_profile_weights(weights, profiles.definitions, f"roads.profiles.model_weights.{model}")
+
+    for biome, weights in profiles.biome_weights.items():
+        if biome not in SUPPORTED_BIOMES:
+            supported = ", ".join(sorted(SUPPORTED_BIOMES))
+            raise ConfigError(f"Unsupported roads.profiles.biome_weights.{biome}. Supported biomes: {supported}.")
+        _validate_road_profile_weights(weights, profiles.definitions, f"roads.profiles.biome_weights.{biome}")
+
+    if profiles.enabled:
+        max_width = max(profile.total_corridor_width_m for profile in profiles.definitions.values())
+        if max_width >= cfg.roads.spacing_m:
+            raise ConfigError(
+                "roads.profiles maximum corridor width must be smaller than roads.spacing_m."
+            )
+
+
+def _validate_road_profile_weights(
+    weights: dict[str, float],
+    definitions: dict[str, RoadProfileConfig],
+    label: str,
+) -> None:
+    if not weights:
+        raise ConfigError(f"{label} must contain at least one profile weight.")
+    total = 0.0
+    for profile_name, weight in weights.items():
+        if profile_name not in definitions:
+            raise ConfigError(f"{label}.{profile_name} references an undefined road profile.")
+        if weight < 0:
+            raise ConfigError(f"{label}.{profile_name} must be >= 0.")
+        total += weight
+    if total <= 0:
+        raise ConfigError(f"{label} must have a positive weight sum.")
 
 
 def _int_range(raw: dict[str, Any], key: str) -> tuple[int, int]:

@@ -4,22 +4,13 @@ from dataclasses import dataclass
 import math
 from random import Random
 
+from .catalogs import ROOF_DEFINITIONS
 from .config import RoofConfig
 from .footprints import BuildingFootprint
+from .selectors import select_weighted_id
 
 
-ROOF_KINDS = (
-    "flat",
-    "shed",
-    "gable",
-    "hip",
-    "half_hip",
-    "pyramid",
-    "mansard",
-    "dome",
-    "barrel",
-    "cone",
-)
+ROOF_KINDS = tuple(ROOF_DEFINITIONS)
 
 
 @dataclass(frozen=True)
@@ -78,15 +69,7 @@ class RoofSpec:
 def select_roof_kind(config: RoofConfig, rng: Random) -> str:
     if config.model != "mixed":
         return config.model
-    total = sum(config.weights.values())
-    pick = rng.random() * total
-    cursor = 0.0
-    for kind in ROOF_KINDS:
-        weight = config.weights.get(kind, 0.0)
-        cursor += weight
-        if pick <= cursor:
-            return kind
-    return "flat"
+    return select_weighted_id(config.weights, rng, fallback="flat", ordered_ids=ROOF_KINDS)
 
 
 def build_roof(

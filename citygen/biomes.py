@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import math
 
+from .catalogs import BIOME_DEFINITIONS, BiomeDefinition
 from .config import UrbanFieldsConfig
 from .fields import sample_urban_fields
 from .geometry import BBox
@@ -19,43 +20,21 @@ class BiomeParams:
     preferred_road_model: str
 
 
+def _params_from_definition(definition: BiomeDefinition) -> BiomeParams:
+    return BiomeParams(
+        name=definition.id,
+        build_probability=definition.build_probability,
+        footprint_scale=definition.footprint_scale,
+        height_min_multiplier=definition.height_min_multiplier,
+        height_max_multiplier=definition.height_max_multiplier,
+        setback_scale=definition.setback_scale,
+        preferred_road_model=definition.preferred_road_model,
+    )
+
+
 BIOME_PARAMS: dict[str, BiomeParams] = {
-    "downtown": BiomeParams(
-        name="downtown",
-        build_probability=0.94,
-        footprint_scale=1.08,
-        height_min_multiplier=1.45,
-        height_max_multiplier=1.75,
-        setback_scale=0.65,
-        preferred_road_model="radial_ring",
-    ),
-    "residential": BiomeParams(
-        name="residential",
-        build_probability=0.78,
-        footprint_scale=0.92,
-        height_min_multiplier=0.85,
-        height_max_multiplier=0.82,
-        setback_scale=1.0,
-        preferred_road_model="grid",
-    ),
-    "industrial": BiomeParams(
-        name="industrial",
-        build_probability=0.64,
-        footprint_scale=1.45,
-        height_min_multiplier=0.9,
-        height_max_multiplier=0.75,
-        setback_scale=0.85,
-        preferred_road_model="linear",
-    ),
-    "suburb": BiomeParams(
-        name="suburb",
-        build_probability=0.38,
-        footprint_scale=0.72,
-        height_min_multiplier=0.55,
-        height_max_multiplier=0.45,
-        setback_scale=1.45,
-        preferred_road_model="organic",
-    ),
+    name: _params_from_definition(definition)
+    for name, definition in BIOME_DEFINITIONS.items()
 }
 
 
@@ -75,6 +54,14 @@ def classify_biome(seed: int, config: UrbanFieldsConfig, x: float, y: float) -> 
 
 def biome_params(name: str) -> BiomeParams:
     return BIOME_PARAMS.get(name, BIOME_PARAMS["residential"])
+
+
+def biome_definition(name: str) -> BiomeDefinition:
+    return BIOME_DEFINITIONS.get(name, BIOME_DEFINITIONS["residential"])
+
+
+def supported_biomes() -> tuple[str, ...]:
+    return tuple(sorted(BIOME_DEFINITIONS))
 
 
 def preferred_road_model_for_biome(name: str) -> str:

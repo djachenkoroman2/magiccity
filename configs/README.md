@@ -60,6 +60,16 @@ roads:
   radial_count: 12
   ring_spacing_m: 0
   organic_wander_m: 0
+  profiles:
+    enabled: false
+    default: default
+    definitions:
+      default:
+        carriageway_width_m: 10
+        sidewalk_width_m: 3
+        median_width_m: 0
+    model_weights: {}
+    biome_weights: {}
 buildings:
   enabled: true
   min_height_m: 8
@@ -108,6 +118,9 @@ output:
   format: ply
   include_rgb: true
   include_class: true
+worldgen:
+  catalog_docs: true
+  strict_catalog_validation: true
 ```
 
 ## Корневые параметры
@@ -124,6 +137,7 @@ output:
 | `parcels` | mapping | нет | см. секцию `parcels` | Включает прямоугольное block/parcel subdivision и размещение зданий внутри участков. |
 | `sampling` | mapping | нет | см. секцию `sampling` | Настраивает плотность и регулярность точек. |
 | `output` | mapping | нет | см. секцию `output` | Настраивает PLY-поля. |
+| `worldgen` | mapping | нет | см. секцию `worldgen` | Настраивает catalog/worldgen validation flags. |
 
 ## `tile`
 
@@ -289,6 +303,7 @@ roads:
 | `spacing_m` | number | `64.0` | `> 0` | Основной шаг между дорогами или узлами сети. Чем меньше значение, тем плотнее дорожная сеть. |
 | `width_m` | number | `10.0` | `> 0` | Полная ширина проезжей части. Точка считается `road`, если расстояние до оси дороги не больше `width_m / 2`. |
 | `sidewalk_width_m` | number | `3.0` | `> 0` | Ширина тротуара с каждой стороны дороги. Точка считается `sidewalk`, если она за пределами дороги, но в пределах `width_m / 2 + sidewalk_width_m`. |
+| `profiles` | mapping | disabled | mapping | Опциональные road profiles с разной шириной проезжей части, тротуаров и центрального разделителя. |
 | `angle_degrees` | number | `0.0` | любое число | Поворот в градусах. Используется в `radial`, `radial_ring` и `linear`; в `mixed` влияет на соответствующие подмодели. |
 | `radial_count` | integer | `12` | `>= 3` | Количество лучей в моделях `radial` и `radial_ring`. |
 | `ring_spacing_m` | number | `0.0` | `>= 0` | Шаг кольцевых дорог для `radial_ring`. `0` означает использовать `spacing_m`. |
@@ -320,6 +335,62 @@ Surface-класс точки определяется по расстоянию
 distance <= width_m / 2                         -> road
 distance <= width_m / 2 + sidewalk_width_m      -> sidewalk
 иначе                                           -> ground
+```
+
+### `roads.profiles`
+
+Если `roads.profiles.enabled: true`, каждая road primitive получает детерминированно выбранный profile. Profile задает поперечное сечение дороги:
+
+```yaml
+roads:
+  profiles:
+    enabled: true
+    default: collector
+    definitions:
+      local:
+        carriageway_width_m: 7
+        sidewalk_width_m: 2
+        median_width_m: 0
+      collector:
+        carriageway_width_m: 10
+        sidewalk_width_m: 3
+        median_width_m: 0
+      arterial:
+        carriageway_width_m: 14
+        sidewalk_width_m: 4
+        median_width_m: 1.5
+      boulevard:
+        carriageway_width_m: 16
+        sidewalk_width_m: 4
+        median_width_m: 6
+    model_weights:
+      grid: {local: 0.45, collector: 0.40, arterial: 0.15}
+      radial_ring: {collector: 0.20, arterial: 0.45, boulevard: 0.35}
+      linear: {collector: 0.35, arterial: 0.50, boulevard: 0.15}
+      organic: {local: 0.80, collector: 0.20}
+    biome_weights:
+      downtown: {collector: 0.15, arterial: 0.45, boulevard: 0.40}
+      residential: {local: 0.55, collector: 0.35, arterial: 0.10}
+      industrial: {collector: 0.30, arterial: 0.55, boulevard: 0.15}
+      suburb: {local: 0.85, collector: 0.15}
+```
+
+| Параметр | Тип | Действие |
+| --- | --- | --- |
+| `enabled` | boolean | Включает profile-aware ширины. При `false` используется совместимое поведение через `roads.width_m` и `roads.sidewalk_width_m`. |
+| `default` | string | Profile для fallback, должен быть описан в `definitions`. |
+| `definitions.*.carriageway_width_m` | number | Суммарная ширина проезжей части без median. |
+| `definitions.*.sidewalk_width_m` | number | Ширина тротуара с каждой стороны. |
+| `definitions.*.median_width_m` | number | Ширина центрального разделителя; при `> 0` генерирует class `road_median`. |
+| `model_weights` | mapping | Веса profiles по road model. |
+| `biome_weights` | mapping | Веса profiles по биому anchor-точки road primitive. |
+
+Для profile с median классификация идет от оси дороги наружу: `road_median`, затем `road`, затем `sidewalk`, затем `ground`. На перекрытиях дорог `road` имеет приоритет над median, чтобы пересечения не превращались в сплошной разделитель.
+
+Валидатор требует положительные `carriageway_width_m`/`sidewalk_width_m`, `median_width_m >= 0`, существующие profile names в weights, положительные суммы весов и:
+
+```text
+max(carriageway_width_m + median_width_m + 2 * sidewalk_width_m) < roads.spacing_m
 ```
 
 ## `buildings`
@@ -556,7 +627,7 @@ sampling:
 
 - Уменьшение spacing увеличивает плотность и размер PLY.
 - Увеличение spacing ускоряет preview и уменьшает файлы.
-- Для ground/road/sidewalk сначала берется минимальный шаг из `ground_spacing_m` и `road_spacing_m`, затем лишние точки прореживаются под нужный класс.
+- Для ground/road/road_median/sidewalk сначала берется минимальный шаг из `ground_spacing_m` и `road_spacing_m`, затем лишние точки прореживаются под нужный класс.
 - `building_spacing_m` отдельно применяется к крышам и фасадам.
 - Jitter детерминирован от `seed`, поэтому не ломает воспроизводимость.
 
@@ -598,6 +669,7 @@ x y z
 | `3` | `sidewalk` | `174, 174, 166` |
 | `4` | `building_facade` | `176, 164, 148` |
 | `5` | `building_roof` | `112, 116, 122` |
+| `6` | `road_median` | `118, 128, 84` |
 
 Для каждого PLY также пишется metadata-файл рядом с ним:
 
@@ -606,7 +678,24 @@ outputs/example.ply
 outputs/example.metadata.json
 ```
 
-Metadata содержит seed, bbox тайла, количество точек, распределение классов, mapping классов, использованные road models, biome counts, `building_counts`, списки поддержанных footprint/roof types и полный конфиг после применения defaults.
+Metadata содержит seed, bbox тайла, количество точек, распределение классов, mapping классов, использованные road models, `road_profile_counts`, `road_profile_counts_by_biome`, `road_widths`, `road_median`, biome counts, `building_counts`, списки поддержанных footprint/roof types и полный конфиг после применения defaults.
+
+## `worldgen`
+
+Секция `worldgen` опциональна и управляет catalog/worldgen validation flags. Она не меняет runtime distribution сцены.
+
+```yaml
+worldgen:
+  catalog_docs: true
+  strict_catalog_validation: true
+```
+
+| Параметр | Тип | По умолчанию | Действие |
+| --- | --- | --- | --- |
+| `catalog_docs` | boolean | `true` | Документирует намерение держать catalog-backed docs включенными; сейчас используется как resolved config flag. |
+| `strict_catalog_validation` | boolean | `true` | При загрузке config проверяет встроенные catalogs на неизвестные ids, некорректные weights и битые ссылки. |
+
+Catalog architecture описана в `doc/worldgen_catalogs.md`, а список generated object features — в `doc/generated_objects.md`.
 
 ## Ограничения валидатора
 
@@ -629,6 +718,10 @@ Metadata содержит seed, bbox тайла, количество точек
 | `roads.ring_spacing_m < 0` | ring spacing не может быть отрицательным |
 | `roads.organic_wander_m < 0` | organic wander не может быть отрицательным |
 | `roads.width_m + 2 * roads.sidewalk_width_m >= roads.spacing_m` | дорога с тротуарами должна быть уже квартального шага |
+| `roads.profiles.default` не описан в `definitions` | default profile должен существовать |
+| `roads.profiles.*_weights` содержит неизвестный road model, biome или profile | веса должны ссылаться на поддержанные сущности |
+| `roads.profiles.*_weights` имеет сумму `<= 0` | для выбора profile нужна положительная сумма весов |
+| `max(profile corridor width) >= roads.spacing_m` | самый широкий road profile должен помещаться в квартальный шаг |
 | Любой обязательный positive spacing/size/height `<= 0` | значение должно быть положительным |
 | `buildings.max_height_m < buildings.min_height_m` | максимум высоты должен быть не меньше минимума |
 | `buildings.footprint_max_m < buildings.footprint_min_m` | максимум footprint должен быть не меньше минимума |
@@ -661,6 +754,8 @@ Metadata содержит seed, bbox тайла, количество точек
 | `sampling.mode != surface` | поддерживается только `surface` |
 | `sampling.jitter_ratio` вне `0..0.45` | jitter должен быть в допустимом диапазоне |
 | `output.format != ply` | поддерживается только `ply` |
+| Неизвестный ключ в `worldgen` | поддерживаются `catalog_docs`, `strict_catalog_validation` |
+| builtin catalogs не проходят strict validation | catalog definitions должны ссылаться только на известные ids и иметь валидные weights |
 
 ## Демо-конфиги в этом каталоге
 
@@ -678,6 +773,7 @@ Metadata содержит seed, bbox тайла, количество точек
 | `demo_linear.yaml` | Линейная городская структура с основной осью и редкими поперечными улицами. |
 | `demo_organic.yaml` | Волнистые organic streets, связанные с рельефом. |
 | `demo_mixed_biomes.yaml` | `mixed` road model, urban fields и несколько биомов в одном тайле. |
+| `demo_road_profiles.yaml` | Road profiles: вариативная ширина дорог, arterial/boulevard, wide median и class `road_median`. |
 | `demo_universal_showcase.yaml` | Большой showcase-тайл: mixed roads, urban fields, биомы, mixed footprints, mixed roofs и parcels. См. `demo_universal_showcase.md`. |
 | `demo_parcels.yaml` | Parcel subdivision: прямоугольные blocks/parcels и здания, привязанные к участкам. |
 | `demo_building_footprints.yaml` | Несколько типов building footprint в одном тайле. |

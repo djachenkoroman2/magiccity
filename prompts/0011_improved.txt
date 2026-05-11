@@ -1,0 +1,506 @@
+Ты senior Python-инженер и архитектор процедурных генераторов городских point clouds.
+
+В репозитории есть рабочий MVP `citygen`: CLI на Python, YAML-конфиги, детерминированный `seed`, тайлы, road primitives, несколько road models, road profiles, urban fields, биомы, parcels, разные building footprints, разные roof geometry, surface sampling, ASCII PLY export и metadata JSON. Координатная конвенция проекта: горизонтальная плоскость `x/y`, высота `z`. Справочники: `README.md`, `configs/README.md`, `doc/biomes.md`, `doc/building_footprints.md`, `doc/building_roofs.md`, `doc/parcels.md`.
+
+Нужно реализовать следующий архитектурный этап: привести логику генерации к Minecraft-like подходу в смысле организации worldgen, а не в смысле voxel/block gameplay. То есть нужен единый, расширяемый и документируемый подход к биомам, объектам и стадиям генерации, чтобы новые биомы и новые типы генерируемых объектов можно было добавлять без переписывания общей структуры пайплайна.
+
+Не останавливайся на описании подхода: внеси рабочие изменения в код, YAML-конфиги, документацию и тесты.
+
+## Что значит Minecraft-like для этого проекта
+
+Не превращай `citygen` в Minecraft clone и не добавляй voxel blocks.
+
+Под Minecraft-like подходом здесь понимаются архитектурные принципы world generation:
+
+- генерация идет через явные stages/layers;
+- каждый stage работает с immutable-ish контекстом: seed, tile/chunk coordinates, bbox, config, catalogs;
+- биом определяется отдельным biome source, а не разбросанными `if` по коду;
+- типы объектов описаны в registry/catalog, а не зашиты разрозненными строками;
+- есть аналог configured features: "что генерировать" + параметры;
+- есть аналог placed features: "где и с какими правилами размещать";
+- биомы выбирают/взвешивают road models, road profiles, buildings, parcels, footprint/roof types и будущие object features через единый механизм;
+- все random decisions локальны и детерминированы от seed, tile coords, feature id, object id и namespace;
+- metadata и документация строятся из тех же registry/catalog definitions, которые использует генератор.
+
+Цель — не идеальная копия Minecraft internals, а практичная, чистая архитектура MVP для процедурного городского point cloud generator.
+
+## Главная цель
+
+Сделай унифицированную систему worldgen catalogs/registries для:
+
+- биомов;
+- road models;
+- road profiles;
+- parcel/block subdivision modes, если они уже есть;
+- building object type;
+- building footprint types;
+- roof types;
+- semantic object/surface classes;
+- будущих generated object types без необходимости менять центральный пайплайн.
+
+После изменения должно быть понятно:
+
+- где перечислены все поддержанные биомы;
+- где перечислены все генерируемые object/features;
+- какие параметры и веса у каждого биома;
+- какие object/features допустимы в каждом биоме;
+- как добавить новый биом;
+- как добавить новый generated object type;
+- как сгенерировать или обновить документацию по catalogs.
+
+## Обязательные принципы
+
+1. Сохрани обратную совместимость:
+   - `configs/mvp.yaml` должен запускаться без изменений;
+   - существующие `demo_*.yaml` должны продолжить работать;
+   - старые поля `urban_fields`, `roads`, `buildings`, `parcels`, `sampling`, `output` должны остаться валидными;
+   - metadata можно расширять, но нельзя удалять существующие поля;
+   - semantic class ids нельзя менять.
+
+2. Сохрани детерминированность:
+   - одинаковый seed и одинаковый config дают одинаковые биомы, roads, parcels, buildings, points и metadata;
+   - не используй глобальный недетерминированный `random`;
+   - все choices должны использовать stable hash-based RNG с понятным namespace.
+
+3. Сохрани текущий результат как baseline:
+   - после refactor базовые сцены не должны радикально измениться без причины;
+   - допускаются небольшие изменения metadata или ordering, если они документированы и тесты обновлены;
+   - если refactor меняет distribution, явно объясни почему.
+
+4. Не добавляй тяжелые зависимости:
+   - registry/catalog можно реализовать dataclass-ами и обычными dict;
+   - не нужен plugin framework, database, pydantic, GIS stack или runtime code generation;
+   - если dependency все-таки нужна, обоснуй и добавь минимально.
+
+5. Не добавляй новые визуальные сущности ради демонстрации:
+   - не нужно реализовывать машины, деревья, фонари, ЛЭП, материалы, Minecraft blocks, mobs или inventory;
+   - object catalog должен сначала описывать уже существующие сущности и быть готовым к расширению.
+
+## Архитектура pipeline
+
+Введи явную структуру стадий генерации, например:
+
+```text
+load_config()
+  -> resolve_catalogs()
+  -> create_worldgen_context()
+  -> sample_biome_source()
+  -> build_road_network()
+  -> build_blocks_and_parcels()
+  -> place_object_features()
+  -> sample_surfaces()
+  -> export_ply()
+  -> export_metadata()
+```
+
+Можно выбрать другие имена, если они лучше ложатся в текущий код. Главное — сделать stages явными и документированными.
+
+Нужен объект контекста, например `WorldgenContext`:
+
+```python
+@dataclass(frozen=True)
+class WorldgenContext:
+    config: CityGenConfig
+    catalogs: WorldgenCatalogs
+    seed: int
+    tile: TileConfig
+    bbox: BBox
+    work_bbox: BBox
+```
+
+Требования:
+
+- stages должны получать контекст явно, а не подтягивать global state;
+- context должен быть удобен для future stages;
+- нельзя переписывать весь проект ради абстракции, если достаточно тонкого слоя;
+- текущий `generate_scene(config)` должен остаться публичным entry point или получить совместимый wrapper.
+
+## Registry / catalog слой
+
+Добавь модуль или набор модулей, например:
+
+```text
+citygen/catalogs.py
+citygen/worldgen.py
+```
+
+Каталог должен быть единым source of truth для supported definitions.
+
+Рекомендуемые dataclass-и:
+
+```python
+@dataclass(frozen=True)
+class BiomeDefinition:
+    id: str
+    title: str
+    description: str
+    tags: tuple[str, ...]
+    build_probability: float
+    footprint_scale: float
+    height_min_multiplier: float
+    height_max_multiplier: float
+    setback_scale: float
+    preferred_road_model: str
+    road_profile_weights: dict[str, float]
+    object_weights: dict[str, float]
+
+@dataclass(frozen=True)
+class ObjectFeatureDefinition:
+    id: str
+    title: str
+    category: str
+    description: str
+    stage: str
+    semantic_classes: tuple[str, ...]
+    config_section: str | None
+    enabled_by_default: bool
+    biome_tags: tuple[str, ...]
+```
+
+Можно добавить:
+
+- `RoadModelDefinition`;
+- `RoadProfileDefinition`;
+- `FootprintDefinition`;
+- `RoofDefinition`;
+- `SemanticClassDefinition`;
+- `CatalogValidationIssue`.
+
+Не обязательно делать все идеально обобщенным в одном проходе. Но должно быть ясно, что новые биомы/object features добавляются через definition/registry, а не через несколько независимых списков строк в разных файлах.
+
+## Биомы
+
+Сейчас биомы определены в `citygen/biomes.py` через `BIOME_PARAMS`, `classify_biome()`, `biome_params()`, `preferred_road_model_for_biome()`.
+
+Нужно:
+
+- перенести параметры биомов в unified catalog или сделать catalog wrapper вокруг существующих definitions;
+- сохранить функции `classify_biome`, `biome_params`, `preferred_road_model_for_biome` как совместимые фасады, если они используются в коде;
+- добавить возможность получить `BiomeDefinition` по id;
+- добавить список supported biomes из catalog;
+- убрать дублирующиеся hardcoded списки биомов там, где их можно заменить catalog lookup;
+- сохранить текущие биомы:
+  - `downtown`;
+  - `residential`;
+  - `industrial`;
+  - `suburb`.
+
+Важно: biome source может остаться текущим `urban_fields` + thresholds. Не нужно изобретать новую noise-router систему, если текущая работает. Но thresholds, docs и эффекты биома должны быть описаны как часть единой системы.
+
+## Generated objects / features
+
+Введи единый слой object feature definitions для текущих сущностей:
+
+- `terrain_surface`;
+- `road_network`;
+- `road_surface`;
+- `road_sidewalk`;
+- `road_median`, если поддерживается;
+- `parcel_blocks`;
+- `building`;
+- `building_footprint`;
+- `building_roof`.
+
+Если считаешь, что `road_surface`/`road_sidewalk` лучше считать semantic surfaces, а не object features, выбери более чистое разделение и задокументируй его. Важно, чтобы пользователь мог найти полный список того, что генератор умеет создавать.
+
+Для каждого object/feature definition укажи:
+
+- stable id;
+- human title;
+- category;
+- stage;
+- краткое описание;
+- связанные semantic classes;
+- связанный YAML config section;
+- биомные ограничения или веса, если применимо;
+- ссылку/якорь на документацию.
+
+Не нужно сразу реализовывать универсальный placement engine для всех features, если это приведет к большому рискованному refactor. Допустим MVP-вариант:
+
+- existing generation functions остаются;
+- они читают definitions/catalogs для supported ids, weights, docs и validation;
+- buildings/roads/footprints/roofs постепенно подключены к общим selectors.
+
+## Config integration
+
+Добавь минимальную, обратносуместимую config-интеграцию.
+
+Возможные варианты:
+
+```yaml
+worldgen:
+  catalog_docs: true
+  strict_catalog_validation: true
+```
+
+или:
+
+```yaml
+catalogs:
+  strict: true
+```
+
+Эта секция должна быть опциональной. Если она отсутствует, defaults должны сохранять старое поведение.
+
+Не требуй от пользователя переписывать текущие configs на новый формат.
+
+Если вводишь overrides, сделай их очень аккуратно, например:
+
+```yaml
+biomes:
+  overrides:
+    downtown:
+      build_probability: 0.96
+      preferred_road_model: radial_ring
+```
+
+Но не нужно делать большой data pack формат, если это затянет задачу. Сначала важнее unified internal architecture и docs.
+
+## Selectors and weights
+
+Сделай единый helper для deterministic weighted choices, если сейчас в проекте несколько раз повторяется похожая логика.
+
+Требования:
+
+- helper принимает weights mapping;
+- валидирует неизвестные ids через catalog, если применимо;
+- валидирует веса `>= 0` и положительную сумму;
+- использует переданный RNG или stable RNG namespace;
+- сортирует keys перед выбором, чтобы dict insertion order не менял результат;
+- возвращает stable id.
+
+Примеры использования:
+
+- footprint type selection;
+- roof type selection;
+- road profile selection;
+- future object feature selection.
+
+Не ломай существующие probabilities и weights.
+
+## Metadata
+
+Расширь metadata JSON, не удаляя старые поля.
+
+Добавь агрегаты вроде:
+
+```json
+"worldgen": {
+  "pipeline_version": 1,
+  "stages": [
+    "biome_source",
+    "roads",
+    "parcels",
+    "objects",
+    "sampling"
+  ]
+},
+"catalogs": {
+  "biomes": ["downtown", "residential", "industrial", "suburb"],
+  "object_features": ["terrain_surface", "road_network", "parcel_blocks", "building"],
+  "road_models": ["grid", "radial_ring", "radial", "linear", "organic", "mixed", "free"],
+  "footprint_types": ["rectangle", "square", "circle", "slab", "courtyard", "l_shape", "u_shape", "t_shape"],
+  "roof_types": ["flat", "shed", "gable", "hip", "half_hip", "pyramid", "mansard", "dome", "barrel", "cone"]
+}
+```
+
+Если уже есть `supported_footprint_types` и `supported_roof_types`, сохрани их для совместимости и добавь новый catalog summary рядом.
+
+Полезно также добавить:
+
+- `biome_catalog` summary с tags и preferred road model;
+- `object_feature_counts` или `enabled_features`, если это просто посчитать;
+- `documentation_version` или `catalog_schema_version`.
+
+## Документация
+
+Нужно разработать детальную и расширяемую систему документирования всех биомов и генерируемых объектов.
+
+Минимально:
+
+1. Добавь или обнови документ:
+
+```text
+doc/worldgen_catalogs.md
+```
+
+В нем должны быть:
+
+- описание Minecraft-like pipeline для `citygen`;
+- список stages;
+- список catalogs/registries;
+- правила добавления нового биома;
+- правила добавления нового object feature;
+- правила добавления/документирования weights;
+- объяснение deterministic RNG namespaces;
+- ссылки на существующие docs.
+
+2. Обнови `doc/biomes.md`:
+
+- укажи, что параметры биомов берутся из catalog;
+- таблица биомов должна включать id, tags, preferred road model, road profile preferences и building effects;
+- объясни, как biome source выбирает биом;
+- объясни, как биом влияет на generated objects.
+
+3. Добавь документ по объектам, например:
+
+```text
+doc/generated_objects.md
+```
+
+В нем перечисли все object/feature definitions:
+
+- terrain;
+- roads;
+- road profiles/surfaces;
+- parcels;
+- buildings;
+- footprints;
+- roofs;
+- semantic classes.
+
+Для каждого объекта укажи:
+
+- stage;
+- config section;
+- semantic classes;
+- biome interaction;
+- metadata fields;
+- ограничения MVP.
+
+4. Обнови `README.md` и `configs/README.md` только точечно:
+
+- ссылка на `doc/worldgen_catalogs.md`;
+- ссылка на `doc/generated_objects.md`;
+- короткое описание catalog-based architecture;
+- новые metadata fields, если добавлены.
+
+### Генерация документации
+
+Если получится компактно, добавь helper/CLI/script для генерации markdown из catalogs, например:
+
+```bash
+uv run python -m citygen.catalogs --write-docs
+```
+
+или:
+
+```bash
+uv run python -m citygen.docs
+```
+
+Но не делай это обязательным, если проще и надежнее держать markdown вручную, а тестами проверять, что docs покрывают все catalog ids.
+
+Обязательное требование: добавь тест, который проверяет, что каждый biome id и каждый object feature id из catalog упоминается в документации. Это дает расширяемую систему документации даже без генератора markdown.
+
+## Code organization
+
+Ожидаемые направления изменений:
+
+- добавить `citygen/catalogs.py` или близкий модуль;
+- добавить `citygen/worldgen.py` или `WorldgenContext` в подходящем месте;
+- заменить дублирующиеся supported lists/weights на exports из catalog там, где это безопасно;
+- сохранить совместимые constants для старых imports, если они есть;
+- добавить универсальный weighted selector, например в `geometry.py`, `catalogs.py` или отдельный `selectors.py`;
+- расширить `Scene`, если нужно хранить `catalog_summary` или `worldgen_stages`;
+- расширить export metadata;
+- обновить docs и tests.
+
+Не делай гигантский rewrite всего генератора. Предпочтительный стиль — аккуратная архитектурная прослойка, которая начинает унификацию и оставляет понятный путь для дальнейших этапов.
+
+## Тесты
+
+Добавь или обнови unit tests.
+
+Минимальный набор:
+
+1. Catalog validation:
+   - все biome ids уникальны;
+   - все object feature ids уникальны;
+   - каждый biome preferred road model существует;
+   - каждый road profile/footprint/roof id, на который есть ссылка в weights, существует;
+   - все weights `>= 0`, суммы положительные;
+   - semantic classes, указанные object features, существуют.
+
+2. Backward compatibility:
+   - `configs/mvp.yaml` загружается и генерируется;
+   - существующие demo configs загружаются;
+   - старые functions `classify_biome`, `biome_params`, `preferred_road_model_for_biome` продолжают работать.
+
+3. Determinism:
+   - одинаковый config и seed дают одинаковую scene/metadata;
+   - deterministic weighted selector стабилен при разном порядке keys в dict.
+
+4. Documentation coverage:
+   - каждый biome id из catalog упоминается в `doc/biomes.md`;
+   - каждый object feature id из catalog упоминается в `doc/generated_objects.md`;
+   - `doc/worldgen_catalogs.md` содержит список stages или ссылки на stage ids.
+
+5. Metadata:
+   - metadata содержит `worldgen` и `catalogs` summary;
+   - старые поля metadata остаются.
+
+6. Smoke:
+   - CLI генерирует PLY/metadata для `configs/mvp.yaml`;
+   - если добавишь demo config, он тоже проходит CLI smoke.
+
+## Demo config
+
+Если изменение заметно в config-level API, добавь demo config:
+
+```text
+configs/demo_worldgen_catalogs.yaml
+```
+
+Но не добавляй demo только ради количества. Если runtime behavior не меняется, достаточно обновить metadata/docs и существующие demos.
+
+Если demo добавлен, он должен показывать:
+
+- `urban_fields.enabled: true`;
+- несколько биомов;
+- несколько road/object features в metadata;
+- catalog/worldgen metadata summary.
+
+## Проверка
+
+Минимально выполни:
+
+```bash
+uv run python -m unittest discover -s tests
+uv run citygen --config configs/mvp.yaml --out outputs/mvp_catalogs_check.ply
+```
+
+Если добавишь demo:
+
+```bash
+uv run citygen --config configs/demo_worldgen_catalogs.yaml --out outputs/demo_worldgen_catalogs.ply
+```
+
+Проверь metadata:
+
+```text
+outputs/mvp_catalogs_check.metadata.json
+```
+
+Критерии хорошего результата:
+
+- тесты проходят;
+- baseline config генерируется без ошибок;
+- metadata содержит старые поля и новый catalog/worldgen summary;
+- docs покрывают все catalog ids;
+- в коде больше нет нескольких независимых источников правды для одних и тех же supported ids, кроме совместимых re-export constants;
+- новый архитектурный слой не делает простую генерацию сложнее для пользователя.
+
+## Финальный ответ
+
+В финальном ответе кратко укажи:
+
+- какие файлы изменены;
+- где теперь находится единый catalog/registry layer;
+- какие stages worldgen pipeline описаны;
+- какие docs добавлены или обновлены;
+- какие metadata fields добавлены;
+- какие тесты запускались;
+- сколько точек сгенерировалось при CLI-проверке.
+
+Если где-то выбран консервативный MVP-подход вместо полного Minecraft-style data pack/plugin system, явно назови это. Это нормально: цель этапа — унификация и расширяемость без разрушения текущего генератора.

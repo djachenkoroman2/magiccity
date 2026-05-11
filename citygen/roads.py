@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+from collections import Counter
 from dataclasses import dataclass
 import math
 
 from .biomes import classify_biome, preferred_road_model_for_biome
-from .config import CityGenConfig
+from .config import CityGenConfig, RoadProfileConfig
 from .geometry import BBox, Rect, stable_rng
+from .selectors import select_weighted_id
 
 
 @dataclass(frozen=True)
@@ -57,25 +59,59 @@ RoadPrimitive = InfiniteLinePrimitive | SegmentPrimitive | RingPrimitive | Polyl
 
 
 @dataclass(frozen=True)
+class RoadPrimitiveInstance:
+    primitive: RoadPrimitive
+    model: str
+    index: int
+    profile_name: str
+    profile: RoadProfileConfig
+    biome: str
+
+    def distance_to(self, x: float, y: float) -> float:
+        return self.primitive.distance_to(x, y)
+
+
+@dataclass(frozen=True)
+class RoadSurfaceHit:
+    kind: str
+    distance_m: float
+    instance: RoadPrimitiveInstance
+
+
+@dataclass(frozen=True)
 class RoadNetwork:
     model: str
-    primitives: tuple[RoadPrimitive, ...]
+    instances: tuple[RoadPrimitiveInstance, ...]
     effective_models: tuple[str, ...]
 
+    @property
+    def primitives(self) -> tuple[RoadPrimitive, ...]:
+        return tuple(instance.primitive for instance in self.instances)
+
     def nearest_distance(self, x: float, y: float) -> float:
-        if not self.primitives:
+        if not self.instances:
             return math.inf
-        return min(primitive.distance_to(x, y) for primitive in self.primitives)
+        return min(instance.distance_to(x, y) for instance in self.instances)
+
+    def nearest_hardscape_distance(self, x: float, y: float) -> float:
+        if not self.instances:
+            return math.inf
+        return min(
+            instance.distance_to(x, y) - instance.profile.hardscape_half_width_m
+            for instance in self.instances
+        )
 
     def surface_kind(self, config: CityGenConfig, x: float, y: float) -> str:
-        distance = self.nearest_distance(x, y)
-        road_half = config.roads.width_m * 0.5
-        sidewalk_half = road_half + config.roads.sidewalk_width_m
-        if distance <= road_half:
-            return "road"
-        if distance <= sidewalk_half:
-            return "sidewalk"
-        return "ground"
+        return self.surface_hit(config, x, y).kind
+
+    def surface_hit(self, _config: CityGenConfig, x: float, y: float) -> RoadSurfaceHit:
+        hits: list[RoadSurfaceHit] = []
+        for instance in self.instances:
+            distance = instance.distance_to(x, y)
+            kind = _surface_kind_for_profile(distance, instance.profile)
+            if kind != "ground":
+                hits.append(RoadSurfaceHit(kind=kind, distance_m=distance, instance=instance))
+        return _select_surface_hit(hits)
 
     def road_model_at(self, _config: CityGenConfig, _x: float, _y: float) -> str:
         return self.model
@@ -85,9 +121,35 @@ class RoadNetwork:
         y_values = (rect.min_y, rect.center_y, rect.max_y)
         for x in x_values:
             for y in y_values:
-                if self.nearest_distance(x, y) <= clearance_m:
+                if self.nearest_hardscape_distance(x, y) <= clearance_m:
                     return False
         return True
+
+    def road_profile_counts(self) -> dict[str, int]:
+        return dict(sorted(Counter(instance.profile_name for instance in self.instances).items()))
+
+    def road_profile_counts_by_biome(self) -> dict[str, dict[str, int]]:
+        result: dict[str, Counter[str]] = {}
+        for instance in self.instances:
+            counts = result.setdefault(instance.biome, Counter())
+            counts[instance.profile_name] += 1
+        return {
+            biome: dict(sorted(counts.items()))
+            for biome, counts in sorted(result.items())
+        }
+
+    def road_widths(self) -> dict[str, float]:
+        return _road_widths(self.instances)
+
+    def road_median_info(self) -> dict[str, object]:
+        profiles = sorted(
+            {
+                instance.profile_name
+                for instance in self.instances
+                if instance.profile.median_width_m > 0
+            }
+        )
+        return {"enabled": bool(profiles), "profiles": profiles}
 
 
 @dataclass(frozen=True)
@@ -111,9 +173,17 @@ class MixedRoadNetwork:
         network = self._network_for(x, y)
         return network.nearest_distance(x, y)
 
+    def nearest_hardscape_distance(self, x: float, y: float) -> float:
+        network = self._network_for(x, y)
+        return network.nearest_hardscape_distance(x, y)
+
     def surface_kind(self, config: CityGenConfig, x: float, y: float) -> str:
         network = self._network_for(x, y)
         return network.surface_kind(config, x, y)
+
+    def surface_hit(self, config: CityGenConfig, x: float, y: float) -> RoadSurfaceHit:
+        network = self._network_for(x, y)
+        return network.surface_hit(config, x, y)
 
     def road_model_at(self, config: CityGenConfig, x: float, y: float) -> str:
         biome = classify_biome(config.seed, config.urban_fields, x, y)
@@ -124,9 +194,41 @@ class MixedRoadNetwork:
         y_values = (rect.min_y, rect.center_y, rect.max_y)
         for x in x_values:
             for y in y_values:
-                if self.nearest_distance(x, y) <= clearance_m:
+                if self.nearest_hardscape_distance(x, y) <= clearance_m:
                     return False
         return True
+
+    def road_profile_counts(self) -> dict[str, int]:
+        counts: Counter[str] = Counter()
+        for network in self.networks.values():
+            counts.update(network.road_profile_counts())
+        return dict(sorted(counts.items()))
+
+    def road_profile_counts_by_biome(self) -> dict[str, dict[str, int]]:
+        result: dict[str, Counter[str]] = {}
+        for network in self.networks.values():
+            for biome, counts in network.road_profile_counts_by_biome().items():
+                target = result.setdefault(biome, Counter())
+                target.update(counts)
+        return {
+            biome: dict(sorted(counts.items()))
+            for biome, counts in sorted(result.items())
+        }
+
+    def road_widths(self) -> dict[str, float]:
+        instances = [instance for network in self.networks.values() for instance in network.instances]
+        return _road_widths(instances)
+
+    def road_median_info(self) -> dict[str, object]:
+        profiles = sorted(
+            {
+                instance.profile_name
+                for network in self.networks.values()
+                for instance in network.instances
+                if instance.profile.median_width_m > 0
+            }
+        )
+        return {"enabled": bool(profiles), "profiles": profiles}
 
     def _network_for(self, x: float, y: float) -> RoadNetwork:
         biome = classify_biome(self.config.seed, self.config.urban_fields, x, y)
@@ -169,7 +271,91 @@ def _build_simple_network(config: CityGenConfig, bbox: BBox, model: str) -> Road
         primitives = _free_primitives(config, bbox)
     else:
         primitives = ()
-    return RoadNetwork(model=model, primitives=tuple(primitives), effective_models=(model,))
+    instances = _primitive_instances(config, bbox, model, primitives)
+    return RoadNetwork(model=model, instances=instances, effective_models=(model,))
+
+
+def _primitive_instances(
+    config: CityGenConfig,
+    bbox: BBox,
+    model: str,
+    primitives: list[RoadPrimitive],
+) -> tuple[RoadPrimitiveInstance, ...]:
+    instances: list[RoadPrimitiveInstance] = []
+    for index, primitive in enumerate(primitives):
+        anchor_x, anchor_y = _primitive_anchor(primitive, bbox)
+        biome = classify_biome(config.seed, config.urban_fields, anchor_x, anchor_y)
+        profile_name, profile = _select_road_profile(config, model, index, primitive, biome)
+        instances.append(
+            RoadPrimitiveInstance(
+                primitive=primitive,
+                model=model,
+                index=index,
+                profile_name=profile_name,
+                profile=profile,
+                biome=biome,
+            )
+        )
+    return tuple(instances)
+
+
+def _select_road_profile(
+    config: CityGenConfig,
+    model: str,
+    index: int,
+    primitive: RoadPrimitive,
+    biome: str,
+) -> tuple[str, RoadProfileConfig]:
+    profiles = config.roads.profiles
+    if not profiles.enabled:
+        profile = config.roads.default_profile
+        return profiles.default, profile
+
+    weights = _combined_profile_weights(
+        profiles.model_weights.get(model, {}),
+        profiles.biome_weights.get(biome, {}),
+        profiles.default,
+    )
+    rng = stable_rng(
+        config.seed,
+        "road-profile",
+        config.tile.x,
+        config.tile.y,
+        model,
+        index,
+        biome,
+        _primitive_key(primitive),
+    )
+    profile_name = select_weighted_id(
+        weights,
+        rng,
+        fallback=profiles.default,
+        ordered_ids=sorted(profiles.definitions),
+    )
+    return profile_name, profiles.definitions[profile_name]
+
+
+def _combined_profile_weights(
+    model_weights: dict[str, float],
+    biome_weights: dict[str, float],
+    default_name: str,
+) -> dict[str, float]:
+    if model_weights and biome_weights:
+        combined = {
+            name: model_weights[name] * biome_weights[name]
+            for name in model_weights.keys() & biome_weights.keys()
+        }
+        combined = {name: weight for name, weight in combined.items() if weight > 0}
+        if combined:
+            return combined
+
+    combined: Counter[str] = Counter()
+    combined.update(model_weights)
+    combined.update(biome_weights)
+    combined = Counter({name: weight for name, weight in combined.items() if weight > 0})
+    if combined:
+        return dict(combined)
+    return {default_name: 1.0}
 
 
 def _grid_primitives(config: CityGenConfig, bbox: BBox) -> list[RoadPrimitive]:
@@ -330,6 +516,100 @@ def _free_node(seed: int, ix: int, iy: int, spacing: float) -> tuple[float, floa
         (ix + 0.5) * spacing + rng.uniform(-spacing * 0.28, spacing * 0.28),
         (iy + 0.5) * spacing + rng.uniform(-spacing * 0.28, spacing * 0.28),
     )
+
+
+def _surface_kind_for_profile(distance_m: float, profile: RoadProfileConfig) -> str:
+    median_half = profile.median_width_m * 0.5
+    road_outer_half = median_half + profile.carriageway_width_m * 0.5
+    sidewalk_outer_half = road_outer_half + profile.sidewalk_width_m
+    if profile.median_width_m > 0 and distance_m <= median_half:
+        return "road_median"
+    if distance_m <= road_outer_half:
+        return "road"
+    if distance_m <= sidewalk_outer_half:
+        return "sidewalk"
+    return "ground"
+
+
+def _select_surface_hit(hits: list[RoadSurfaceHit]) -> RoadSurfaceHit:
+    if not hits:
+        return RoadSurfaceHit(
+            kind="ground",
+            distance_m=math.inf,
+            instance=RoadPrimitiveInstance(
+                primitive=InfiniteLinePrimitive(0.0, 0.0, 1.0, 0.0),
+                model="none",
+                index=-1,
+                profile_name="none",
+                profile=RoadProfileConfig(1.0, 1.0, 0.0),
+                biome="none",
+            ),
+        )
+    if len(hits) > 1 and any(hit.kind == "road_median" for hit in hits):
+        road_like = min(hits, key=lambda hit: (hit.distance_m, hit.instance.model, hit.instance.index))
+        return RoadSurfaceHit(kind="road", distance_m=road_like.distance_m, instance=road_like.instance)
+
+    priority = {"sidewalk": 1, "road_median": 2, "road": 3}
+    return max(
+        hits,
+        key=lambda hit: (
+            priority[hit.kind],
+            -hit.distance_m,
+            hit.instance.model,
+            -hit.instance.index,
+        ),
+    )
+
+
+def _road_widths(instances) -> dict[str, float]:
+    profiles = [instance.profile for instance in instances]
+    if not profiles:
+        return {
+            "min_carriageway_width_m": 0.0,
+            "max_carriageway_width_m": 0.0,
+            "max_median_width_m": 0.0,
+            "max_total_corridor_width_m": 0.0,
+        }
+    return {
+        "min_carriageway_width_m": round(min(profile.carriageway_width_m for profile in profiles), 3),
+        "max_carriageway_width_m": round(max(profile.carriageway_width_m for profile in profiles), 3),
+        "max_median_width_m": round(max(profile.median_width_m for profile in profiles), 3),
+        "max_total_corridor_width_m": round(max(profile.total_corridor_width_m for profile in profiles), 3),
+    }
+
+
+def _primitive_anchor(primitive: RoadPrimitive, bbox: BBox) -> tuple[float, float]:
+    center_x = bbox.min_x + bbox.width * 0.5
+    center_y = bbox.min_y + bbox.depth * 0.5
+    if isinstance(primitive, InfiniteLinePrimitive):
+        dx = center_x - primitive.point_x
+        dy = center_y - primitive.point_y
+        t = dx * primitive.dir_x + dy * primitive.dir_y
+        return primitive.point_x + primitive.dir_x * t, primitive.point_y + primitive.dir_y * t
+    if isinstance(primitive, SegmentPrimitive):
+        return (primitive.x0 + primitive.x1) * 0.5, (primitive.y0 + primitive.y1) * 0.5
+    if isinstance(primitive, RingPrimitive):
+        return primitive.center_x + primitive.radius_m, primitive.center_y
+    if isinstance(primitive, PolylinePrimitive) and primitive.points:
+        return primitive.points[len(primitive.points) // 2]
+    return center_x, center_y
+
+
+def _primitive_key(primitive: RoadPrimitive) -> str:
+    if isinstance(primitive, InfiniteLinePrimitive):
+        return (
+            f"line:{primitive.point_x:.3f}:{primitive.point_y:.3f}:"
+            f"{primitive.dir_x:.3f}:{primitive.dir_y:.3f}"
+        )
+    if isinstance(primitive, SegmentPrimitive):
+        return f"seg:{primitive.x0:.3f}:{primitive.y0:.3f}:{primitive.x1:.3f}:{primitive.y1:.3f}"
+    if isinstance(primitive, RingPrimitive):
+        return f"ring:{primitive.center_x:.3f}:{primitive.center_y:.3f}:{primitive.radius_m:.3f}"
+    if isinstance(primitive, PolylinePrimitive):
+        first = primitive.points[0] if primitive.points else (0.0, 0.0)
+        last = primitive.points[-1] if primitive.points else (0.0, 0.0)
+        return f"poly:{len(primitive.points)}:{first[0]:.3f}:{first[1]:.3f}:{last[0]:.3f}:{last[1]:.3f}"
+    return "unknown"
 
 
 def _distance_to_segment(x: float, y: float, x0: float, y0: float, x1: float, y1: float) -> float:

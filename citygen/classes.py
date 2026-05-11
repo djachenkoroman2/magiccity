@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from .catalogs import SEMANTIC_CLASS_DEFINITIONS
+
 
 @dataclass(frozen=True)
 class PointClass:
@@ -11,11 +13,8 @@ class PointClass:
 
 
 POINT_CLASSES: dict[str, PointClass] = {
-    "ground": PointClass(1, "ground", (107, 132, 85)),
-    "road": PointClass(2, "road", (47, 50, 54)),
-    "sidewalk": PointClass(3, "sidewalk", (174, 174, 166)),
-    "building_facade": PointClass(4, "building_facade", (176, 164, 148)),
-    "building_roof": PointClass(5, "building_roof", (112, 116, 122)),
+    name: PointClass(definition.class_id, name, definition.color)
+    for name, definition in SEMANTIC_CLASS_DEFINITIONS.items()
 }
 
 

@@ -7,10 +7,11 @@ from .biomes import biome_params, classify_biome, sample_biome_counts
 from .config import CityGenConfig
 from .fields import sample_urban_fields
 from .footprints import build_footprint, select_footprint_kind
-from .geometry import BBox, Building, Rect, stable_rng, terrain_height, tile_bbox
+from .geometry import BBox, Building, Rect, stable_rng, terrain_height
 from .parcels import Block, Parcel, build_blocks_and_parcels, parcel_counts
 from .roads import RoadNetworkLike, build_road_network
 from .roofs import build_roof, select_roof_kind
+from .worldgen import WorldgenContext, create_worldgen_context, pipeline_stage_ids
 
 
 @dataclass(frozen=True)
@@ -24,11 +25,14 @@ class Scene:
     blocks: tuple[Block, ...]
     parcels: tuple[Parcel, ...]
     parcel_counts: dict
+    context: WorldgenContext
+    worldgen_stages: tuple[str, ...]
 
 
 def generate_scene(config: CityGenConfig) -> Scene:
-    bbox = tile_bbox(config.tile.x, config.tile.y, config.tile.size_m)
-    work_bbox = bbox.expand(config.tile.margin_m)
+    context = create_worldgen_context(config)
+    bbox = context.bbox
+    work_bbox = context.work_bbox
     road_network = build_road_network(config, work_bbox)
     blocks, parcels = (
         build_blocks_and_parcels(config, work_bbox, road_network)
@@ -48,6 +52,8 @@ def generate_scene(config: CityGenConfig) -> Scene:
         blocks=blocks,
         parcels=parcels,
         parcel_counts=parcel_counts(blocks, parcels, buildings),
+        context=context,
+        worldgen_stages=pipeline_stage_ids(),
     )
 
 
@@ -120,8 +126,7 @@ def _generate_buildings(
             if not footprint.intersects(work_bbox):
                 continue
 
-            clearance = config.roads.width_m * 0.5 + config.roads.sidewalk_width_m + setback
-            if not _footprint_is_clear(road_network, footprint, clearance):
+            if not _footprint_is_clear(road_network, footprint, setback):
                 continue
             if _overlaps_existing(result, footprint, min(setback, 4.0)):
                 continue
@@ -177,8 +182,7 @@ def _generate_buildings_from_parcels(
         if not _footprint_within_rect(footprint, inner):
             continue
 
-        clearance = config.roads.width_m * 0.5 + config.roads.sidewalk_width_m + max(0.5, setback)
-        if not _footprint_is_clear(road_network, footprint, clearance):
+        if not _footprint_is_clear(road_network, footprint, max(0.5, setback)):
             continue
         if _overlaps_existing(result, footprint, min(setback, 4.0)):
             continue
@@ -232,7 +236,10 @@ def _build_building(
 
 
 def _footprint_is_clear(road_network: RoadNetworkLike, footprint, clearance_m: float) -> bool:
-    return all(road_network.nearest_distance(x, y) > clearance_m for x, y in footprint.clearance_sample_points())
+    return all(
+        road_network.nearest_hardscape_distance(x, y) > clearance_m
+        for x, y in footprint.clearance_sample_points()
+    )
 
 
 def _overlaps_existing(buildings: list[Building], footprint, clearance: float) -> bool:

@@ -1,0 +1,99 @@
+seed: 173
+tile:
+  x: 0
+  y: 0
+  size_m: 512
+  margin_m: 80
+terrain:
+  base_height_m: 0
+  height_noise_m: 2.8
+urban_fields:
+  enabled: true
+  center_x: 224
+  center_y: 248
+  city_radius_m: 310
+  noise_scale_m: 125
+  density_bias: 0.18
+  industrial_bias: 0.10
+  green_bias: 0.10
+roads:
+  model: mixed
+  spacing_m: 72
+  width_m: 10
+  sidewalk_width_m: 3
+  angle_degrees: 18
+  radial_count: 14
+  ring_spacing_m: 88
+  organic_wander_m: 16
+  profiles:
+    enabled: true
+    default: collector
+    definitions:
+      local:
+        carriageway_width_m: 7
+        sidewalk_width_m: 2
+        median_width_m: 0
+      collector:
+        carriageway_width_m: 10
+        sidewalk_width_m: 3
+        median_width_m: 0
+      arterial:
+        carriageway_width_m: 14
+        sidewalk_width_m: 4
+        median_width_m: 1.5
+      boulevard:
+        carriageway_width_m: 16
+        sidewalk_width_m: 4
+        median_width_m: 6
+    model_weights:
+      grid:
+        local: 0.45
+        collector: 0.40
+        arterial: 0.15
+      radial_ring:
+        collector: 0.20
+        arterial: 0.45
+        boulevard: 0.35
+      radial:
+        collector: 0.30
+        arterial: 0.50
+        boulevard: 0.20
+      linear:
+        collector: 0.35
+        arterial: 0.50
+        boulevard: 0.15
+      organic:
+        local: 0.80
+        collector: 0.20
+      free:
+        local: 0.55
+        collector: 0.35
+        arterial: 0.10
+    biome_weights:
+      downtown:
+        collector: 0.15
+        arterial: 0.45
+        boulevard: 0.40
+      residential:
+        local: 0.55
+        collector: 0.35
+        arterial: 0.10
+      industrial:
+        collector: 0.30
+        arterial: 0.55
+        boulevard: 0.15
+      suburb:
+        local: 0.85
+        collector: 0.15
+buildings:
+  enabled: false
+sampling:
+  mode: surface
+  ground_spacing_m: 8
+  road_spacing_m: 2
+  building_spacing_m: 4
+  jitter_ratio: 0.08
+output:
+  format: ply
+  include_rgb: true
+  include_class: true

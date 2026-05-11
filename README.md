@@ -11,7 +11,7 @@ MagicCity — MVP CLI-генератора синтетической город
 - прямоугольный городской тайл с координатами `tile.x` и `tile.y`;
 - процедурный рельеф по `seed`, `terrain.base_height_m` и `terrain.height_noise_m`;
 - road network по одной из поддерживаемых моделей: `grid`, `radial_ring`, `radial`, `linear`, `organic`, `mixed`, `free`;
-- зоны тротуаров вокруг дорог;
+- зоны тротуаров вокруг дорог и опциональные road profiles с широкими median-разделителями;
 - опциональное прямоугольное block/parcel subdivision для размещения зданий внутри земельных участков;
 - опциональные здания с footprint-формами `rectangle`, `square`, `circle`, `slab`, `courtyard`, `l_shape`, `u_shape`, `t_shape`;
 - roof geometry: `flat`, `shed`, `gable`, `hip`, `half_hip`, `pyramid`, `mansard`, `dome`, `barrel`, `cone`;
@@ -29,6 +29,7 @@ MagicCity — MVP CLI-генератора синтетической город
 | 3 | `sidewalk` | `174, 174, 166` |
 | 4 | `building_facade` | `176, 164, 148` |
 | 5 | `building_roof` | `112, 116, 122` |
+| 6 | `road_median` | `118, 128, 84` |
 
 ## Возможности MVP
 
@@ -37,11 +38,11 @@ MagicCity — MVP CLI-генератора синтетической город
 - детерминированная генерация по `seed`;
 - тайловая система координат;
 - несколько моделей дорог: `grid`, `radial_ring`, `radial`, `linear`, `organic`, `mixed`, `free`;
-- road primitives и distance-based классификация `ground` / `road` / `sidewalk`;
+- road primitives и distance-based классификация `ground` / `road` / `road_median` / `sidewalk`;
 - глобальные urban fields в мировых координатах;
 - городские биомы `downtown`, `residential`, `industrial`, `suburb`;
 - генерация нескольких тайлов из одного конфига;
-- классы `ground`, `road`, `sidewalk`, `building_facade`, `building_roof`;
+- классы `ground`, `road`, `road_median`, `sidewalk`, `building_facade`, `building_roof`;
 - процедурный шум высоты рельефа;
 - процедурные здания с прямоугольными, круговыми, линейными, периметральными и составными footprints;
 - опциональное размещение зданий через parcels с агрегированной статистикой blocks/parcels в metadata;
@@ -54,6 +55,7 @@ MagicCity — MVP CLI-генератора синтетической город
 - включение/отключение RGB-полей;
 - включение/отключение поля semantic class;
 - metadata JSON с итоговым конфигом, bbox тайла, количеством точек и статистикой классов.
+- Minecraft-like worldgen architecture layer: `WorldgenContext`, pipeline stages и catalogs/registries для биомов и generated objects.
 
 Пока не реализовано:
 
@@ -65,6 +67,8 @@ MagicCity — MVP CLI-генератора синтетической город
 - CRS/georeferencing metadata;
 - текстуры и mesh-геометрия.
 
+Подробнее об архитектурном catalog layer см. `doc/worldgen_catalogs.md`, а полный список generated object features — в `doc/generated_objects.md`.
+
 ## Структура Проекта
 
 ```text
@@ -73,6 +77,9 @@ citygen/
   cli.py            # CLI entry point
   config.py         # загрузка YAML, defaults, validation
   generator.py      # генерация сцены: тайл, дороги, здания
+  worldgen.py       # WorldgenContext и явные stages pipeline
+  catalogs.py       # registries/catalogs биомов, объектов, классов и типов
+  selectors.py      # deterministic weighted selectors
   roads.py          # road primitives и модели уличной сети
   fields.py         # глобальные urban fields
   biomes.py         # классификация городских биомов
@@ -206,6 +213,7 @@ uv run citygen --config configs/demo_multi_tile.yaml --out outputs/multi_tile
 | `configs/demo_linear.yaml` | Линейная структура города с основной осью и редкими поперечными улицами. |
 | `configs/demo_organic.yaml` | Органические wavy streets, зависящие от рельефа. |
 | `configs/demo_mixed_biomes.yaml` | `mixed` road model, urban fields и несколько биомов в одном тайле. |
+| `configs/demo_road_profiles.yaml` | Вариативные road profiles: local/collector/arterial/boulevard, wide median и class `road_median`. |
 | `configs/demo_universal_showcase.yaml` | Большой showcase-тайл: mixed roads, urban fields, биомы, mixed footprints и mixed roofs. |
 | `configs/demo_parcels.yaml` | Parcel subdivision: прямоугольные blocks/parcels и здания, привязанные к участкам. |
 | `configs/demo_building_footprints.yaml` | Несколько типов building footprint в одном тайле. |
@@ -228,6 +236,7 @@ uv run citygen --config configs/demo_radial_ring.yaml --out outputs/demo_radial_
 uv run citygen --config configs/demo_radial.yaml --out outputs/demo_radial.ply
 uv run citygen --config configs/demo_linear.yaml --out outputs/demo_linear.ply
 uv run citygen --config configs/demo_organic.yaml --out outputs/demo_organic.ply
+uv run citygen --config configs/demo_road_profiles.yaml --out outputs/demo_road_profiles.ply
 uv run citygen --config configs/demo_mixed_biomes.yaml --out outputs/demo_mixed_biomes.ply
 uv run citygen --config configs/demo_universal_showcase.yaml --out outputs/demo_universal_showcase.ply
 uv run citygen --config configs/demo_parcels.yaml --out outputs/demo_parcels.ply
@@ -463,6 +472,7 @@ roads:
 | `spacing_m` | `64.0` | Расстояние между осями параллельных дорог. |
 | `width_m` | `10.0` | Ширина проезжей части. |
 | `sidewalk_width_m` | `3.0` | Ширина тротуара с каждой стороны дороги. |
+| `profiles` | disabled | Опциональные road profiles с разными ширинами проезжей части, тротуаров и median-разделителя. |
 | `angle_degrees` | `0.0` | Поворот для `linear`, `radial`, `radial_ring`. |
 | `radial_count` | `12` | Количество лучей для radial models. |
 | `ring_spacing_m` | `0.0` | Шаг кольцевых дорог для `radial_ring`; `0` означает использовать `spacing_m`. |
@@ -485,6 +495,14 @@ roads.width_m + 2 * roads.sidewalk_width_m < roads.spacing_m
 ```
 
 Иначе дороги и тротуары занимают весь квартал, и для земли/зданий не остается корректного пространства.
+
+Когда `roads.profiles.enabled: true`, ширина берется из выбранного profile вместо глобальных `width_m`/`sidewalk_width_m`. Profile задает `carriageway_width_m`, `sidewalk_width_m` и `median_width_m`; если `median_width_m > 0`, центральная часть дороги получает semantic class `road_median`. Биомы и road models могут иметь свои веса выбора профиля через `roads.profiles.biome_weights` и `roads.profiles.model_weights`. Дополнительно валидируется:
+
+```text
+max(carriageway_width_m + median_width_m + 2 * sidewalk_width_m) < roads.spacing_m
+```
+
+Пример с широким разделителем см. в `configs/demo_road_profiles.yaml`.
 
 ### `buildings`
 
@@ -655,7 +673,9 @@ Metadata содержит:
 - `point_count`;
 - `class_counts`;
 - `class_mapping`;
+- `worldgen`, `catalogs`, `biome_catalog`, `object_feature_counts`;
 - `road_models`;
+- `road_profile_counts`, `road_profile_counts_by_biome`, `road_widths`, `road_median`;
 - `biome_counts`;
 - `building_counts` с распределением по footprint type и биомам;
 - `parcel_counts` с blocks/parcels/buildable/occupied статистикой;
@@ -753,6 +773,14 @@ uv run citygen --config configs/demo_mixed_biomes.yaml --out outputs/mixed_biome
 ```
 
 Полезно для проверки `urban_fields`, распределения `biome_counts` и переключения road model по биомам.
+
+### Road Profiles
+
+```bash
+uv run citygen --config configs/demo_road_profiles.yaml --out outputs/road_profiles.ply
+```
+
+Полезно для проверки разных ширин дорог, `boulevard`/`arterial` profiles, wide median и class `road_median`.
 
 ### Mixed Building Footprints
 

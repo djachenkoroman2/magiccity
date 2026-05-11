@@ -63,7 +63,7 @@ def build_blocks_and_parcels(
     end_i = math.ceil(bbox.max_x / block_size)
     start_j = math.floor(bbox.min_y / block_size)
     end_j = math.ceil(bbox.max_y / block_size)
-    road_clearance = _road_clearance(config)
+    road_clearance = config.parcels.parcel_setback_m
 
     for ix in range(start_i, end_i):
         for iy in range(start_j, end_j):
@@ -206,7 +206,7 @@ def _inset_rect(rect: Rect, inset: float) -> Rect | None:
 
 def _rect_is_clear(road_network: RoadNetworkLike, rect: Rect, clearance_m: float) -> bool:
     for x, y in _rect_sample_points(rect):
-        if road_network.nearest_distance(x, y) <= clearance_m:
+        if road_network.nearest_hardscape_distance(x, y) <= clearance_m:
             return False
     return True
 
@@ -223,10 +223,6 @@ def _rect_sample_points(rect: Rect) -> tuple[tuple[float, float], ...]:
         (rect.max_x, rect.center_y),
         (rect.max_x, rect.max_y),
     )
-
-
-def _road_clearance(config: CityGenConfig) -> float:
-    return config.roads.width_m * 0.5 + config.roads.sidewalk_width_m + config.parcels.parcel_setback_m
 
 
 def _average(values) -> float:

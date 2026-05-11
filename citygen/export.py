@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from .classes import CLASS_BY_ID, class_mapping
+from .catalogs import biome_catalog_summary, catalog_summary, worldgen_summary
 from .config import CityGenConfig
 from .footprints import FOOTPRINT_KINDS
 from .generator import Scene
@@ -90,7 +91,15 @@ def write_metadata(path: str | Path, config: CityGenConfig, scene: Scene, points
             CLASS_BY_ID[class_id].name: count for class_id, count in sorted(counts.items())
         },
         "class_mapping": class_mapping(),
+        "worldgen": worldgen_summary(),
+        "catalogs": catalog_summary(scene.context.catalogs),
+        "biome_catalog": biome_catalog_summary(scene.context.catalogs),
+        "object_feature_counts": _object_feature_counts(scene, points),
         "road_models": list(scene.road_models),
+        "road_profile_counts": scene.road_network.road_profile_counts(),
+        "road_profile_counts_by_biome": scene.road_network.road_profile_counts_by_biome(),
+        "road_widths": scene.road_network.road_widths(),
+        "road_median": scene.road_network.road_median_info(),
         "biome_counts": scene.biome_counts,
         "building_counts": {
             "total": len(scene.buildings),
@@ -121,3 +130,23 @@ def write_metadata(path: str | Path, config: CityGenConfig, scene: Scene, points
         encoding="utf-8",
     )
     return metadata_path
+
+
+def _object_feature_counts(scene: Scene, points: list[Point]) -> dict[str, int]:
+    class_counts = Counter(point.class_id for point in points)
+    class_name_counts = {
+        CLASS_BY_ID[class_id].name: count
+        for class_id, count in class_counts.items()
+        if class_id in CLASS_BY_ID
+    }
+    return {
+        "terrain_surface": class_name_counts.get("ground", 0),
+        "road_network": len(scene.road_network.primitives),
+        "road_surface": class_name_counts.get("road", 0),
+        "road_sidewalk": class_name_counts.get("sidewalk", 0),
+        "road_median": class_name_counts.get("road_median", 0),
+        "parcel_blocks": scene.parcel_counts.get("blocks", 0),
+        "building": len(scene.buildings),
+        "building_footprint": len(scene.buildings),
+        "building_roof": class_name_counts.get("building_roof", 0),
+    }
