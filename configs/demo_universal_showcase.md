@@ -20,9 +20,12 @@
 - заметный, но умеренный рельеф через `terrain.height_noise_m`;
 - `urban_fields.enabled: true`;
 - `roads.model: mixed`;
+- `roads.profiles.enabled: true` с `local`, `collector`, `arterial`, `boulevard`;
+- wide median через `arterial`/`boulevard` и semantic class `road_median`;
 - mixed building footprints со всеми supported footprint weights;
 - mixed roofs со всеми supported roof weights;
 - `parcels.enabled: true`;
+- worldgen/catalog metadata summary;
 - RGB и semantic class fields в PLY.
 
 Горизонтальная плоскость остается `x/y`, высота остается `z`.
@@ -50,7 +53,11 @@ jq '{
   point_count,
   class_counts,
   road_models,
+  road_profile_counts,
+  road_widths,
+  road_median,
   biome_counts,
+  object_feature_counts,
   building_counts: {
     total: .building_counts.total,
     by_footprint: .building_counts.by_footprint,
@@ -64,9 +71,13 @@ jq '{
 Хороший результат для этого конфига:
 
 - `point_count > 0`;
-- `class_counts` содержит `ground`, `road`, `sidewalk`, `building_facade`, `building_roof`;
+- `point_count` достаточно большой для showcase, ориентировочно `> 100000`;
+- `class_counts` содержит `ground`, `road`, `road_median`, `sidewalk`, `building_facade`, `building_roof`;
 - `road_models` содержит несколько effective models для `mixed`;
+- `road_profile_counts` содержит `local`, `collector`, `arterial`, `boulevard`;
+- `road_widths.max_median_width_m > 0`;
 - `biome_counts` содержит несколько биомов, желательно все четыре;
+- `object_feature_counts` содержит terrain, roads, parcels и buildings;
 - `building_counts.total > 0`;
 - `building_counts.by_footprint` содержит разные footprint types;
 - `building_counts.by_roof` содержит разные roof types;
@@ -82,11 +93,15 @@ jq '{
 
 `roads.model: mixed` выбирает effective road model по биому. Текущий mixed-режим демонстрирует biome-preferred модели вроде `grid`, `radial_ring`, `linear` и `organic`. Отдельные `radial` и `free` проверяются отдельными demo-конфигами.
 
+`roads.profiles.enabled: true` назначает road primitives разные поперечные профили. В showcase включены узкие local streets, collector roads, arterial roads и boulevards с wide median.
+
 `buildings.footprint.model: mixed` выбирает форму здания по weights. Конфиг задает положительные веса для всех поддержанных footprint types.
 
 `buildings.roof.model: mixed` выбирает roof geometry по weights. Конфиг задает положительные веса для всех поддержанных roof types.
 
 `parcels.enabled: true` включает прямоугольное block/parcel subdivision. Здания размещаются внутри `parcel.inner`, получают `parcel_id` и учитываются в `parcel_counts`.
+
+`worldgen` оставлен явно включенным, чтобы metadata показывала catalog/worldgen summary: `worldgen`, `catalogs`, `biome_catalog` и `object_feature_counts`.
 
 ## Ограничения
 

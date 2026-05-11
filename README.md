@@ -216,6 +216,7 @@ uv run citygen --config configs/demo_multi_tile.yaml --out outputs/multi_tile
 | `configs/demo_road_profiles.yaml` | Вариативные road profiles: local/collector/arterial/boulevard, wide median и class `road_median`. |
 | `configs/demo_universal_showcase.yaml` | Большой showcase-тайл: mixed roads, urban fields, биомы, mixed footprints и mixed roofs. |
 | `configs/demo_parcels.yaml` | Parcel subdivision: прямоугольные blocks/parcels и здания, привязанные к участкам. |
+| `configs/demo_parcel_alignment.yaml` | Parcel-aware placement: buildings внутри buildable area и parallel to parcel geometry. |
 | `configs/demo_building_footprints.yaml` | Несколько типов building footprint в одном тайле. |
 | `configs/demo_courtyard_blocks.yaml` | Периметральные здания с внутренними дворами. |
 | `configs/demo_building_roofs.yaml` | Все поддержанные типы roof geometry в одном тайле. |
@@ -531,7 +532,7 @@ buildings:
 | `footprint.model` | `rectangle` | Тип контура здания: `rectangle`, `square`, `circle`, `slab`, `courtyard`, `l_shape`, `u_shape`, `t_shape`, `mixed`. |
 | `roof.model` | `flat` | Тип крыши: `flat`, `shed`, `gable`, `hip`, `half_hip`, `pyramid`, `mansard`, `dome`, `barrel`, `cone`, `mixed`. |
 
-По умолчанию здания размещаются по детерминированным candidate centers и отбрасываются, если footprint попадает в road/sidewalk clearance или пересекается с другим зданием. При `parcels.enabled: true` candidate centers заменяются явным проходом по parcels, а footprint дополнительно должен помещаться в `parcel.inner`. Каждое здание имеет:
+По умолчанию здания размещаются по детерминированным candidate centers и отбрасываются, если footprint попадает в road/sidewalk clearance или пересекается с другим зданием. При `parcels.enabled: true` candidate centers заменяются явным проходом по parcels, а footprint дополнительно должен помещаться в buildable area parcel и выравниваться по parcel geometry. Каждое здание имеет:
 
 - footprint выбранного типа;
 - base height по рельефу в центре footprint;
@@ -566,11 +567,15 @@ parcels:
   parcel_setback_m: 2
   split_jitter_ratio: 0.18
   max_subdivision_depth: 3
+  building_alignment: parcel
+  orientation_jitter_degrees: 0
+  max_building_coverage: 0.72
+  require_building_inside_buildable_area: true
 ```
 
-Когда `enabled: true`, генератор строит прямоугольные candidate blocks в рабочем bbox, делит их на parcels и размещает здания внутри `parcel.inner`. Footprint здания должен помещаться в свой parcel, проходить road/sidewalk clearance и не пересекаться с уже принятыми зданиями.
+Когда `enabled: true`, генератор строит прямоугольные candidate blocks в рабочем bbox, делит их на parcels и размещает здания внутри buildable area участка. При `building_alignment: parcel` footprint здания строится в local-space участка и ориентируется параллельно parcel geometry; для текущих generated parcels это обычно угол `0`, но roof/facade sampling уже используют orientation-aware footprint методы.
 
-Это MVP-аппроксимация поверх текущих road primitives: она не пытается построить идеальные GIS-полигоны кварталов для organic/free/radial дорог, но дает явный слой участков, детерминированную привязку `building.parcel_id` и `parcel_counts` в metadata.
+Это MVP-аппроксимация поверх текущих road primitives: она не пытается построить идеальные GIS-полигоны кварталов для organic/free/radial дорог, но дает явный слой участков, детерминированную привязку `building.parcel_id`, `parcel_counts`, `parcel_building_alignment`, `building_orientations` и `parcel_geometry` в metadata.
 
 Подробный справочник по parcels находится в `doc/parcels.md`.
 
@@ -679,6 +684,7 @@ Metadata содержит:
 - `biome_counts`;
 - `building_counts` с распределением по footprint type и биомам;
 - `parcel_counts` с blocks/parcels/buildable/occupied статистикой;
+- `parcel_building_alignment`, `building_orientations`, `parcel_geometry`;
 - `supported_footprint_types`;
 - `building_counts.by_roof` с распределением зданий по roof type;
 - `supported_roof_types`;

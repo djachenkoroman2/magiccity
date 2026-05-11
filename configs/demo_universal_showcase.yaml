@@ -3,35 +3,100 @@ tile:
   x: 0
   y: 0
   size_m: 2000
-  margin_m: 80
+  margin_m: 96
 terrain:
   base_height_m: 0
   height_noise_m: 3.8
 urban_fields:
   enabled: true
-  center_x: 288
-  center_y: 304
-  city_radius_m: 420
-  noise_scale_m: 155
-  density_bias: 0.42
-  industrial_bias: 0.03
-  green_bias: 0.12
+  center_x: 720
+  center_y: 780
+  city_radius_m: 900
+  noise_scale_m: 230
+  density_bias: 0.18
+  industrial_bias: 0.10
+  green_bias: 0.08
 roads:
   model: mixed
-  spacing_m: 72
+  spacing_m: 78
   width_m: 8
   sidewalk_width_m: 3
   angle_degrees: 22
-  radial_count: 16
-  ring_spacing_m: 84
-  organic_wander_m: 14
+  radial_count: 18
+  ring_spacing_m: 92
+  organic_wander_m: 16
+  profiles:
+    enabled: true
+    default: collector
+    definitions:
+      local:
+        carriageway_width_m: 7
+        sidewalk_width_m: 2
+        median_width_m: 0
+      collector:
+        carriageway_width_m: 10
+        sidewalk_width_m: 3
+        median_width_m: 0
+      arterial:
+        carriageway_width_m: 14
+        sidewalk_width_m: 4
+        median_width_m: 1.5
+      boulevard:
+        carriageway_width_m: 16
+        sidewalk_width_m: 4
+        median_width_m: 6
+    model_weights:
+      grid:
+        local: 0.35
+        collector: 0.42
+        arterial: 0.18
+        boulevard: 0.05
+      radial_ring:
+        collector: 0.14
+        arterial: 0.42
+        boulevard: 0.44
+      radial:
+        collector: 0.20
+        arterial: 0.50
+        boulevard: 0.30
+      linear:
+        collector: 0.24
+        arterial: 0.54
+        boulevard: 0.22
+      organic:
+        local: 0.72
+        collector: 0.24
+        arterial: 0.04
+      free:
+        local: 0.45
+        collector: 0.35
+        arterial: 0.15
+        boulevard: 0.05
+    biome_weights:
+      downtown:
+        collector: 0.10
+        arterial: 0.40
+        boulevard: 0.50
+      residential:
+        local: 0.44
+        collector: 0.38
+        arterial: 0.14
+        boulevard: 0.04
+      industrial:
+        collector: 0.24
+        arterial: 0.56
+        boulevard: 0.20
+      suburb:
+        local: 0.76
+        collector: 0.22
+        arterial: 0.02
 buildings:
   enabled: true
   min_height_m: 7
-  max_height_m: 82
-  setback_m: 0.8
+  max_height_m: 96
+  setback_m: 0.7
   footprint_min_m: 5
-  footprint_max_m: 24
+  footprint_max_m: 26
   footprint:
     model: mixed
     weights:
@@ -68,13 +133,13 @@ buildings:
     dome_segments: 20
 parcels:
   enabled: true
-  block_size_m: 256
+  block_size_m: 224
   block_jitter_m: 4
   min_block_size_m: 28
   min_parcel_width_m: 10
-  max_parcel_width_m: 36
+  max_parcel_width_m: 38
   min_parcel_depth_m: 12
-  max_parcel_depth_m: 46
+  max_parcel_depth_m: 48
   parcel_setback_m: 0.5
   split_jitter_ratio: 0.12
   max_subdivision_depth: 6
@@ -83,8 +148,11 @@ sampling:
   ground_spacing_m: 8
   road_spacing_m: 5
   building_spacing_m: 4.5
-  jitter_ratio: 0.15
+  jitter_ratio: 0.14
 output:
   format: ply
   include_rgb: true
   include_class: true
+worldgen:
+  catalog_docs: true
+  strict_catalog_validation: true

@@ -145,6 +145,55 @@ buildings:
 """
             )
 
+    def test_loads_parcel_alignment_config(self) -> None:
+        config = _config_from_text(
+            """
+seed: 7
+parcels:
+  enabled: true
+  building_alignment: parcel
+  orientation_jitter_degrees: 3
+  max_building_coverage: 0.65
+  require_building_inside_buildable_area: true
+"""
+        )
+
+        self.assertEqual(config.parcels.building_alignment, "parcel")
+        self.assertEqual(config.parcels.orientation_jitter_degrees, 3.0)
+        self.assertEqual(config.parcels.max_building_coverage, 0.65)
+        self.assertTrue(config.parcels.require_building_inside_buildable_area)
+
+    def test_invalid_parcel_alignment_config_is_error(self) -> None:
+        with self.assertRaises(ConfigError):
+            _config_from_text(
+                """
+seed: 7
+parcels:
+  enabled: true
+  building_alignment: diagonal
+"""
+            )
+
+        with self.assertRaises(ConfigError):
+            _config_from_text(
+                """
+seed: 7
+parcels:
+  enabled: true
+  orientation_jitter_degrees: -1
+"""
+            )
+
+        with self.assertRaises(ConfigError):
+            _config_from_text(
+                """
+seed: 7
+parcels:
+  enabled: true
+  max_building_coverage: 1.5
+"""
+            )
+
 
 def _config_from_text(text: str):
     with tempfile.TemporaryDirectory() as tmp:

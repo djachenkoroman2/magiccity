@@ -7,7 +7,7 @@ from typing import Any
 
 from .biomes import classify_biome
 from .config import CityGenConfig, ParcelsConfig
-from .geometry import BBox, Building, Rect, stable_rng
+from .geometry import BBox, Building, OrientedRect, Rect, rect_to_oriented, stable_rng
 from .roads import RoadNetworkLike
 
 
@@ -28,6 +28,7 @@ class Parcel:
     biome: str
     road_distance_m: float
     buildable: bool
+    orientation_degrees: float = 0.0
 
     @property
     def center_x(self) -> float:
@@ -48,6 +49,14 @@ class Parcel:
     @property
     def area_m2(self) -> float:
         return self.width * self.depth
+
+    @property
+    def geometry(self) -> OrientedRect:
+        return rect_to_oriented(self.bbox, self.orientation_degrees)
+
+    @property
+    def buildable_geometry(self) -> OrientedRect:
+        return rect_to_oriented(self.inner, self.orientation_degrees)
 
 
 def build_blocks_and_parcels(

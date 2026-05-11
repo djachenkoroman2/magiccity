@@ -177,6 +177,10 @@ class ParcelsConfig:
     parcel_setback_m: float = 2.0
     split_jitter_ratio: float = 0.18
     max_subdivision_depth: int = 3
+    building_alignment: str = "parcel"
+    orientation_jitter_degrees: float = 0.0
+    max_building_coverage: float = 0.72
+    require_building_inside_buildable_area: bool = True
 
 
 @dataclass(frozen=True)
@@ -603,6 +607,10 @@ def _parcels_config(raw: dict[str, Any]) -> ParcelsConfig:
         "parcel_setback_m",
         "split_jitter_ratio",
         "max_subdivision_depth",
+        "building_alignment",
+        "orientation_jitter_degrees",
+        "max_building_coverage",
+        "require_building_inside_buildable_area",
     }
     for key in raw:
         if key not in supported:
@@ -621,6 +629,18 @@ def _parcels_config(raw: dict[str, Any]) -> ParcelsConfig:
         parcel_setback_m=_float(raw, "parcel_setback_m", defaults.parcel_setback_m),
         split_jitter_ratio=_float(raw, "split_jitter_ratio", defaults.split_jitter_ratio),
         max_subdivision_depth=_int(raw, "max_subdivision_depth", defaults.max_subdivision_depth),
+        building_alignment=_str(raw, "building_alignment", defaults.building_alignment),
+        orientation_jitter_degrees=_float(
+            raw,
+            "orientation_jitter_degrees",
+            defaults.orientation_jitter_degrees,
+        ),
+        max_building_coverage=_float(raw, "max_building_coverage", defaults.max_building_coverage),
+        require_building_inside_buildable_area=_bool(
+            raw,
+            "require_building_inside_buildable_area",
+            defaults.require_building_inside_buildable_area,
+        ),
     )
 
 
@@ -759,6 +779,12 @@ def _validate(cfg: CityGenConfig) -> None:
         raise ConfigError("parcels.block_jitter_m must be >= 0.")
     if cfg.parcels.parcel_setback_m < 0:
         raise ConfigError("parcels.parcel_setback_m must be >= 0.")
+    if cfg.parcels.building_alignment not in {"parcel", "global"}:
+        raise ConfigError("parcels.building_alignment must be one of: global, parcel.")
+    if cfg.parcels.orientation_jitter_degrees < 0:
+        raise ConfigError("parcels.orientation_jitter_degrees must be >= 0.")
+    if not 0 < cfg.parcels.max_building_coverage <= 1:
+        raise ConfigError("parcels.max_building_coverage must be between 0 and 1.")
     if not 0 <= cfg.parcels.split_jitter_ratio <= 0.45:
         raise ConfigError("parcels.split_jitter_ratio must be between 0 and 0.45.")
     if cfg.parcels.max_subdivision_depth < 0:

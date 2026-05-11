@@ -10,6 +10,7 @@ from citygen.cli import main
 from citygen.config import ConfigError, load_config
 from citygen.export import write_metadata, write_ply
 from citygen.generator import generate_scene
+from citygen.geometry import OrientedRect, rect_to_oriented
 from citygen.sampling import sample_scene
 
 
@@ -78,6 +79,28 @@ parcels:
             [(building.parcel_id, building.footprint.bbox) for building in scene_b.buildings],
         )
 
+    def test_oriented_rect_geometry_round_trips(self) -> None:
+        rect = OrientedRect(center_x=10.0, center_y=20.0, width=30.0, depth=12.0, angle_degrees=30.0)
+        world = rect.local_to_world(8.0, -3.0)
+        local = rect.world_to_local(*world)
+
+        self.assertAlmostEqual(local[0], 8.0, places=6)
+        self.assertAlmostEqual(local[1], -3.0, places=6)
+        self.assertTrue(rect.contains_xy(*world))
+        self.assertFalse(rect.contains_xy(*rect.local_to_world(16.0, 0.0)))
+        self.assertEqual(len(rect.corners()), 4)
+
+    def test_rect_to_oriented_adapter_keeps_axis_aligned_geometry(self) -> None:
+        config = load_config("configs/demo_parcels.yaml")
+        scene = generate_scene(config)
+        parcel = next(parcel for parcel in scene.parcels if parcel.buildable)
+        oriented = rect_to_oriented(parcel.inner)
+
+        self.assertEqual(oriented.angle_degrees, 0.0)
+        self.assertEqual(oriented.width, parcel.inner.width)
+        self.assertEqual(oriented.depth, parcel.inner.depth)
+        self.assertTrue(oriented.contains_xy(parcel.inner.center_x, parcel.inner.center_y))
+
     def test_buildings_stay_inside_parcels_and_avoid_roads(self) -> None:
         config = load_config("configs/demo_parcels.yaml")
         scene = generate_scene(config)
@@ -94,8 +117,10 @@ parcels:
         for building in scene.buildings:
             self.assertIsNotNone(building.parcel_id)
             parcel = parcels[building.parcel_id]
+            self.assertAlmostEqual(building.orientation_degrees, parcel.orientation_degrees, places=6)
             self.assertTrue(_rect_contains(parcel.inner, building.footprint.bbox))
             for x, y in building.footprint.clearance_sample_points():
+                self.assertTrue(parcel.buildable_geometry.contains_xy(x, y))
                 self.assertTrue(parcel.inner.contains_xy(x, y))
                 self.assertEqual(scene.road_network.surface_kind(config, x, y), "ground")
 
@@ -120,6 +145,17 @@ parcels:
         self.assertGreater(parcel_counts["occupied_parcels"], 0)
         self.assertEqual(parcel_counts["buildings_with_parcel_id"], metadata["building_counts"]["total"])
         self.assertIn("by_parcel_biome", metadata["building_counts"])
+        self.assertIn("parcel_building_alignment", metadata)
+        self.assertIn("building_orientations", metadata)
+        self.assertIn("parcel_geometry", metadata)
+        self.assertEqual(
+            metadata["parcel_building_alignment"]["buildings_with_parcel_id"],
+            metadata["building_counts"]["total"],
+        )
+        self.assertEqual(
+            metadata["parcel_building_alignment"]["aligned_buildings"],
+            metadata["building_counts"]["total"],
+        )
 
     def test_cli_smoke_writes_demo_parcels(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -132,6 +168,22 @@ parcels:
         self.assertGreater(metadata["point_count"], 0)
         self.assertGreater(metadata["parcel_counts"]["blocks"], 0)
         self.assertGreater(metadata["parcel_counts"]["occupied_parcels"], 0)
+
+    def test_cli_smoke_writes_demo_parcel_alignment(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            out_path = Path(tmp) / "demo_parcel_alignment.ply"
+            exit_code = main(["--config", "configs/demo_parcel_alignment.yaml", "--out", str(out_path)])
+            metadata_path = out_path.with_suffix(".metadata.json")
+            metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(exit_code, 0)
+        self.assertGreater(metadata["point_count"], 0)
+        self.assertGreater(metadata["parcel_counts"]["occupied_parcels"], 0)
+        self.assertEqual(metadata["parcel_building_alignment"]["mode"], "parcel")
+        self.assertEqual(
+            metadata["parcel_building_alignment"]["aligned_buildings"],
+            metadata["parcel_building_alignment"]["buildings_with_parcel_id"],
+        )
 
 
 def _config_from_text(text: str):

@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 import math
 from random import Random
 
 from .catalogs import FOOTPRINT_DEFINITIONS
 from .config import FootprintConfig
-from .geometry import Rect
+from .geometry import Rect, normalize_degrees, rotate_xy
 from .selectors import select_weighted_id
 
 
@@ -33,9 +33,28 @@ class BuildingFootprint:
     circle_center: tuple[float, float] | None = None
     circle_radius: float = 0.0
     circle_segments: int = 24
+    angle_degrees: float = 0.0
+    rotation_center: tuple[float, float] | None = None
 
     @property
     def bbox(self) -> Rect:
+        if self.angle_degrees == 0:
+            return self.local_bbox
+        if self.circle_center is not None:
+            cx, cy = self._to_world(*self.circle_center)
+            r = self.circle_radius
+            return Rect(cx - r, cy - r, cx + r, cy + r)
+        points: list[tuple[float, float]] = []
+        for part in self.parts:
+            points.extend(self._rect_world_corners(part))
+        if not points:
+            return self.local_bbox
+        xs = [point[0] for point in points]
+        ys = [point[1] for point in points]
+        return Rect(min(xs), min(ys), max(xs), max(ys))
+
+    @property
+    def local_bbox(self) -> Rect:
         if self.circle_center is not None:
             cx, cy = self.circle_center
             r = self.circle_radius
@@ -64,13 +83,29 @@ class BuildingFootprint:
 
     @property
     def center_x(self) -> float:
-        return self.bbox.center_x
+        return self._rotation_origin()[0]
 
     @property
     def center_y(self) -> float:
-        return self.bbox.center_y
+        return self._rotation_origin()[1]
+
+    @property
+    def orientation_degrees(self) -> float:
+        return normalize_degrees(self.angle_degrees)
+
+    def with_orientation(
+        self,
+        angle_degrees: float,
+        center: tuple[float, float] | None = None,
+    ) -> "BuildingFootprint":
+        return replace(
+            self,
+            angle_degrees=normalize_degrees(angle_degrees),
+            rotation_center=center or self._rotation_origin(),
+        )
 
     def contains_xy(self, x: float, y: float) -> bool:
+        x, y = self.world_to_local_xy(x, y)
         if self.circle_center is not None:
             cx, cy = self.circle_center
             return math.hypot(x - cx, y - cy) <= self.circle_radius
@@ -84,10 +119,19 @@ class BuildingFootprint:
     def boundary_segments(self) -> tuple[BoundarySegment, ...]:
         if self.circle_center is not None:
             return self._circle_boundary_segments()
-        return tuple(_rect_union_boundary_segments(self.parts, self.holes))
+        segments = _rect_union_boundary_segments(self.parts, self.holes)
+        if self.angle_degrees == 0:
+            return tuple(segments)
+        return tuple(
+            BoundarySegment(
+                *self._to_world(segment.x0, segment.y0),
+                *self._to_world(segment.x1, segment.y1),
+            )
+            for segment in segments
+        )
 
     def clearance_sample_points(self) -> tuple[tuple[float, float], ...]:
-        bbox = self.bbox
+        bbox = self.local_bbox
         points = [
             (bbox.center_x, bbox.center_y),
             (bbox.min_x, bbox.min_y),
@@ -108,10 +152,24 @@ class BuildingFootprint:
             for part in self.parts:
                 points.append((part.center_x, part.center_y))
             for segment in self.boundary_segments():
-                points.append((segment.x0, segment.y0))
-                points.append((segment.x1, segment.y1))
-                points.append(((segment.x0 + segment.x1) * 0.5, (segment.y0 + segment.y1) * 0.5))
-        return tuple(_dedupe_points(points))
+                points.append(self.world_to_local_xy(segment.x0, segment.y0))
+                points.append(self.world_to_local_xy(segment.x1, segment.y1))
+                points.append(
+                    self.world_to_local_xy(
+                        (segment.x0 + segment.x1) * 0.5,
+                        (segment.y0 + segment.y1) * 0.5,
+                    )
+                )
+        return tuple(_dedupe_points([self._to_world(x, y) for x, y in points]))
+
+    def local_to_world_xy(self, x: float, y: float) -> tuple[float, float]:
+        return self._to_world(x, y)
+
+    def world_to_local_xy(self, x: float, y: float) -> tuple[float, float]:
+        if self.angle_degrees == 0:
+            return x, y
+        ox, oy = self._rotation_origin()
+        return rotate_xy(x, y, ox, oy, -self.angle_degrees)
 
     def _circle_boundary_segments(self) -> tuple[BoundarySegment, ...]:
         if self.circle_center is None:
@@ -121,10 +179,35 @@ class BuildingFootprint:
         vertices = []
         for index in range(self.circle_segments):
             angle = math.tau * index / self.circle_segments
-            vertices.append((cx + math.cos(angle) * self.circle_radius, cy + math.sin(angle) * self.circle_radius))
+            vertices.append(
+                self._to_world(
+                    cx + math.cos(angle) * self.circle_radius,
+                    cy + math.sin(angle) * self.circle_radius,
+                )
+            )
         for (x0, y0), (x1, y1) in zip(vertices, vertices[1:] + vertices[:1]):
             segments.append(BoundarySegment(x0, y0, x1, y1))
         return tuple(segments)
+
+    def _rotation_origin(self) -> tuple[float, float]:
+        if self.rotation_center is not None:
+            return self.rotation_center
+        bbox = self.local_bbox
+        return bbox.center_x, bbox.center_y
+
+    def _to_world(self, x: float, y: float) -> tuple[float, float]:
+        if self.angle_degrees == 0:
+            return x, y
+        ox, oy = self._rotation_origin()
+        return rotate_xy(x, y, ox, oy, self.angle_degrees)
+
+    def _rect_world_corners(self, rect: Rect) -> tuple[tuple[float, float], ...]:
+        return (
+            self._to_world(rect.min_x, rect.min_y),
+            self._to_world(rect.min_x, rect.max_y),
+            self._to_world(rect.max_x, rect.max_y),
+            self._to_world(rect.max_x, rect.min_y),
+        )
 
 
 def select_footprint_kind(config: FootprintConfig, rng: Random) -> str:
@@ -395,7 +478,11 @@ def _rect_union_boundary_segments(parts: tuple[Rect, ...], holes: tuple[Rect, ..
 
 
 def _rect_contains(rect: Rect, x: float, y: float) -> bool:
-    return rect.min_x <= x <= rect.max_x and rect.min_y <= y <= rect.max_y
+    eps = 1e-9
+    return (
+        rect.min_x - eps <= x <= rect.max_x + eps
+        and rect.min_y - eps <= y <= rect.max_y + eps
+    )
 
 
 def _rects_intersect(a: Rect, b: Rect) -> bool:

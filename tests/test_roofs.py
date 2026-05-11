@@ -55,6 +55,14 @@ sampling:
                 for point in points:
                     self.assertTrue(footprint.contains_xy(point.x, point.y))
 
+    def test_rotated_roof_uses_footprint_local_axes(self) -> None:
+        footprint = _rect_footprint().with_orientation(35.0, (0.0, 0.0))
+        roof = build_roof("gable", footprint, 0.0, 20.0, RoofConfig(pitch_jitter_degrees=0), random.Random(11))
+        center = footprint.local_to_world_xy(0.0, 0.0)
+        eave = footprint.local_to_world_xy(0.0, 10.0)
+
+        self.assertGreater(roof.height_at(*center, footprint), roof.height_at(*eave, footprint))
+
     def test_roof_sampling_skips_courtyard_hole(self) -> None:
         footprint = BuildingFootprint(
             kind="courtyard",

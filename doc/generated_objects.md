@@ -59,7 +59,7 @@ Metadata:
 
 ## Parcels
 
-`parcel_blocks` включается через `parcels.enabled: true`. Генератор создает прямоугольные candidate blocks, subdivides them into parcels и использует parcel inner rect для buildings.
+`parcel_blocks` включается через `parcels.enabled: true`. Генератор создает прямоугольные candidate blocks, subdivides them into parcels и использует buildable geometry parcel для buildings. Сейчас generated parcels axis-aligned, но каждый parcel имеет orientation и adapter в `OrientedRect`.
 
 Biome interaction:
 
@@ -69,10 +69,12 @@ Biome interaction:
 Metadata:
 
 - `parcel_counts`;
+- `parcel_building_alignment`;
+- `parcel_geometry`;
 - `building_counts.by_parcel_biome`;
 - `object_feature_counts.parcel_blocks`.
 
-Ограничение MVP: parcels являются прямоугольной аппроксимацией поверх road primitives, не cadastral/GIS layer.
+Ограничение MVP: parcels являются прямоугольной аппроксимацией поверх road primitives, не cadastral/GIS layer. Rotated/polygon parcels подготовлены на уровне geometry API, но текущий generator их еще не строит.
 
 ## Buildings
 
@@ -98,6 +100,7 @@ Metadata:
 - `building_counts.by_biome`;
 - `building_counts.by_footprint`;
 - `building_counts.by_roof`;
+- `building_orientations`;
 - `object_feature_counts.building`;
 - `object_feature_counts.building_footprint`;
 - `object_feature_counts.building_roof`.
@@ -117,7 +120,7 @@ Metadata:
 - `u_shape`;
 - `t_shape`.
 
-Footprint ids описаны в catalog `FOOTPRINT_DEFINITIONS`; старое metadata поле `supported_footprint_types` сохранено.
+Footprint ids описаны в catalog `FOOTPRINT_DEFINITIONS`; старое metadata поле `supported_footprint_types` сохранено. Footprint geometry может хранить orientation transform: `contains_xy`, roof sampling и facade boundary segments работают в world-space, но форма оценивается в local-space.
 
 ## Roofs
 

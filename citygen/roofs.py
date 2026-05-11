@@ -25,9 +25,10 @@ class RoofSpec:
     flat_slope_degrees: float = 0.0
 
     def height_at(self, x: float, y: float, footprint: BuildingFootprint) -> float:
-        bbox = footprint.bbox
-        ux = _normalized_axis(x, bbox.center_x, bbox.width)
-        uy = _normalized_axis(y, bbox.center_y, bbox.depth)
+        local_x, local_y = footprint.world_to_local_xy(x, y)
+        bbox = footprint.local_bbox
+        ux = _normalized_axis(local_x, bbox.center_x, bbox.width)
+        uy = _normalized_axis(local_y, bbox.center_y, bbox.depth)
 
         if self.kind == "flat":
             factor = self._flat_factor(ux, uy)
@@ -146,7 +147,7 @@ def _roof_rise(
 
 
 def _long_axis(footprint: BuildingFootprint) -> str:
-    bbox = footprint.bbox
+    bbox = footprint.local_bbox
     return "x" if bbox.width >= bbox.depth else "y"
 
 

@@ -7,7 +7,7 @@ from .biomes import biome_params, classify_biome, sample_biome_counts
 from .config import CityGenConfig
 from .fields import sample_urban_fields
 from .footprints import build_footprint, select_footprint_kind
-from .geometry import BBox, Building, Rect, stable_rng, terrain_height
+from .geometry import BBox, Building, OrientedRect, Rect, normalize_degrees, stable_rng, terrain_height
 from .parcels import Block, Parcel, build_blocks_and_parcels, parcel_counts
 from .roads import RoadNetworkLike, build_road_network
 from .roofs import build_roof, select_roof_kind
@@ -158,29 +158,51 @@ def _generate_buildings_from_parcels(
             continue
 
         setback = max(0.5, buildings_cfg.setback_m * params.setback_scale * 0.35)
-        inner = _inset_rect(parcel.inner, setback)
-        if inner is None:
+        buildable_area = parcel.buildable_geometry.inset(setback)
+        if buildable_area is None:
             continue
-        max_fit = min(inner.width, inner.depth)
+        max_fit = min(buildable_area.width, buildable_area.depth)
+        coverage_fit = math.sqrt(buildable_area.area_m2 * config.parcels.max_building_coverage)
         min_fp = max(4.0, buildings_cfg.footprint_min_m * params.footprint_scale * 0.82)
-        max_fp = min(max_fit, buildings_cfg.footprint_max_m * params.footprint_scale)
+        max_fp = min(max_fit, coverage_fit, buildings_cfg.footprint_max_m * params.footprint_scale)
         if max_fp < min_fp:
             min_fp = max(4.0, min(max_fp, max_fit))
         if max_fp < 4.0 or min_fp > max_fp:
             continue
 
         footprint_kind = select_footprint_kind(buildings_cfg.footprint, rng)
+        orientation = _parcel_building_orientation(config, parcel)
         footprint = build_footprint(
             footprint_kind,
-            inner.center_x,
-            inner.center_y,
+            buildable_area.center_x,
+            buildable_area.center_y,
             min_fp,
             max_fp,
             buildings_cfg.footprint,
             rng,
+        ).with_orientation(
+            orientation,
+            (buildable_area.center_x, buildable_area.center_y),
         )
-        if not _footprint_within_rect(footprint, inner):
-            continue
+        if config.parcels.require_building_inside_buildable_area and not _footprint_within_oriented_rect(
+            footprint,
+            buildable_area,
+        ):
+            fallback_rng = stable_rng(config.seed, "parcel-building-fallback", parcel.id)
+            footprint = build_footprint(
+                "rectangle",
+                buildable_area.center_x,
+                buildable_area.center_y,
+                min_fp,
+                max_fp,
+                buildings_cfg.footprint,
+                fallback_rng,
+            ).with_orientation(
+                orientation,
+                (buildable_area.center_x, buildable_area.center_y),
+            )
+            if not _footprint_within_oriented_rect(footprint, buildable_area):
+                continue
 
         if not _footprint_is_clear(road_network, footprint, max(0.5, setback)):
             continue
@@ -197,6 +219,7 @@ def _generate_buildings_from_parcels(
                 params,
                 rng,
                 parcel_id=parcel.id,
+                orientation_degrees=orientation,
             )
         )
 
@@ -213,6 +236,7 @@ def _build_building(
     params,
     rng,
     parcel_id: str | None = None,
+    orientation_degrees: float | None = None,
 ) -> Building:
     buildings_cfg = config.buildings
     min_height = buildings_cfg.min_height_m * params.height_min_multiplier
@@ -232,6 +256,7 @@ def _build_building(
         biome=biome,
         roof=roof,
         parcel_id=parcel_id,
+        orientation_degrees=footprint.orientation_degrees if orientation_degrees is None else orientation_degrees,
     )
 
 
@@ -264,6 +289,24 @@ def _footprint_within_rect(footprint, rect: Rect) -> bool:
     ):
         return False
     return all(rect.contains_xy(x, y) for x, y in footprint.clearance_sample_points())
+
+
+def _footprint_within_oriented_rect(footprint, rect: OrientedRect) -> bool:
+    if not _rects_overlap(footprint.bbox, rect.bbox):
+        return False
+    return all(rect.contains_xy(x, y) for x, y in footprint.clearance_sample_points())
+
+
+def _parcel_building_orientation(config: CityGenConfig, parcel: Parcel) -> float:
+    if config.parcels.building_alignment == "global":
+        base = 0.0
+    else:
+        base = parcel.orientation_degrees
+    jitter = config.parcels.orientation_jitter_degrees
+    if jitter <= 0:
+        return normalize_degrees(base)
+    rng = stable_rng(config.seed, "parcel-building-orientation", parcel.id)
+    return normalize_degrees(base + rng.uniform(-jitter, jitter))
 
 
 def _inset_rect(rect: Rect, inset: float) -> Rect | None:

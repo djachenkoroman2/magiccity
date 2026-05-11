@@ -10,7 +10,7 @@ from .catalogs import biome_catalog_summary, catalog_summary, worldgen_summary
 from .config import CityGenConfig
 from .footprints import FOOTPRINT_KINDS
 from .generator import Scene
-from .geometry import Point
+from .geometry import Point, angle_delta_degrees, normalize_degrees
 from .roofs import ROOF_KINDS
 
 
@@ -121,6 +121,9 @@ def write_metadata(path: str | Path, config: CityGenConfig, scene: Scene, points
             "by_parcel_biome": dict(sorted(parcel_biome_counts.items())),
         },
         "parcel_counts": scene.parcel_counts,
+        "parcel_building_alignment": _parcel_building_alignment(config, scene),
+        "building_orientations": _building_orientation_summary(scene),
+        "parcel_geometry": _parcel_geometry_summary(scene),
         "supported_footprint_types": list(FOOTPRINT_KINDS),
         "supported_roof_types": list(ROOF_KINDS),
         "config": config.to_dict(),
@@ -149,4 +152,65 @@ def _object_feature_counts(scene: Scene, points: list[Point]) -> dict[str, int]:
         "building": len(scene.buildings),
         "building_footprint": len(scene.buildings),
         "building_roof": class_name_counts.get("building_roof", 0),
+    }
+
+
+def _parcel_building_alignment(config: CityGenConfig, scene: Scene) -> dict[str, Any]:
+    parcels_by_id = {parcel.id: parcel for parcel in scene.parcels}
+    with_parcel = [building for building in scene.buildings if building.parcel_id is not None]
+    tolerance = config.parcels.orientation_jitter_degrees + 1e-6
+    aligned = 0
+    for building in with_parcel:
+        if config.parcels.building_alignment == "global":
+            target = 0.0
+        else:
+            parcel = parcels_by_id.get(building.parcel_id)
+            target = parcel.orientation_degrees if parcel is not None else 0.0
+        if angle_delta_degrees(building.orientation_degrees, target) <= tolerance:
+            aligned += 1
+
+    too_small = 0
+    for parcel in scene.parcels:
+        if not parcel.buildable:
+            continue
+        buildable = parcel.buildable_geometry.inset(max(0.0, config.buildings.setback_m * 0.35))
+        if buildable is None or min(buildable.width, buildable.depth) < max(4.0, config.buildings.footprint_min_m * 0.5):
+            too_small += 1
+
+    return {
+        "mode": config.parcels.building_alignment,
+        "buildings_with_parcel_id": len(with_parcel),
+        "aligned_buildings": aligned,
+        "skipped_too_small_parcels": too_small,
+        "orientation_jitter_degrees": config.parcels.orientation_jitter_degrees,
+        "require_building_inside_buildable_area": config.parcels.require_building_inside_buildable_area,
+        "max_building_coverage": config.parcels.max_building_coverage,
+    }
+
+
+def _building_orientation_summary(scene: Scene) -> dict[str, float | int]:
+    if not scene.buildings:
+        return {
+            "min_degrees": 0.0,
+            "max_degrees": 0.0,
+            "unique_bucket_count": 0,
+        }
+    values = [normalize_degrees(building.orientation_degrees) for building in scene.buildings]
+    buckets = {round(value) % 360 for value in values}
+    return {
+        "min_degrees": round(min(values), 3),
+        "max_degrees": round(max(values), 3),
+        "unique_bucket_count": len(buckets),
+    }
+
+
+def _parcel_geometry_summary(scene: Scene) -> dict[str, int]:
+    axis_aligned = sum(
+        1 for parcel in scene.parcels if angle_delta_degrees(parcel.orientation_degrees, 0.0) <= 1e-6
+    )
+    oriented = len(scene.parcels) - axis_aligned
+    return {
+        "oriented_parcels": oriented,
+        "axis_aligned_parcels": axis_aligned,
+        "buildable_area_failures": sum(1 for parcel in scene.parcels if not parcel.buildable),
     }

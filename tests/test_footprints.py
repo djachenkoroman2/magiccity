@@ -27,6 +27,20 @@ class FootprintTests(unittest.TestCase):
                 self.assertGreater(footprint.bbox.depth, 0)
                 self.assertGreater(len(footprint.boundary_segments()), 0)
 
+    def test_rotated_footprint_contains_and_samples_in_world_space(self) -> None:
+        cfg = FootprintConfig()
+        footprint = build_footprint("rectangle", 10.0, 20.0, 20.0, 20.0, cfg, random.Random(12))
+        rotated = footprint.with_orientation(30.0, (10.0, 20.0))
+        world_inside = rotated.local_to_world_xy(14.0, 20.0)
+        world_outside = rotated.local_to_world_xy(40.0, 20.0)
+
+        self.assertEqual(rotated.orientation_degrees, 30.0)
+        self.assertTrue(rotated.contains_xy(10.0, 20.0))
+        self.assertTrue(rotated.contains_xy(*world_inside))
+        self.assertFalse(rotated.contains_xy(*world_outside))
+        self.assertGreater(rotated.bbox.width, rotated.local_bbox.width)
+        self.assertTrue(all(rotated.contains_xy(x, y) for x, y in rotated.clearance_sample_points()))
+
     def test_circle_roof_points_stay_inside_circle(self) -> None:
         cfg = FootprintConfig(model="circle", circle_segments=24)
         footprint = build_footprint("circle", 0.0, 0.0, 20.0, 20.0, cfg, random.Random(4))

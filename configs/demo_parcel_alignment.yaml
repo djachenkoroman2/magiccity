@@ -1,0 +1,133 @@
+seed: 912
+tile:
+  x: 0
+  y: 0
+  size_m: 384
+  margin_m: 64
+terrain:
+  base_height_m: 0
+  height_noise_m: 2.2
+urban_fields:
+  enabled: true
+  center_x: 192
+  center_y: 192
+  city_radius_m: 340
+  noise_scale_m: 130
+  density_bias: 0.10
+  industrial_bias: 0.06
+  green_bias: 0.04
+roads:
+  model: mixed
+  spacing_m: 82
+  width_m: 9
+  sidewalk_width_m: 3
+  angle_degrees: 16
+  radial_count: 12
+  ring_spacing_m: 92
+  organic_wander_m: 12
+  profiles:
+    enabled: true
+    default: collector
+    definitions:
+      local:
+        carriageway_width_m: 7
+        sidewalk_width_m: 2
+        median_width_m: 0
+      collector:
+        carriageway_width_m: 10
+        sidewalk_width_m: 3
+        median_width_m: 0
+      arterial:
+        carriageway_width_m: 14
+        sidewalk_width_m: 4
+        median_width_m: 1.5
+      boulevard:
+        carriageway_width_m: 16
+        sidewalk_width_m: 4
+        median_width_m: 6
+    biome_weights:
+      downtown:
+        collector: 0.15
+        arterial: 0.40
+        boulevard: 0.45
+      residential:
+        local: 0.48
+        collector: 0.40
+        arterial: 0.12
+      industrial:
+        collector: 0.25
+        arterial: 0.55
+        boulevard: 0.20
+      suburb:
+        local: 0.78
+        collector: 0.22
+buildings:
+  enabled: true
+  min_height_m: 7
+  max_height_m: 56
+  setback_m: 2.2
+  footprint_min_m: 7
+  footprint_max_m: 24
+  footprint:
+    model: mixed
+    weights:
+      rectangle: 1
+      square: 1
+      circle: 0.7
+      slab: 1
+      courtyard: 0.8
+      l_shape: 0.9
+      u_shape: 0.8
+      t_shape: 0.8
+    circle_segments: 32
+    courtyard_ratio: 0.42
+    wing_width_ratio: 0.34
+    min_part_width_m: 3.5
+  roof:
+    model: mixed
+    weights:
+      flat: 1
+      shed: 1
+      gable: 1
+      hip: 1
+      half_hip: 0.8
+      pyramid: 0.8
+      mansard: 0.8
+      dome: 0.6
+      barrel: 0.6
+      cone: 0.5
+    pitch_degrees: 30
+    pitch_jitter_degrees: 5
+    flat_slope_degrees: 1
+    ridge_height_ratio: 0.36
+    mansard_break_ratio: 0.44
+    dome_segments: 20
+parcels:
+  enabled: true
+  building_alignment: parcel
+  orientation_jitter_degrees: 0
+  max_building_coverage: 0.70
+  require_building_inside_buildable_area: true
+  block_size_m: 86
+  block_jitter_m: 5
+  min_block_size_m: 30
+  min_parcel_width_m: 12
+  max_parcel_width_m: 34
+  min_parcel_depth_m: 15
+  max_parcel_depth_m: 44
+  parcel_setback_m: 1.4
+  split_jitter_ratio: 0.14
+  max_subdivision_depth: 4
+sampling:
+  mode: surface
+  ground_spacing_m: 4.5
+  road_spacing_m: 2.5
+  building_spacing_m: 2.6
+  jitter_ratio: 0.12
+output:
+  format: ply
+  include_rgb: true
+  include_class: true
+worldgen:
+  catalog_docs: true
+  strict_catalog_validation: true

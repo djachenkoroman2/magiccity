@@ -1,0 +1,367 @@
+Ты senior Python-инженер и архитектор процедурных генераторов городских point clouds.
+
+В репозитории есть рабочий MVP `citygen`: CLI на Python, YAML-конфиги, детерминированный `seed`, тайлы, road primitives, несколько road models, road profiles, worldgen catalogs, urban fields, биомы, parcels, разные building footprints, разные roof geometry, surface sampling, ASCII PLY export и metadata JSON. Координатная конвенция проекта: горизонтальная плоскость `x/y`, высота `z`. Справочники: `README.md`, `configs/README.md`, `doc/biomes.md`, `doc/parcels.md`, `doc/building_footprints.md`, `doc/building_roofs.md`, `doc/generated_objects.md`, `doc/worldgen_catalogs.md`.
+
+Нужно реализовать следующий этап для parcels/buildings: при размещении зданий внутри parcels учитывать геометрию конкретного участка. Здание должно размещаться внутри buildable area участка и быть ориентировано параллельно границам участка, а не просто ставиться по глобальным осям `x/y` без учета формы parcel.
+
+Не останавливайся на описании подхода: внеси рабочие изменения в код, YAML-конфиги, документацию и тесты.
+
+## Главная цель
+
+`citygen` должен поддерживать parcel-aware building placement:
+
+- каждый parcel предоставляет геометрию, пригодную для размещения здания;
+- building footprint выбирается и масштабируется с учетом usable/buildable area конкретного parcel;
+- footprint ориентируется по локальным осям parcel, frontage или длинной стороне участка;
+- footprint целиком остается внутри buildable area parcel с учетом setbacks;
+- surface sampling, roof geometry, facade/boundary sampling и metadata корректно работают для ориентированных footprint geometry;
+- текущие axis-aligned parcels остаются валидным baseline и должны давать практически прежний результат;
+- архитектура должна быть готова к будущим rotated / non-axis-aligned parcels, даже если текущий генератор parcels пока создает только прямоугольные участки.
+
+Под "параллельно границам участка" в этом этапе понимается MVP-правило:
+
+```text
+building local X/Y axes align with parcel local axes
+```
+
+Если parcel прямоугольный и axis-aligned, его orientation равен `0`, и результат совместим со старым поведением. Если parcel получает orientation, footprint должен поворачиваться вместе с ним.
+
+## Важные понятия
+
+- `Parcel geometry`: world-space геометрия участка и его buildable area после setbacks.
+- `Parcel orientation`: стабильный угол или пара локальных осей, задающих направление участка.
+- `Buildable area`: область внутри parcel, где разрешено размещать footprint здания.
+- `Footprint local space`: локальная система координат footprint до поворота и переноса в world-space.
+- `Footprint transform`: перенос, поворот и масштабирование footprint из local-space в world-space.
+- `Parcel-aligned building`: здание, чьи локальные оси параллельны локальным осям parcel.
+
+## Обязательные принципы
+
+1. Сохрани обратную совместимость:
+   - `configs/mvp.yaml` должен запускаться без изменений;
+   - существующие `demo_*.yaml` должны продолжить работать;
+   - старые поля `parcels`, `buildings`, `building_footprints`, `building_roofs`, `roads`, `sampling`, `output` должны остаться валидными;
+   - если parcels выключены, placement должен работать как раньше;
+   - существующие semantic class ids нельзя менять;
+   - существующие metadata fields нельзя удалять.
+
+2. Сохрани детерминированность:
+   - одинаковый seed и одинаковый config дают одинаковые parcels, building placements, orientations, points и metadata;
+   - не используй глобальный недетерминированный `random`;
+   - если вводишь random orientation choice или jitter, используй stable hash-based RNG с namespace, seed, tile coordinates, parcel id и building id.
+
+3. Уважай координатную систему:
+   - горизонтальная плоскость: `x/y`;
+   - высота: `z`;
+   - geometry containment и расстояния считаются в `x/y`;
+   - PLY остается `x y z`, где `z` — высота.
+
+4. Не добавляй тяжелые зависимости:
+   - задача решается dataclass-ами, affine transforms и простыми geometry helpers;
+   - не нужен Shapely, GIS/topology stack, CRS, triangulation engine или mesh boolean;
+   - если dependency все-таки нужна, обоснуй и добавь минимально.
+
+5. Не делай большой rewrite:
+   - текущие `Rect`, parcels, footprint и roof generation можно адаптировать постепенно;
+   - предпочтительный стиль — тонкий geometry/transform слой вокруг существующих структур.
+
+## Геометрия parcels
+
+Добавь или расширь модели данных так, чтобы parcel мог явно отдавать:
+
+- stable `parcel_id` или index;
+- world-space bbox;
+- buildable area после setbacks;
+- orientation angle или локальные оси;
+- center / anchor point для размещения здания;
+- usable width/depth в локальных координатах;
+- helper для проверки, что world-space point или footprint находится внутри buildable area.
+
+Один возможный путь:
+
+```python
+@dataclass(frozen=True)
+class OrientedRect:
+    center_x: float
+    center_y: float
+    width: float
+    depth: float
+    angle_degrees: float = 0.0
+
+    def local_to_world(self, x: float, y: float) -> tuple[float, float]: ...
+    def world_to_local(self, x: float, y: float) -> tuple[float, float]: ...
+    def contains_xy(self, x: float, y: float, eps: float = 1e-9) -> bool: ...
+    def corners(self) -> tuple[tuple[float, float], ...]: ...
+```
+
+Если текущий `Rect` используется широко, сохрани его и добавь совместимый adapter:
+
+```python
+def rect_to_oriented(rect: Rect) -> OrientedRect:
+    return OrientedRect(rect.center_x, rect.center_y, rect.width, rect.depth, 0.0)
+```
+
+Требования:
+
+- axis-aligned parcels должны продолжить работать без изменения YAML;
+- buildable area должна учитывать setbacks;
+- если buildable area слишком мала для здания, parcel должен быть пропущен понятным и детерминированным образом;
+- ориентация parcel должна быть стабильной и отражаться в metadata;
+- если появятся rotated parcels, bbox должен использоваться только как broad phase, а точная проверка должна идти через oriented geometry.
+
+## Building footprint alignment
+
+Обнови building placement так, чтобы footprint строился в локальной системе parcel и затем трансформировался в world-space.
+
+Требования:
+
+- building center выбирается внутри buildable area parcel;
+- footprint dimensions ограничиваются usable width/depth parcel;
+- footprint orientation совпадает с parcel orientation, кроме явно настроенного jitter;
+- rectangular/square/slab/courtyard/L/U/T footprints должны поворачиваться как единое тело;
+- circle footprint может иметь orientation для metadata, даже если визуально симметричен;
+- roof geometry должна использовать ту же ориентацию, что и footprint;
+- boundary/facade sampling должен работать по world-space boundary segments;
+- containment/clearance checks не должны полагаться только на axis-aligned bbox.
+
+Если текущая архитектура footprint хранит `parts: tuple[Rect, ...]`, выбери минимально рискованный вариант:
+
+- хранить parts в local-space и добавить transform;
+- или сразу преобразовывать parts в world-space oriented parts;
+- или добавить методы `contains_xy`, `sample_points`, `boundary_segments`, которые учитывают transform.
+
+Не меняй публичный смысл существующих footprint types. Цель этапа — правильная привязка к parcel geometry, а не новый набор footprint shapes.
+
+## YAML-настройка
+
+Добавь опциональные настройки, только если они реально нужны для управления поведением. Секция должна быть обратносуместимой.
+
+Пример допустимого формата:
+
+```yaml
+parcels:
+  enabled: true
+  building_alignment: parcel
+  orientation_jitter_degrees: 0
+  max_building_coverage: 0.72
+  require_building_inside_buildable_area: true
+```
+
+Можно выбрать другие имена, если они лучше ложатся в текущий код.
+
+Требования к настройкам:
+
+- отсутствие новых полей должно сохранять старое поведение настолько близко, насколько возможно;
+- `building_alignment` должен поддерживать как минимум `parcel`;
+- если оставляешь legacy/global alignment mode, задокументируй его;
+- `orientation_jitter_degrees` должен быть `>= 0`;
+- jitter по умолчанию должен быть `0`, чтобы здания были строго параллельны parcel;
+- validation errors должны быть понятными `ConfigError`;
+- настройки должны быть отражены в `configs/README.md`.
+
+## Placement rules
+
+Для каждого building, размещаемого по parcel:
+
+1. Выбери parcel детерминированно существующей логикой.
+2. Получи parcel buildable geometry.
+3. Выбери footprint type и roof type существующими deterministic selectors.
+4. Подбери footprint dimensions так, чтобы footprint помещался в local buildable width/depth.
+5. Назначь orientation:
+
+```text
+building_orientation = parcel_orientation + deterministic_jitter
+```
+
+6. Построй footprint в local-space.
+7. Преобразуй footprint в world-space.
+8. Проверь:
+   - footprint inside buildable area;
+   - не попадает на road/sidewalk/road_median;
+   - не нарушает существующий building clearance;
+   - не пересекает соседние buildings, если такая проверка уже есть.
+9. Если проверка не прошла, попробуй уменьшить footprint или пропусти parcel по стабильному правилу.
+
+Для MVP допустим консервативный fit:
+
+- здание центрируется в buildable area;
+- размеры ограничиваются долей usable width/depth;
+- если сложная форма не помещается, fallback к rectangle/square внутри того же parcel;
+- если и fallback не помещается, parcel остается пустым.
+
+Главное: не размещай здание, если его footprint выходит за buildable area parcel.
+
+## Roads, sidewalks и medians
+
+Существующая логика road clearance должна остаться обязательной.
+
+Особенно проверь:
+
+- widened road profiles;
+- sidewalks;
+- `road_median`;
+- intersections;
+- parcel buildable areas рядом с дорогами;
+- здания в parcels не должны появляться поверх road, sidewalk или road_median.
+
+Если точная проверка на пересечение дороги сложна, используй существующий conservative clearance через surface query / max road corridor. Но это должно быть явно покрыто тестами.
+
+## Metadata
+
+Расширь metadata JSON, не удаляя существующие поля.
+
+Добавь агрегаты вроде:
+
+```json
+"parcel_building_alignment": {
+  "mode": "parcel",
+  "buildings_with_parcel_id": 42,
+  "aligned_buildings": 42,
+  "skipped_too_small_parcels": 3,
+  "orientation_jitter_degrees": 0.0
+},
+"building_orientations": {
+  "min_degrees": 0.0,
+  "max_degrees": 90.0,
+  "unique_bucket_count": 2
+},
+"parcel_geometry": {
+  "oriented_parcels": 0,
+  "axis_aligned_parcels": 64,
+  "buildable_area_failures": 0
+}
+```
+
+Можно выбрать другой компактный формат, но metadata должна помогать ответить:
+
+- сколько зданий поставлено по parcels;
+- сколько buildings реально aligned с parcel;
+- сколько parcels пропущено из-за недостаточного buildable area;
+- какие orientations использовались;
+- включен ли jitter.
+
+Если metadata по отдельным buildings уже существует, добавь туда `parcel_id` и `orientation_degrees` аккуратно, без чрезмерного раздувания файла.
+
+## Demo config
+
+Добавь или обнови демонстрационный конфиг, например:
+
+```text
+configs/demo_parcel_alignment.yaml
+```
+
+Он должен показывать:
+
+- `parcels.enabled: true`;
+- buildings enabled;
+- несколько footprint types;
+- несколько roof types;
+- road profiles / widened roads, если они уже поддерживаются;
+- достаточно зданий, чтобы alignment был виден в point cloud;
+- metadata с `parcel_building_alignment` и `building_orientations`.
+
+Если текущий generator пока не создает rotated parcels, demo все равно должен подтверждать корректный parcel-aware fit на axis-aligned parcels. В финальном ответе честно укажи, что rotated parcel geometry подготовлена архитектурно, если визуально в demo используются только axis-aligned parcels.
+
+## Документация
+
+Обнови документацию точечно:
+
+- `doc/parcels.md`: опиши parcel geometry, buildable area, alignment rule, skips для слишком маленьких parcels;
+- `doc/building_footprints.md`: укажи, что footprints строятся в local-space и могут трансформироваться в world-space;
+- `doc/building_roofs.md`: укажи, что roof geometry наследует building footprint orientation;
+- `doc/generated_objects.md`: обнови описание `parcel_blocks`, `building`, `building_footprint`, `building_roof`;
+- `configs/README.md`: добавь новые YAML-поля и validation rules;
+- `README.md`: если добавлен demo config, добавь его в список demos.
+
+Не переписывай всю документацию. Обнови только места, необходимые пользователю и будущему разработчику.
+
+## Тесты
+
+Добавь или обнови unit tests.
+
+Минимальный набор:
+
+1. Config validation:
+   - старые configs продолжают загружаться;
+   - новые parcel alignment fields валидны;
+   - неизвестный `building_alignment` дает `ConfigError`;
+   - отрицательный `orientation_jitter_degrees` дает `ConfigError`.
+
+2. Parcel geometry:
+   - axis-aligned `Rect` корректно адаптируется к oriented geometry;
+   - `local_to_world` и `world_to_local` обратимы;
+   - `contains_xy` работает для center, corners, outside points;
+   - buildable area меньше исходного parcel на setbacks.
+
+3. Building placement:
+   - building в parcel получает `parcel_id`;
+   - `building.orientation_degrees` совпадает с `parcel.orientation_degrees` при jitter `0`;
+   - footprint sample points находятся внутри parcel buildable area;
+   - слишком маленький parcel пропускается или получает корректный fallback;
+   - здания не попадают на road, sidewalk или road_median.
+
+4. Footprint and roof geometry:
+   - rotated/aligned footprint сохраняет площадь и dimensions в пределах допуска;
+   - boundary segments поворачиваются вместе с footprint;
+   - roof sampling не выходит за footprint;
+   - facade/wall points используют world-space boundary.
+
+5. Детерминированность:
+   - одинаковый seed и config дают одинаковые building orientations и metadata;
+   - изменение seed или jitter settings меняет только ожидаемые stochastic decisions.
+
+6. Metadata/export:
+   - metadata содержит `parcel_building_alignment`;
+   - metadata содержит orientation aggregates;
+   - class counts и старые metadata поля сохраняются;
+   - CLI создает PLY и metadata для demo config.
+
+7. Backward compatibility:
+   - `configs/mvp.yaml` генерируется;
+   - существующие `demo_*.yaml` генерируются или хотя бы проходят config load smoke;
+   - существующие footprint/roof/parcels tests не ломаются.
+
+## Проверка
+
+Минимально выполни:
+
+```bash
+uv run python -m unittest discover -s tests
+uv run citygen --config configs/mvp.yaml --out outputs/mvp_parcel_alignment_check.ply
+uv run citygen --config configs/demo_parcel_alignment.yaml --out outputs/demo_parcel_alignment.ply
+```
+
+Затем проверь metadata:
+
+```text
+outputs/demo_parcel_alignment.metadata.json
+```
+
+Критерии хорошего результата:
+
+- тесты проходят;
+- baseline config генерируется без ошибок;
+- demo config генерируется без ошибок;
+- metadata содержит старые поля и новые parcel alignment aggregates;
+- buildings имеют `parcel_id` там, где размещены через parcels;
+- buildings aligned с parcel orientation;
+- footprint points не выходят за buildable area;
+- здания не размещаются поверх `road`, `sidewalk` или `road_median`;
+- количество точек в demo достаточно большое, чтобы визуально проверить результат.
+
+Если не удается показать rotated parcels в текущем генераторе без большого рискованного refactor, оставь axis-aligned demo и явно объясни в финальном ответе, что MVP добавляет parcel-aware geometry/transform слой и строгую alignment semantics, а не полноценную генерацию произвольных polygon parcels.
+
+## Финальный ответ
+
+В финальном ответе кратко укажи:
+
+- какие файлы изменены;
+- какие новые geometry/dataclass helpers добавлены;
+- где реализовано parcel-aware building placement;
+- какие YAML-поля поддержаны;
+- какие metadata fields добавлены;
+- какой demo config добавлен или обновлен;
+- сколько точек сгенерировалось при CLI-проверке;
+- какие тесты запускались.
+
+Если где-то выбран консервативный MVP-подход вместо полной polygon/oriented parcel системы, назови это прямо. Это нормально: цель этапа — корректное размещение зданий относительно geometry parcel и понятная архитектура для дальнейшего развития.

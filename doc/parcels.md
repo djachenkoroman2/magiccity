@@ -21,6 +21,10 @@ parcels:
   parcel_setback_m: 2
   split_jitter_ratio: 0.18
   max_subdivision_depth: 3
+  building_alignment: parcel
+  orientation_jitter_degrees: 0
+  max_building_coverage: 0.72
+  require_building_inside_buildable_area: true
 ```
 
 Если секция отсутствует, используется `enabled: false`, и генератор сохраняет прежний режим размещения зданий.
@@ -38,8 +42,12 @@ parcels:
 | `parcel_setback_m` | `2.0` | Внутренний отступ parcel; из него получается `parcel.inner`. |
 | `split_jitter_ratio` | `0.18` | Jitter позиции split как доля текущей ширины или глубины. |
 | `max_subdivision_depth` | `3` | Максимальная глубина рекурсивного деления block. |
+| `building_alignment` | `parcel` | Ориентация зданий в parcel mode. `parcel` выравнивает footprint по локальным осям участка; `global` оставляет глобальные оси `x/y`. |
+| `orientation_jitter_degrees` | `0.0` | Детерминированное отклонение от parcel orientation. По умолчанию здания строго параллельны границам участка. |
+| `max_building_coverage` | `0.72` | Верхняя доля buildable area, которую может занимать footprint. |
+| `require_building_inside_buildable_area` | `true` | Требует, чтобы representative points footprint лежали внутри buildable area. |
 
-Валидатор требует положительные размеры, согласованные min/max-значения, `split_jitter_ratio` в диапазоне `0..0.45` и известные имена параметров в секции `parcels`.
+Валидатор требует положительные размеры, согласованные min/max-значения, `split_jitter_ratio` в диапазоне `0..0.45`, `orientation_jitter_degrees >= 0`, `max_building_coverage` в диапазоне `0..1` и известные имена параметров в секции `parcels`.
 
 ## Как Это Работает
 
@@ -48,9 +56,10 @@ parcels:
 3. Каждая candidate cell превращается в прямоугольный `Block`; края немного inset-ятся через `block_jitter_m`.
 4. Слишком маленькие blocks отбрасываются по `min_block_size_m`.
 5. Каждый block рекурсивно делится по длинной оси, пока parcel не укладывается в `max_parcel_width_m` и `max_parcel_depth_m` или пока не достигнут `max_subdivision_depth`.
-6. Для каждого parcel считается `inner` через `parcel_setback_m`, biome в центре участка и расстояние до ближайшей road primitive.
+6. Для каждого parcel считается `inner` через `parcel_setback_m`, biome в центре участка, расстояние до ближайшей road primitive и parcel geometry. Сейчас generated parcels остаются axis-aligned, поэтому orientation равен `0`.
 7. Parcel считается buildable, если его `inner` достаточно велик и representative points проходят road/sidewalk clearance.
 8. Building generation проходит по buildable parcels детерминированно от `seed` и `parcel.id`.
+9. Footprint строится в локальной системе участка и получает orientation по `building_alignment`.
 
 Это сознательная MVP-аппроксимация. Текущие дороги представлены primitives и distance-based классификацией, а не полноценным топологическим графом, поэтому `parcels` не обещают идеальную GIS-полигонализацию кварталов для `organic`, `free`, `radial` или `mixed` roads.
 
@@ -58,12 +67,15 @@ parcels:
 
 При `parcels.enabled: true` каждое принятое здание получает `parcel_id`. Footprint здания должен:
 
-- помещаться в `parcel.inner`;
-- иметь representative points внутри `parcel.inner`;
+- помещаться в buildable area участка после `parcel_setback_m` и building setback;
+- иметь representative points внутри buildable area;
+- быть ориентированным параллельно parcel axes при `building_alignment: parcel`;
 - быть дальше от road centerline, чем `roads.width_m / 2 + roads.sidewalk_width_m + effective_setback`;
 - не пересекаться с уже принятыми зданиями по conservative bbox overlap check.
 
-Старые настройки `buildings.footprint_min_m`, `buildings.footprint_max_m` и `buildings.setback_m` продолжают влиять на размер и отступы здания. Если выбранный footprint type не помещается в участок, здание детерминированно пропускается.
+Старые настройки `buildings.footprint_min_m`, `buildings.footprint_max_m` и `buildings.setback_m` продолжают влиять на размер и отступы здания. Если выбранный footprint type не помещается в участок, генератор пробует deterministic rectangle fallback; если и он не помещается, parcel остается пустым.
+
+Внутри кода для этого используется тонкий geometry layer: axis-aligned `Rect` адаптируется в `OrientedRect`, а `BuildingFootprint` хранит transform. Это позволяет roof sampling и facade boundary segments работать в world-space, но оценивать форму в local-space footprint.
 
 ## Metadata
 
@@ -92,12 +104,44 @@ Metadata получает агрегированную секцию `parcel_coun
 
 `building_counts.by_parcel_biome` дополнительно показывает распределение зданий, которые были размещены через parcels.
 
+Для parcel-aware placement добавляются агрегаты:
+
+```json
+{
+  "parcel_building_alignment": {
+    "mode": "parcel",
+    "buildings_with_parcel_id": 27,
+    "aligned_buildings": 27,
+    "skipped_too_small_parcels": 0,
+    "orientation_jitter_degrees": 0.0,
+    "require_building_inside_buildable_area": true,
+    "max_building_coverage": 0.72
+  },
+  "building_orientations": {
+    "min_degrees": 0.0,
+    "max_degrees": 0.0,
+    "unique_bucket_count": 1
+  },
+  "parcel_geometry": {
+    "oriented_parcels": 0,
+    "axis_aligned_parcels": 134,
+    "buildable_area_failures": 96
+  }
+}
+```
+
 ## Демо
 
 Базовый demo-конфиг parcels:
 
 ```bash
 uv run citygen --config configs/demo_parcels.yaml --out outputs/demo_parcels.ply
+```
+
+Демо parcel-aware alignment:
+
+```bash
+uv run citygen --config configs/demo_parcel_alignment.yaml --out outputs/demo_parcel_alignment.ply
 ```
 
 Большой showcase с включенными parcels:
@@ -137,7 +181,7 @@ jq '{point_count, building_counts, parcel_counts}' outputs/demo_parcels.metadata
 
 ## Ограничения MVP
 
-- Blocks и parcels прямоугольные и axis-aligned.
+- Blocks и generated parcels пока прямоугольные и axis-aligned; geometry layer уже хранит orientation для будущих rotated parcels.
 - Нет Shapely/GIS stack и нет polygon clipping дорожных коридоров.
 - Road/sidewalk avoidance проверяется через representative sample points и distance to road primitives.
 - Overlap зданий фильтруется консервативно по bbox.

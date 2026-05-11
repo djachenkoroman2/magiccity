@@ -509,7 +509,7 @@ Alias-значения в YAML нормализуются:
 | `ridge_height_ratio` | number | `0.35` | `0 < value <= 0.8` | Верхняя граница rise крыши как доля высоты здания. |
 | `mansard_break_ratio` | number | `0.45` | `0.1..0.9` | Положение перелома мансардной крыши. |
 | `dome_segments` | integer | `16` | `>= 8` | Зарезервировано для детализации curved roofs и metadata; height function аналитическая. |
-| `align_to_long_axis` | boolean | `true` | `true`, `false` | Ориентирует ridge/arch относительно длинной оси bbox. |
+| `align_to_long_axis` | boolean | `true` | `true`, `false` | Ориентирует ridge/arch относительно длинной оси footprint local bbox. |
 
 Поддерживаемые canonical roof types:
 
@@ -580,6 +580,10 @@ parcels:
   parcel_setback_m: 2
   split_jitter_ratio: 0.18
   max_subdivision_depth: 3
+  building_alignment: parcel
+  orientation_jitter_degrees: 0
+  max_building_coverage: 0.72
+  require_building_inside_buildable_area: true
 ```
 
 | Параметр | Тип | По умолчанию | Возможные значения | Действие |
@@ -595,10 +599,14 @@ parcels:
 | `parcel_setback_m` | number | `2.0` | `>= 0` | Внутренний отступ parcel для получения `parcel.inner`. |
 | `split_jitter_ratio` | number | `0.18` | `0..0.45` | Детерминированный jitter позиции split как доля текущего размера. |
 | `max_subdivision_depth` | integer | `3` | `>= 0` | Максимальная глубина рекурсивного деления block. |
+| `building_alignment` | string | `parcel` | `parcel`, `global` | При `parcel` footprint здания выравнивается по локальным осям участка; `global` оставляет глобальные оси. |
+| `orientation_jitter_degrees` | number | `0.0` | `>= 0` | Детерминированное отклонение orientation здания от parcel orientation. |
+| `max_building_coverage` | number | `0.72` | `> 0`, `<= 1` | Максимальная доля buildable area, которую может занять footprint. |
+| `require_building_inside_buildable_area` | boolean | `true` | `true`, `false` | Требует, чтобы representative points footprint лежали внутри buildable area parcel. |
 
-MVP не строит полноценные GIS-полигоны кварталов из дорожного графа. Вместо этого он создает road-aware прямоугольные blocks/parcels, отбрасывает участки без достаточного road/sidewalk clearance и размещает здания только внутри `parcel.inner`.
+MVP не строит полноценные GIS-полигоны кварталов из дорожного графа. Вместо этого он создает road-aware прямоугольные blocks/parcels, отбрасывает участки без достаточного road/sidewalk clearance и размещает здания только внутри buildable area parcel. Generated parcels пока axis-aligned, но placement использует parcel geometry/orientation API.
 
-Metadata получает агрегированную секцию `parcel_counts`: количество blocks/parcels, buildable и occupied parcels, распределение parcels по биомам, средние размеры участков и число зданий с `parcel_id`.
+Metadata получает агрегированные секции `parcel_counts`, `parcel_building_alignment`, `building_orientations` и `parcel_geometry`: количество blocks/parcels, buildable и occupied parcels, распределение parcels по биомам, число зданий с `parcel_id`, alignment mode и orientation summary.
 
 Подробный архитектурный справочник по этому слою находится в `../doc/parcels.md`.
 
@@ -678,7 +686,7 @@ outputs/example.ply
 outputs/example.metadata.json
 ```
 
-Metadata содержит seed, bbox тайла, количество точек, распределение классов, mapping классов, использованные road models, `road_profile_counts`, `road_profile_counts_by_biome`, `road_widths`, `road_median`, biome counts, `building_counts`, списки поддержанных footprint/roof types и полный конфиг после применения defaults.
+Metadata содержит seed, bbox тайла, количество точек, распределение классов, mapping классов, использованные road models, `road_profile_counts`, `road_profile_counts_by_biome`, `road_widths`, `road_median`, biome counts, `building_counts`, `parcel_counts`, `parcel_building_alignment`, `building_orientations`, `parcel_geometry`, списки поддержанных footprint/roof types и полный конфиг после применения defaults.
 
 ## `worldgen`
 
@@ -746,6 +754,9 @@ Catalog architecture описана в `doc/worldgen_catalogs.md`, а списо
 | Неизвестный ключ в `parcels` | имена параметров `parcels` валидируются строго |
 | `parcels.block_jitter_m < 0` | jitter block не может быть отрицательным |
 | `parcels.parcel_setback_m < 0` | parcel setback не может быть отрицательным |
+| `parcels.building_alignment` неизвестен | поддерживаются `parcel` и `global` |
+| `parcels.orientation_jitter_degrees < 0` | orientation jitter не может быть отрицательным |
+| `parcels.max_building_coverage` вне `0..1` | coverage должен быть положительным и не больше `1` |
 | `parcels.split_jitter_ratio` вне `0..0.45` | split jitter должен быть в допустимом диапазоне |
 | `parcels.max_subdivision_depth < 0` | глубина subdivision не может быть отрицательной |
 | `parcels.max_parcel_width_m < parcels.min_parcel_width_m` | максимум ширины parcel должен быть не меньше минимума |
@@ -776,6 +787,7 @@ Catalog architecture описана в `doc/worldgen_catalogs.md`, а списо
 | `demo_road_profiles.yaml` | Road profiles: вариативная ширина дорог, arterial/boulevard, wide median и class `road_median`. |
 | `demo_universal_showcase.yaml` | Большой showcase-тайл: mixed roads, urban fields, биомы, mixed footprints, mixed roofs и parcels. См. `demo_universal_showcase.md`. |
 | `demo_parcels.yaml` | Parcel subdivision: прямоугольные blocks/parcels и здания, привязанные к участкам. |
+| `demo_parcel_alignment.yaml` | Parcel-aware placement: здания выравниваются по buildable geometry участка, metadata показывает alignment/orientation aggregates. |
 | `demo_building_footprints.yaml` | Несколько типов building footprint в одном тайле. |
 | `demo_courtyard_blocks.yaml` | Периметральные здания с внутренними дворами. |
 | `demo_building_roofs.yaml` | Все поддержанные roof types в одном тайле. |
