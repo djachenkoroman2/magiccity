@@ -1,969 +1,183 @@
 # MagicCity
 
-MagicCity — MVP CLI-генератора синтетической городской застройки в формате облака точек.
+MagicCity — MVP CLI-генератора синтетической городской застройки в формате облака точек. `citygen` строит процедурный городской тайл из YAML-конфига и экспортирует ASCII PLY плюс соседний JSON-файл с metadata.
 
-Проект строит простой процедурный городской тайл: рельеф, разные модели уличной сети, тротуары, опциональные blocks/parcels, здания с несколькими типами footprint и крыш, глобальные urban fields, городские биомы, точки поверхностей, семантические классы, опциональные RGB-цвета и экспорт в ASCII PLY. Это рабочий MVP пайплайна от YAML-конфига до готового `.ply`, а не полноценный симулятор LiDAR.
+Координатная конвенция проекта: горизонтальная плоскость `x/y`, высота `z`.
 
-## Что Генерируется
-
-Для каждого тайла `citygen` создает детерминированную сцену:
-
-- прямоугольный городской тайл с координатами `tile.x` и `tile.y`;
-- процедурный рельеф по `seed`, `terrain.base_height_m` и `terrain.height_noise_m`;
-- road network по одной из поддерживаемых моделей: `grid`, `radial_ring`, `radial`, `linear`, `organic`, `mixed`, `free`;
-- зоны тротуаров вокруг дорог и опциональные road profiles с широкими median-разделителями;
-- опциональное прямоугольное block/parcel subdivision для размещения зданий внутри земельных участков;
-- опциональные здания с footprint-формами `rectangle`, `square`, `circle`, `slab`, `courtyard`, `l_shape`, `u_shape`, `t_shape`;
-- roof geometry: `flat`, `shed`, `gable`, `hip`, `half_hip`, `pyramid`, `mansard`, `dome`, `barrel`, `cone`;
-- urban fields и biome map, влияющие на дороги и здания;
-- точки крыш и фасадов зданий;
-- точки земли, дорог и тротуаров;
-- `.ply` файл и соседний `.metadata.json`.
-
-Поддерживаемые классы точек:
-
-| ID | Класс | RGB по умолчанию |
-| --- | --- | --- |
-| 1 | `ground` | `107, 132, 85` |
-| 2 | `road` | `47, 50, 54` |
-| 3 | `sidewalk` | `174, 174, 166` |
-| 4 | `building_facade` | `176, 164, 148` |
-| 5 | `building_roof` | `112, 116, 122` |
-| 6 | `road_median` | `118, 128, 84` |
-
-## Возможности MVP
-
-Сейчас реализовано:
+## Возможности
 
 - детерминированная генерация по `seed`;
-- тайловая система координат;
-- несколько моделей дорог: `grid`, `radial_ring`, `radial`, `linear`, `organic`, `mixed`, `free`;
-- road primitives и distance-based классификация `ground` / `road` / `road_median` / `sidewalk`;
-- глобальные urban fields в мировых координатах;
-- городские биомы `downtown`, `residential`, `industrial`, `suburb`;
-- генерация нескольких тайлов из одного конфига;
-- классы `ground`, `road`, `road_median`, `sidewalk`, `building_facade`, `building_roof`;
-- процедурный шум высоты рельефа;
-- процедурные здания с прямоугольными, круговыми, линейными, периметральными и составными footprints;
-- опциональное размещение зданий через parcels с агрегированной статистикой blocks/parcels в metadata;
-- процедурные крыши: плоские, скатные, мансардные, купольные, арочные и конические;
-- sampling крыш и фасадов;
-- surface sampling земли, дорог и тротуаров;
-- настройка плотности точек;
-- jitter для менее регулярного расположения точек;
-- ASCII PLY экспорт;
-- включение/отключение RGB-полей;
-- включение/отключение поля semantic class;
-- metadata JSON с итоговым конфигом, bbox тайла, количеством точек и статистикой классов.
-- Minecraft-like worldgen architecture layer: `WorldgenContext`, pipeline stages и catalogs/registries для биомов и generated objects.
+- координатная модель для одного тайла и multi-tile запусков;
+- дорожные primitives и модели дорог: `grid`, `radial_ring`, `radial`, `linear`, `organic`, `mixed`, `free`;
+- дорожные профили: `local`, `collector`, `arterial`, `boulevard`, включая `road_median`;
+- `urban_fields` и биомы: `downtown`, `residential`, `industrial`, `suburb`;
+- опциональное разбиение blocks/parcels, включая oriented block/parcel subdivision;
+- размещение зданий с учетом parcels и выравнивание по parcel orientation;
+- footprints зданий: `rectangle`, `square`, `circle`, `slab`, `courtyard`, `l_shape`, `u_shape`, `t_shape`;
+- геометрия крыш: `flat`, `shed`, `gable`, `hip`, `half_hip`, `pyramid`, `mansard`, `dome`, `barrel`, `cone`;
+- семплирование поверхностей земли, дорог, median, тротуаров, фасадов и крыш;
+- semantic class ids и опциональный RGB;
+- сводки `worldgen`/catalogs в metadata.
 
-Пока не реализовано:
+## Документация
 
-- полноценный топологический дорожный граф с идеальными кварталами и перекрестками;
-- настоящие GIS-ограничения и CRS-aware road layout;
-- настоящая LiDAR-симуляция лучей, окклюзий, углов сканирования, intensity и returns;
-- деревья, автомобили, столбы, ЛЭП, подстанции, фонари, уличная мебель;
-- LAS/LAZ экспорт;
-- CRS/georeferencing metadata;
-- текстуры и mesh-геометрия.
+Основная документация живет в `doc/` и строится от кода, схемы конфигов, каталогов и metadata, которую пишет генератор.
 
-Подробнее о дорожном слое см. `doc/roads.md`, об архитектурном catalog layer — `doc/worldgen_catalogs.md`, а полный список generated object features — в `doc/generated_objects.md`.
+| Документ | Назначение |
+| --- | --- |
+| `doc/configuration_reference.md` | Полный YAML-справочник: значения по умолчанию, правила валидации, примеры. |
+| `doc/roads.md` | Модели дорог, primitives, профили, surface-классы и метаданные. |
+| `doc/biomes.md` | `urban_fields`, классификация биомов и их влияние на генерацию. |
+| `doc/parcels.md` | Кварталы и parcels, ориентированное разбиение и зоны застройки. |
+| `doc/building_footprints.md` | Идентификаторы footprints, aliases, геометрия и семплирование. |
+| `doc/building_roofs.md` | Идентификаторы roofs, aliases, функции высоты и семплирование. |
+| `doc/generated_objects.md` | Feature ids генерируемых объектов и semantic classes. |
+| `doc/worldgen_catalogs.md` | Каталоги, стадии пайплайна и добавление новых ids. |
+| `doc/universal_showcase.md` | Справочник по большому интеграционному демонстрационному сценарию. |
 
-## Структура Проекта
+`configs/README.md` оставлен только как короткий указатель на примеры и `doc/configuration_reference.md`.
 
-```text
-citygen/
-  __main__.py       # запуск через python -m citygen
-  cli.py            # CLI entry point
-  config.py         # загрузка YAML, defaults, validation
-  generator.py      # генерация сцены: тайл, дороги, здания
-  worldgen.py       # WorldgenContext и явные stages pipeline
-  catalogs.py       # registries/catalogs биомов, объектов, классов и типов
-  selectors.py      # deterministic weighted selectors
-  roads.py          # road primitives и модели уличной сети
-  fields.py         # глобальные urban fields
-  biomes.py         # классификация городских биомов
-  parcels.py        # blocks/parcels и subdivision участков
-  footprints.py     # геометрия building footprints
-  roofs.py          # геометрия и height functions крыш
-  sampling.py       # sampling точек поверхностей
-  export.py         # запись PLY и metadata JSON
-  geometry.py       # геометрические примитивы и deterministic helpers
-  classes.py        # semantic class IDs и цвета
-configs/
-  mvp.yaml
-  demo_*.yaml       # демонстрационные конфиги
-doc/
-  roads.md          # road models, profiles, surface classes и metadata
-  parcels.md        # blocks/parcels и parcel-aware placement
-outputs/
-  .gitkeep          # директория вывода по умолчанию
-tests/
-  test_config.py
-  test_determinism.py
-  test_export.py
-  test_parcels.py
-  test_roads_biomes_tiles.py
-prompts/
-  ...               # продуктовый и архитектурный контекст
-pyproject.toml
-uv.lock
-```
+## Быстрый старт
 
-## Установка
-
-Требуется Python `>=3.11`.
-
-Рекомендуемый вариант через `uv`:
+Установка:
 
 ```bash
 uv sync
 ```
 
-Альтернативный вариант через стандартный virtualenv:
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -e .
-```
-
-После установки доступна CLI-команда `citygen`.
-
-## Быстрый Старт
-
-Сгенерировать базовый MVP-тайл:
+Минимальный запуск:
 
 ```bash
 uv run citygen --config configs/mvp.yaml --out outputs/mvp_tile.ply
 ```
 
-Эквивалентный запуск как Python-модуля:
+Эквивалентно через Python-модуль:
 
 ```bash
 uv run python -m citygen --config configs/mvp.yaml --out outputs/mvp_tile.ply
 ```
 
-Если используешь локальное виртуальное окружение напрямую:
-
-```bash
-.venv/bin/citygen --config configs/mvp.yaml --out outputs/mvp_tile.ply
-```
-
-После успешного запуска будут созданы два файла:
+После успешного запуска появятся:
 
 ```text
 outputs/mvp_tile.ply
 outputs/mvp_tile.metadata.json
 ```
 
-Пример вывода CLI:
-
-```text
-Wrote <N> points to outputs/mvp_tile.ply
-Wrote metadata to outputs/mvp_tile.metadata.json
-```
-
-Точное количество точек зависит от размера тайла, road/building spacing и настроек sampling.
-
-## Использование CLI
+## CLI
 
 ```bash
 citygen --config CONFIG_PATH [--out OUTPUT_PATH_OR_DIRECTORY]
 ```
 
-Аргументы:
+`--config` обязателен. `--out` может быть:
 
-| Аргумент | Обязательный | Описание |
-| --- | --- | --- |
-| `--config` | да | Путь к YAML-конфигу генерации. |
-| `--out` | нет | Путь к `.ply` файлу или директории вывода. |
+- путем к `.ply` файлу;
+- директорией, куда будет записан `tile_X_Y.ply`;
+- пропущен, тогда результат пишется в `outputs/tile_X_Y.ply`.
 
-Логика `--out`:
+Если конфиг содержит `tiles`, `--out` должен быть директорией или отсутствовать.
 
-- если `--out` не указан, результат пишется в `outputs/tile_X_Y.ply`;
-- если `--out` заканчивается на `.ply`, используется этот точный путь;
-- если `--out` не заканчивается на `.ply`, он считается директорией, а файл называется `tile_X_Y.ply`;
-- если в конфиге есть несколько тайлов через `tiles`, `--out` должен быть директорией или отсутствовать;
-- multi-tile запуск пишет отдельный `tile_X_Y.ply` и `tile_X_Y.metadata.json` для каждого тайла;
-- директория вывода создается автоматически;
-- metadata всегда пишется рядом с PLY как `<name>.metadata.json`.
+## Актуальные примеры конфигов
+
+| Конфиг | Что проверяет |
+| --- | --- |
+| `configs/mvp.yaml` | Базовый MVP: дороги `grid`, рельеф, здания, RGB и class labels. |
+| `configs/demo_road_profiles.yaml` | Смешанные дороги, road profiles и `road_median`; здания выключены. |
+| `configs/demo_parcels.yaml` | Легкое разбиение parcels и здания, привязанные к parcels. |
+| `configs/demo_parcel_alignment.yaml` | Выравнивание зданий по parcels на смешанных дорогах/profiles. |
+| `configs/demo_oriented_parcels.yaml` | Ориентированное разбиение blocks/parcels и выровненные здания. |
+| `configs/demo_universal_showcase.yaml` | Большой демонстрационный сценарий: mixed roads, profiles, биомы, parcels, footprints, roofs. |
 
 Примеры:
 
 ```bash
-uv run citygen --config configs/mvp.yaml
-uv run citygen --config configs/mvp.yaml --out outputs/custom_name.ply
-uv run citygen --config configs/mvp.yaml --out outputs/demo_run
-uv run citygen --config configs/demo_multi_tile.yaml --out outputs/multi_tile
-```
-
-## Демо-Конфиги
-
-В `configs/` есть несколько конфигов, которые демонстрируют разные возможности текущей версии MVP.
-
-| Конфиг | Что показывает |
-| --- | --- |
-| `configs/mvp.yaml` | Базовый MVP-сценарий: дороги, тротуары, рельеф, здания, RGB и class labels. |
-| `configs/demo_dense_downtown.yaml` | Плотный downtown: частая сетка дорог, высокие здания, плотный sampling. |
-| `configs/demo_lowrise_suburb.yaml` | Пригород: крупные кварталы, большие отступы, низкая застройка, умеренный рельеф. |
-| `configs/demo_roads_and_sidewalks.yaml` | Здания выключены. Удобно для проверки классов `ground`, `road`, `sidewalk`. |
-| `configs/demo_terrain_relief.yaml` | Заметный рельеф, поднятая базовая высота, смещенный тайл, увеличенный margin. |
-| `configs/demo_export_geometry_only.yaml` | PLY только с `x`, `y`, `z`, без RGB и class fields. |
-| `configs/demo_sparse_fast_preview.yaml` | Большой тайл с грубым sampling для быстрого preview. |
-| `configs/demo_radial_ring.yaml` | Радиально-кольцевая система: лучи от центра и кольцевые дороги. |
-| `configs/demo_radial.yaml` | Лучевая система без колец. |
-| `configs/demo_linear.yaml` | Линейная структура города с основной осью и редкими поперечными улицами. |
-| `configs/demo_organic.yaml` | Органические wavy streets, зависящие от рельефа. |
-| `configs/demo_mixed_biomes.yaml` | `mixed` road model, urban fields и несколько биомов в одном тайле. |
-| `configs/demo_road_profiles.yaml` | Вариативные road profiles: local/collector/arterial/boulevard, wide median и class `road_median`. |
-| `configs/demo_universal_showcase.yaml` | Большой showcase-тайл: mixed roads, urban fields, биомы, mixed footprints и mixed roofs. |
-| `configs/demo_parcels.yaml` | Parcel subdivision: прямоугольные blocks/parcels и здания, привязанные к участкам. |
-| `configs/demo_parcel_alignment.yaml` | Parcel-aware placement: buildings внутри buildable area и parallel to parcel geometry. |
-| `configs/demo_oriented_parcels.yaml` | Oriented blocks/parcels: local-space subdivision повернутых кварталов и aligned buildings. |
-| `configs/demo_building_footprints.yaml` | Несколько типов building footprint в одном тайле. |
-| `configs/demo_courtyard_blocks.yaml` | Периметральные здания с внутренними дворами. |
-| `configs/demo_building_roofs.yaml` | Все поддержанные типы roof geometry в одном тайле. |
-| `configs/demo_pitched_roofs.yaml` | Скатные крыши: shed, gable, hip, half-hip, pyramid, mansard. |
-| `configs/demo_curved_roofs.yaml` | Купольные, арочные и конические крыши. |
-| `configs/demo_multi_tile.yaml` | Генерация четырех соседних тайлов одним запуском. |
-
-Запуск всех демо-конфигов вручную:
-
-```bash
-uv run citygen --config configs/demo_dense_downtown.yaml --out outputs/demo_dense_downtown.ply
-uv run citygen --config configs/demo_lowrise_suburb.yaml --out outputs/demo_lowrise_suburb.ply
-uv run citygen --config configs/demo_roads_and_sidewalks.yaml --out outputs/demo_roads_and_sidewalks.ply
-uv run citygen --config configs/demo_terrain_relief.yaml --out outputs/demo_terrain_relief.ply
-uv run citygen --config configs/demo_export_geometry_only.yaml --out outputs/demo_export_geometry_only.ply
-uv run citygen --config configs/demo_sparse_fast_preview.yaml --out outputs/demo_sparse_fast_preview.ply
-uv run citygen --config configs/demo_radial_ring.yaml --out outputs/demo_radial_ring.ply
-uv run citygen --config configs/demo_radial.yaml --out outputs/demo_radial.ply
-uv run citygen --config configs/demo_linear.yaml --out outputs/demo_linear.ply
-uv run citygen --config configs/demo_organic.yaml --out outputs/demo_organic.ply
 uv run citygen --config configs/demo_road_profiles.yaml --out outputs/demo_road_profiles.ply
-uv run citygen --config configs/demo_mixed_biomes.yaml --out outputs/demo_mixed_biomes.ply
+uv run citygen --config configs/demo_oriented_parcels.yaml --out outputs/demo_oriented_parcels.ply
 uv run citygen --config configs/demo_universal_showcase.yaml --out outputs/demo_universal_showcase.ply
-uv run citygen --config configs/demo_parcels.yaml --out outputs/demo_parcels.ply
-uv run citygen --config configs/demo_building_footprints.yaml --out outputs/demo_building_footprints.ply
-uv run citygen --config configs/demo_courtyard_blocks.yaml --out outputs/demo_courtyard_blocks.ply
-uv run citygen --config configs/demo_building_roofs.yaml --out outputs/demo_building_roofs.ply
-uv run citygen --config configs/demo_pitched_roofs.yaml --out outputs/demo_pitched_roofs.ply
-uv run citygen --config configs/demo_curved_roofs.yaml --out outputs/demo_curved_roofs.ply
-uv run citygen --config configs/demo_multi_tile.yaml --out outputs/multi_tile
 ```
 
-## Формат Конфига
-
-Конфиг — это YAML mapping. Обязательное поле только одно: `seed`. Остальные секции имеют значения по умолчанию.
-
-Минимальный валидный конфиг:
+## Минимальный YAML
 
 ```yaml
 seed: 7
 ```
 
-Полный базовый пример:
+Более полный справочник, включая `tile`, `tiles`, `terrain`, `urban_fields`, `roads`, `buildings`, `parcels`, `sampling`, `output` и `worldgen`, находится в `doc/configuration_reference.md`.
 
-```yaml
-seed: 42
-tile:
-  x: 0
-  y: 0
-  size_m: 256
-  margin_m: 32
-terrain:
-  base_height_m: 0
-  height_noise_m: 1.5
-roads:
-  model: grid
-  spacing_m: 64
-  width_m: 10
-  sidewalk_width_m: 3
-  angle_degrees: 0
-  radial_count: 12
-  ring_spacing_m: 0
-  organic_wander_m: 0
-urban_fields:
-  enabled: false
-  center_x: 0
-  center_y: 0
-  city_radius_m: 1200
-  noise_scale_m: 350
-  density_bias: 0.0
-  industrial_bias: 0.0
-  green_bias: 0.0
-buildings:
-  enabled: true
-  min_height_m: 8
-  max_height_m: 60
-  setback_m: 6
-  footprint_min_m: 12
-  footprint_max_m: 36
-  footprint:
-    model: rectangle
-    weights: {}
-    circle_segments: 24
-    courtyard_ratio: 0.45
-    wing_width_ratio: 0.35
-    min_part_width_m: 5
-    align_to_roads: true
-  roof:
-    model: flat
-    weights: {}
-    pitch_degrees: 28
-    pitch_jitter_degrees: 8
-    flat_slope_degrees: 0
-    eave_overhang_m: 0
-    ridge_height_ratio: 0.35
-    mansard_break_ratio: 0.45
-    dome_segments: 16
-    align_to_long_axis: true
-parcels:
-  enabled: false
-  block_size_m: 96
-  block_jitter_m: 8
-  min_block_size_m: 32
-  min_parcel_width_m: 14
-  max_parcel_width_m: 42
-  min_parcel_depth_m: 18
-  max_parcel_depth_m: 56
-  parcel_setback_m: 2
-  split_jitter_ratio: 0.18
-  max_subdivision_depth: 3
-sampling:
-  mode: surface
-  ground_spacing_m: 2.0
-  road_spacing_m: 1.5
-  building_spacing_m: 2.0
-  jitter_ratio: 0.18
-output:
-  format: ply
-  include_rgb: true
-  include_class: true
-```
+## Метаданные
 
-### `seed`
+Рядом с каждым PLY пишется JSON-файл с metadata. Поля верхнего уровня включают:
 
-```yaml
-seed: 42
-```
+- `seed`, `tile`, `point_count`;
+- `class_counts`, `class_mapping`;
+- `worldgen`, `catalogs`, `biome_catalog`, `object_feature_counts`;
+- `road_models`, `road_profile_counts`, `road_profile_counts_by_biome`, `road_widths`, `road_median`;
+- `biome_counts`;
+- `building_counts`;
+- `parcel_counts`, `parcel_building_alignment`, `building_orientations`, `block_geometry`, `parcel_geometry`;
+- `supported_footprint_types`, `supported_roof_types`;
+- resolved `config`.
 
-Управляет детерминированной генерацией. Один и тот же конфиг с одним и тем же seed дает одинаковую сцену и одинаковые первые точки. Изменение seed влияет на размещение зданий, размеры footprint, высоты зданий, фазу рельефа и jitter.
-
-### `tile`
-
-```yaml
-tile:
-  x: 0
-  y: 0
-  size_m: 256
-  margin_m: 32
-```
-
-| Поле | Значение по умолчанию | Описание |
-| --- | --- | --- |
-| `x` | `0` | Целочисленная координата тайла по X. |
-| `y` | `0` | Целочисленная координата тайла по Y. |
-| `size_m` | `256.0` | Размер тайла в метрах. |
-| `margin_m` | `32.0` | Дополнительная зона генерации вокруг тайла. После sampling точки crop-ятся обратно в bbox тайла. |
-
-Итоговый bbox тайла:
-
-```text
-min_x = tile.x * tile.size_m
-min_y = tile.y * tile.size_m
-max_x = min_x + tile.size_m
-max_y = min_y + tile.size_m
-```
-
-`margin_m` нужен, чтобы здания рядом с границей тайла могли корректно попадать в обрезанный результат, а не исчезали слишком резко на краю.
-
-### `tiles`
-
-`tile` описывает один тайл. Для batch generation можно использовать `tiles`.
-
-```yaml
-tiles:
-  items:
-    - {x: 0, y: 0}
-    - {x: 1, y: 0}
-  size_m: 256
-  margin_m: 48
-```
-
-Также поддерживается half-open range:
-
-```yaml
-tiles:
-  x_range: [0, 2]
-  y_range: [0, 2]
-  size_m: 256
-  margin_m: 48
-```
-
-`x_range: [0, 2]` означает тайлы `0` и `1`, по аналогии с Python `range(0, 2)`. Multi-tile конфиг нужно запускать с `--out` директорией:
+Быстрый просмотр:
 
 ```bash
-uv run citygen --config configs/demo_multi_tile.yaml --out outputs/multi_tile
+jq '{point_count, class_counts, road_models, building_counts, parcel_counts}' outputs/demo_oriented_parcels.metadata.json
 ```
 
-### `terrain`
+## Семантические классы
 
-```yaml
-terrain:
-  base_height_m: 0
-  height_noise_m: 1.5
-```
-
-| Поле | Значение по умолчанию | Описание |
+| ID | Класс | RGB |
 | --- | --- | --- |
-| `base_height_m` | `0.0` | Базовая высота рельефа. |
-| `height_noise_m` | `1.5` | Амплитуда процедурного шума высоты. `0` дает плоскую поверхность. |
+| `1` | `ground` | `107, 132, 85` |
+| `2` | `road` | `47, 50, 54` |
+| `3` | `sidewalk` | `174, 174, 166` |
+| `4` | `building_facade` | `176, 164, 148` |
+| `5` | `building_roof` | `112, 116, 122` |
+| `6` | `road_median` | `118, 128, 84` |
 
-Высота рельефа детерминирована и зависит от seed, координат `x/y` и настроек terrain.
+Существующие semantic class ids стабильны, и их нельзя менять без явного breaking change.
 
-### `urban_fields`
-
-```yaml
-urban_fields:
-  enabled: true
-  center_x: 128
-  center_y: 128
-  city_radius_m: 500
-  noise_scale_m: 180
-  density_bias: 0.0
-  industrial_bias: 0.0
-  green_bias: 0.0
-```
-
-Urban fields вычисляются в мировых координатах и задают плавные поля:
-
-- `centrality`: близость к городскому центру;
-- `density`: плотность застройки;
-- `height_potential`: потенциал высотности;
-- `green_index`: открытость/озелененность;
-- `industrialness`: промышленный характер района;
-- `orderliness`: регулярность планировки.
-
-Когда `enabled: false`, используется нейтральный residential-like режим для обратной совместимости. Когда `enabled: true`, поля влияют на biome selection, высоты зданий, вероятность зданий, footprint scale и `mixed` road model.
-
-Поддерживаемые биомы:
-
-| Биом | Эффект |
-| --- | --- |
-| `downtown` | Более высокая плотность и высотность, `radial_ring` как preferred road model. |
-| `residential` | Средняя плотность, нейтральные здания, `grid` как preferred road model. |
-| `industrial` | Крупнее footprints, ниже высотность, `linear` как preferred road model. |
-| `suburb` | Ниже здания, реже застройка, `organic` как preferred road model. |
-
-### `roads`
-
-```yaml
-roads:
-  model: grid
-  spacing_m: 64
-  width_m: 10
-  sidewalk_width_m: 3
-  angle_degrees: 0
-  radial_count: 12
-  ring_spacing_m: 0
-  organic_wander_m: 0
-```
-
-| Поле | Значение по умолчанию | Описание |
-| --- | --- | --- |
-| `model` | `grid` | Модель дорог: `grid`, `radial_ring`, `radial`, `linear`, `organic`, `mixed`, `free`. |
-| `spacing_m` | `64.0` | Расстояние между осями параллельных дорог. |
-| `width_m` | `10.0` | Ширина проезжей части. |
-| `sidewalk_width_m` | `3.0` | Ширина тротуара с каждой стороны дороги. |
-| `profiles` | disabled | Опциональные road profiles с разными ширинами проезжей части, тротуаров и median-разделителя. |
-| `angle_degrees` | `0.0` | Поворот для `linear`, `radial`, `radial_ring`. |
-| `radial_count` | `12` | Количество лучей для radial models. |
-| `ring_spacing_m` | `0.0` | Шаг кольцевых дорог для `radial_ring`; `0` означает использовать `spacing_m`. |
-| `organic_wander_m` | `0.0` | Амплитуда изгиба organic roads; `0` включает auto-значение. |
-
-Road model кратко:
-
-- `grid`: регулярная сетка.
-- `radial_ring`: лучи от центра плюс кольцевые дороги.
-- `radial`: лучи от центра без колец.
-- `linear`: улицы вдоль главной оси и более редкие поперечные улицы.
-- `organic`: wavy polylines; изгиб зависит от `terrain.height_noise_m` и `organic_wander_m`.
-- `mixed`: выбирает preferred road model по биому в каждой точке.
-- `free`: хаотичная сеть из детерминированных сегментов между локальными узлами.
-
-Валидатор требует:
+## Структура проекта
 
 ```text
-roads.width_m + 2 * roads.sidewalk_width_m < roads.spacing_m
+citygen/
+  cli.py
+  config.py
+  generator.py
+  roads.py
+  parcels.py
+  footprints.py
+  roofs.py
+  sampling.py
+  export.py
+  catalogs.py
+  ...
+configs/
+  *.yaml
+doc/
+  *.md
+tests/
+  test_*.py
 ```
-
-Иначе дороги и тротуары занимают весь квартал, и для земли/зданий не остается корректного пространства.
-
-Когда `roads.profiles.enabled: true`, ширина берется из выбранного profile вместо глобальных `width_m`/`sidewalk_width_m`. Profile задает `carriageway_width_m`, `sidewalk_width_m` и `median_width_m`; если `median_width_m > 0`, центральная часть дороги получает semantic class `road_median`. Биомы и road models могут иметь свои веса выбора профиля через `roads.profiles.biome_weights` и `roads.profiles.model_weights`. Дополнительно валидируется:
-
-```text
-max(carriageway_width_m + median_width_m + 2 * sidewalk_width_m) < roads.spacing_m
-```
-
-Пример с широким разделителем см. в `configs/demo_road_profiles.yaml`.
-
-### `buildings`
-
-```yaml
-buildings:
-  enabled: true
-  min_height_m: 8
-  max_height_m: 60
-  setback_m: 6
-  footprint_min_m: 12
-  footprint_max_m: 36
-  footprint:
-    model: rectangle
-  roof:
-    model: flat
-```
-
-| Поле | Значение по умолчанию | Описание |
-| --- | --- | --- |
-| `enabled` | `true` | Включает или выключает генерацию зданий. |
-| `min_height_m` | `8.0` | Минимальная высота здания. |
-| `max_height_m` | `60.0` | Максимальная высота здания. |
-| `setback_m` | `6.0` | Отступ от защищенной зоны дороги и тротуара. |
-| `footprint_min_m` | `12.0` | Минимальный размер footprint по ширине/глубине. |
-| `footprint_max_m` | `36.0` | Максимальный размер footprint по ширине/глубине. |
-| `footprint.model` | `rectangle` | Тип контура здания: `rectangle`, `square`, `circle`, `slab`, `courtyard`, `l_shape`, `u_shape`, `t_shape`, `mixed`. |
-| `roof.model` | `flat` | Тип крыши: `flat`, `shed`, `gable`, `hip`, `half_hip`, `pyramid`, `mansard`, `dome`, `barrel`, `cone`, `mixed`. |
-
-По умолчанию здания размещаются по детерминированным candidate centers и отбрасываются, если footprint попадает в road/sidewalk clearance или пересекается с другим зданием. При `parcels.enabled: true` candidate centers заменяются явным проходом по parcels, а footprint дополнительно должен помещаться в buildable area parcel и выравниваться по parcel geometry. Каждое здание имеет:
-
-- footprint выбранного типа;
-- base height по рельефу в центре footprint;
-- крышу;
-- фасады по реальной границе footprint, включая внутренний двор у `courtyard`.
-
-Для `footprint.model: mixed` тип выбирается по `footprint.weights`. Подробный справочник по форме зданий находится в `doc/building_footprints.md`.
-
-Для `roof.model: mixed` тип крыши выбирается по `roof.weights`. Подробный справочник по крышам находится в `doc/building_roofs.md`.
-
-Валидатор требует:
-
-```text
-buildings.max_height_m >= buildings.min_height_m
-buildings.footprint_max_m >= buildings.footprint_min_m
-```
-
-Если здания не появляются, чаще всего не хватает buildable area между дорогами. Увеличь `roads.spacing_m` или уменьши `roads.width_m`, `roads.sidewalk_width_m`, `buildings.setback_m`, `buildings.footprint_min_m`.
-
-### `parcels`
-
-```yaml
-parcels:
-  enabled: true
-  block_size_m: 96
-  block_jitter_m: 8
-  min_block_size_m: 32
-  min_parcel_width_m: 14
-  max_parcel_width_m: 42
-  min_parcel_depth_m: 18
-  max_parcel_depth_m: 56
-  parcel_setback_m: 2
-  split_jitter_ratio: 0.18
-  max_subdivision_depth: 3
-  building_alignment: parcel
-  orientation_jitter_degrees: 0
-  max_building_coverage: 0.72
-  require_building_inside_buildable_area: true
-  oriented_blocks: false
-  block_orientation_source: road_model
-  block_orientation_jitter_degrees: 0
-  organic_orientation_jitter_degrees: 10
-```
-
-Когда `enabled: true`, генератор строит прямоугольные candidate blocks в рабочем bbox, делит их на parcels и размещает здания внутри buildable area участка. При `oriented_blocks: true` block получает orientation от road model, `roads.angle_degrees` или `none`, а subdivision идет в local-space block. При `building_alignment: parcel` footprint здания строится в local-space участка и ориентируется параллельно parcel geometry.
-
-Это MVP-аппроксимация поверх текущих road primitives: она не пытается построить идеальные GIS-полигоны кварталов для organic/free/radial дорог, но дает явный слой участков, детерминированную привязку `building.parcel_id`, `parcel_counts`, `parcel_building_alignment`, `building_orientations`, `block_geometry` и `parcel_geometry` в metadata.
-
-Подробный справочник по parcels находится в `doc/parcels.md`.
-
-### `sampling`
-
-```yaml
-sampling:
-  mode: surface
-  ground_spacing_m: 2.0
-  road_spacing_m: 1.5
-  building_spacing_m: 2.0
-  jitter_ratio: 0.18
-```
-
-| Поле | Значение по умолчанию | Описание |
-| --- | --- | --- |
-| `mode` | `surface` | Режим sampling. В MVP поддерживается только `surface`. |
-| `ground_spacing_m` | `2.0` | Примерный шаг точек земли. Чем больше значение, тем меньше точек. |
-| `road_spacing_m` | `1.5` | Примерный шаг точек дорог и тротуаров. |
-| `building_spacing_m` | `2.0` | Примерный шаг точек крыш и фасадов. |
-| `jitter_ratio` | `0.18` | Случайное смещение как доля spacing. Допустимый диапазон: `0` .. `0.45`. |
-
-Практические ориентиры:
-
-- для быстрого preview увеличивай spacing;
-- для плотного облака уменьшай spacing;
-- `jitter_ratio: 0` дает регулярную сетку;
-- высокий jitter делает точки менее регулярными, но слишком большой jitter запрещен валидатором.
-
-### `output`
-
-```yaml
-output:
-  format: ply
-  include_rgb: true
-  include_class: true
-```
-
-| Поле | Значение по умолчанию | Описание |
-| --- | --- | --- |
-| `format` | `ply` | Формат вывода. В MVP поддерживается только `ply`. |
-| `include_rgb` | `true` | Добавляет поля `red`, `green`, `blue` в PLY. |
-| `include_class` | `true` | Добавляет поле `class` в PLY. |
-
-Если `include_rgb: true` и `include_class: true`, каждая строка вершины содержит:
-
-```text
-x y z red green blue class
-```
-
-Если оба поля отключены:
-
-```text
-x y z
-```
-
-## Выходные Файлы
-
-### PLY
-
-PLY записывается в ASCII-формате:
-
-```text
-ply
-format ascii 1.0
-comment generated by citygen
-element vertex <point_count>
-property float x
-property float y
-property float z
-...
-end_header
-```
-
-Координаты:
-
-- `x`: горизонтальная координата в метрах;
-- `y`: горизонтальная координата в метрах;
-- `z`: высота в метрах.
-
-Опциональные поля:
-
-- `red`, `green`, `blue`: RGB-цвет semantic class;
-- `class`: integer ID semantic class.
-
-### Metadata JSON
-
-Для каждого `.ply` рядом создается `.metadata.json`:
-
-```text
-outputs/mvp_tile.ply
-outputs/mvp_tile.metadata.json
-```
-
-Metadata содержит:
-
-- `seed`;
-- координаты тайла;
-- bbox тайла;
-- `point_count`;
-- `class_counts`;
-- `class_mapping`;
-- `worldgen`, `catalogs`, `biome_catalog`, `object_feature_counts`;
-- `road_models`;
-- `road_profile_counts`, `road_profile_counts_by_biome`, `road_widths`, `road_median`;
-- `biome_counts`;
-- `building_counts` с распределением по footprint type и биомам;
-- `parcel_counts` с blocks/parcels/buildable/occupied статистикой;
-- `parcel_building_alignment`, `building_orientations`, `block_geometry`, `parcel_geometry`;
-- `supported_footprint_types`;
-- `building_counts.by_roof` с распределением зданий по roof type;
-- `supported_roof_types`;
-- полный resolved config с defaults.
-
-Перед открытием большого PLY удобно сначала посмотреть metadata и проверить, что классы и количество точек выглядят ожидаемо.
-
-## Просмотр Результатов
-
-Сгенерированные `.ply` можно открыть в инструментах, которые поддерживают ASCII PLY:
-
-- CloudCompare;
-- MeshLab;
-- Open3D;
-- PyntCloud;
-- другие point cloud / mesh viewers.
-
-Для быстрой проверки без viewer открой `.metadata.json` и посмотри `point_count` и `class_counts`.
 
 ## Тесты
-
-Запуск тестов через `uv`:
 
 ```bash
 uv run python -m unittest discover -s tests
 ```
 
-Запуск через локальное виртуальное окружение:
+Полезные smoke-запуски:
 
 ```bash
-.venv/bin/python -m unittest discover -s tests
+uv run citygen --config configs/mvp.yaml --out outputs/mvp_check.ply
+uv run citygen --config configs/demo_oriented_parcels.yaml --out outputs/demo_oriented_parcels.ply
 ```
 
-Текущие тесты проверяют:
-
-- загрузку конфига и обязательное поле `seed`;
-- детерминизм при одинаковом seed;
-- отличие результата при разном seed;
-- запись PLY;
-- запись metadata JSON;
-- поддержку новых road models;
-- ошибку для неизвестного `roads.model`;
-- mixed-biome metadata;
-- запись нескольких тайлов из одного конфига.
-
-## Типовые Сценарии
-
-### Плотный Downtown
-
-```bash
-uv run citygen --config configs/demo_dense_downtown.yaml --out outputs/downtown.ply
-```
-
-Подходит для проверки плотной застройки, высоких зданий, фасадов и крыш.
-
-### Быстрый Preview
-
-```bash
-uv run citygen --config configs/demo_sparse_fast_preview.yaml --out outputs/preview.ply
-```
-
-Подходит для быстрой генерации крупного тайла с небольшим количеством точек.
-
-### Только Дороги, Тротуары И Земля
-
-```bash
-uv run citygen --config configs/demo_roads_and_sidewalks.yaml --out outputs/roads_only.ply
-```
-
-Полезно для проверки road/sidewalk classification без влияния building classes.
-
-### Только XYZ Геометрия
-
-```bash
-uv run citygen --config configs/demo_export_geometry_only.yaml --out outputs/xyz_only.ply
-```
-
-Полезно для потребителей данных, которым нужен только набор координат без цветов и классов.
-
-### Радиально-Кольцевой Центр
-
-```bash
-uv run citygen --config configs/demo_radial_ring.yaml --out outputs/radial_ring.ply
-```
-
-Полезно для проверки лучей, кольцевых дорог и более центральной downtown-структуры.
-
-### Mixed Biomes
-
-```bash
-uv run citygen --config configs/demo_mixed_biomes.yaml --out outputs/mixed_biomes.ply
-```
-
-Полезно для проверки `urban_fields`, распределения `biome_counts` и переключения road model по биомам.
-
-### Road Profiles
-
-```bash
-uv run citygen --config configs/demo_road_profiles.yaml --out outputs/road_profiles.ply
-```
-
-Полезно для проверки разных ширин дорог, `boulevard`/`arterial` profiles, wide median и class `road_median`.
-
-### Mixed Building Footprints
-
-```bash
-uv run citygen --config configs/demo_building_footprints.yaml --out outputs/building_footprints.ply
-```
-
-Полезно для проверки `rectangle`, `circle`, `slab`, `courtyard`, `l_shape`, `u_shape`, `t_shape` и metadata `building_counts.by_footprint`.
-
-### Courtyard Blocks
-
-```bash
-uv run citygen --config configs/demo_courtyard_blocks.yaml --out outputs/courtyard_blocks.ply
-```
-
-Полезно для проверки периметральной застройки: крыши не семплируются во внутреннем дворе, а фасады идут по внешнему и внутреннему контуру.
-
-### Building Roofs
-
-```bash
-uv run citygen --config configs/demo_building_roofs.yaml --out outputs/building_roofs.ply
-```
-
-Полезно для проверки всех roof types и metadata `building_counts.by_roof`.
-
-### Pitched Roofs
-
-```bash
-uv run citygen --config configs/demo_pitched_roofs.yaml --out outputs/pitched_roofs.ply
-```
-
-Полезно для проверки односкатных, двускатных, вальмовых, полувальмовых, шатровых и мансардных крыш.
-
-### Curved Roofs
-
-```bash
-uv run citygen --config configs/demo_curved_roofs.yaml --out outputs/curved_roofs.ply
-```
-
-Полезно для проверки купольных, арочных и конических крыш.
-
-### Multi-Tile
-
-```bash
-uv run citygen --config configs/demo_multi_tile.yaml --out outputs/multi_tile
-```
-
-Создает несколько соседних тайлов в одной директории.
-
-## Troubleshooting
-
-### `citygen: config error: Missing required field: seed`
-
-В конфиге обязательно должно быть top-level поле:
-
-```yaml
-seed: 42
-```
-
-### `Unsupported roads.model='...'`
-
-Проверь, что `roads.model` входит в список:
-
-```yaml
-roads:
-  model: grid  # grid, radial_ring, radial, linear, organic, mixed, free
-```
-
-### `Only sampling.mode='surface' is supported in the MVP.`
-
-Сейчас поддерживается только:
-
-```yaml
-sampling:
-  mode: surface
-```
-
-### `Only output.format='ply' is supported in the MVP.`
-
-Сейчас поддерживается только:
-
-```yaml
-output:
-  format: ply
-```
-
-### `Road width plus sidewalks must be smaller than road spacing.`
-
-У дорог и тротуаров слишком большая суммарная ширина относительно расстояния между дорогами.
-
-Исправления:
-
-- увеличь `roads.spacing_m`;
-- уменьши `roads.width_m`;
-- уменьши `roads.sidewalk_width_m`.
-
-### Генерация Медленная Или Слишком Много Точек
-
-Увеличь spacing:
-
-```yaml
-sampling:
-  ground_spacing_m: 4
-  road_spacing_m: 3
-  building_spacing_m: 4
-```
-
-Также можно уменьшить:
-
-```yaml
-tile:
-  size_m: 128
-```
-
-### Нет Точек Зданий
-
-Проверь, что здания включены:
-
-```yaml
-buildings:
-  enabled: true
-```
-
-Если здания включены, но не появляются, возможно, в кварталах мало места. Попробуй:
-
-- увеличить `roads.spacing_m`;
-- уменьшить `roads.width_m`;
-- уменьшить `roads.sidewalk_width_m`;
-- уменьшить `buildings.setback_m`;
-- уменьшить `buildings.footprint_min_m`.
-
-## Как Работает Пайплайн
-
-Высокоуровневый flow:
-
-```text
-YAML config
-  -> load_config()
-  -> build_road_network()
-  -> sample_urban_fields() / classify_biome()
-  -> generate_scene()
-  -> sample_scene()
-  -> write_ply()
-  -> write_metadata()
-```
-
-Основные этапы:
-
-1. `load_config()` читает YAML, применяет defaults и валидирует значения.
-2. `build_road_network()` создает road primitives для выбранной модели дорог.
-3. `sample_urban_fields()` и `classify_biome()` вычисляют поля и биомы в мировых координатах.
-4. `generate_scene()` строит bbox тайла, work bbox с margin и список зданий.
-5. `sample_scene()` генерирует точки земли, дорог, тротуаров, крыш и фасадов.
-6. Точки crop-ятся по bbox тайла.
-7. `write_ply()` записывает ASCII PLY с нужным набором свойств.
-8. `write_metadata()` пишет JSON-описание результата.
-
-Генерация специально сделана детерминированной: случайность получается из стабильных hash-based seed parts. Это позволяет воспроизводить одинаковые результаты при повторном запуске с тем же конфигом.
-
-## Идеи Для Следующих Версий
-
-Логичные следующие шаги развития проекта:
-
-- добавить полноценный топологический road graph и parcel subdivision;
-- добавить больше semantic classes;
-- добавить деревья, машины, столбы, фонари, ЛЭП;
-- добавить LAS/LAZ экспорт;
-- добавить настоящую LiDAR-симуляцию;
-- добавить intensity / return number / scan angle;
-- добавить CRS/georeferencing metadata;
-- расширить тесты на новые config fields;
-- держать демо-конфиги в `configs/` синхронизированными с возможностями MVP.
+## Ограничения MVP
+
+- Нет полноценного GIS/topology road graph.
+- Нет точного polygon clipping дорожных коридоров.
+- Parcels представлены прямоугольными или oriented-rect приближениями, а не кадастровыми полигонами.
+- Buildings и roofs являются аналитическими поверхностями, которые семплируются в облака точек, а не полноценными объемными meshes.
+- Нет LAS/LAZ, CRS/georeferencing, LiDAR ray simulation, intensity или returns.

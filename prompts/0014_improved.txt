@@ -1,0 +1,262 @@
+Ты senior Python-инженер, technical writer и архитектор документации для процедурных генераторов городских point clouds.
+
+В репозитории есть рабочий MVP `citygen`: CLI на Python, YAML-конфиги, детерминированный `seed`, тайлы, road primitives, несколько road models, road profiles, worldgen catalogs, urban fields, биомы, parcels, oriented block/parcel subdivision, parcel-aware building placement, разные building footprints, разные roof geometry, surface sampling, ASCII PLY export и metadata JSON. Координатная конвенция проекта: горизонтальная плоскость `x/y`, высота `z`.
+
+Сейчас документация частично исторически выросла вокруг конкретных demo-конфигов и отдельных этапов разработки. Нужно изменить подход: документация в `doc/` должна строиться от исходного кода, runtime-моделей, dataclass/config schema, validators, catalogs, генераторов и metadata, а не от списка конкретных YAML-файлов. Она должна быть полной, связной и полезной двум аудиториям:
+
+- разработчикам, которые будут менять код генератора;
+- специалистам/пользователям, которые будут писать и настраивать YAML-конфиги.
+
+Не останавливайся на описании подхода: внеси рабочие изменения в документацию, перемести нужные файлы, обнови ссылки и проверь, что docs/tests не сломались.
+
+## Главная цель
+
+Перестроить документацию в `doc/` как code-driven reference:
+
+- основным source of truth считаются Python-код, dataclass-и, validators, catalogs, генераторы, sampling и export metadata;
+- demo configs используются только как примеры запуска, а не как основа структуры документации;
+- каждый документ должен объяснять концепцию, runtime-поведение, YAML-поля, validation rules, metadata и ограничения MVP;
+- примеров должно быть достаточно много: короткие YAML snippets, CLI-команды, metadata snippets, troubleshooting hints;
+- документация должна быть перекрестно связана и не дублировать противоречивые описания;
+- устаревшие ссылки на несуществующие demo configs должны быть удалены или заменены актуальными;
+- новые/перемещенные документы должны иметь осмысленные имена.
+
+## Обязательная миграция файлов
+
+Перенеси в `doc/` следующие файлы из `configs/`:
+
+1. `configs/README.md`
+2. `configs/demo_universal_showcase.md`
+
+Не просто скопируй их как есть. Преобразуй в нормальные справочные документы с осмысленными именами, например:
+
+```text
+doc/configuration_reference.md
+doc/universal_showcase.md
+```
+
+Можно выбрать другие имена, если они лучше вписываются в текущую структуру, но названия должны быть понятными без контекста.
+
+После переноса:
+
+- обнови ссылки в `README.md`, `doc/*.md`, tests и других markdown-файлах;
+- если в коде или тестах есть hardcoded references на старые пути, обнови их;
+- старые файлы в `configs/` не должны оставаться как основная документация;
+- если считаешь, что для обратной навигации нужен короткий stub в `configs/README.md`, сделай его минимальным и явно направь пользователя в новый `doc/...` файл. Не оставляй две расходящиеся версии большого справочника.
+
+## Что изучить перед правками
+
+Прочитай текущие источники истины:
+
+- `citygen/config.py` — YAML schema, defaults, validation rules;
+- `citygen/catalogs.py` — supported ids, catalogs, worldgen stages;
+- `citygen/roads.py` — road primitives, road models, road profiles, surface priority;
+- `citygen/parcels.py` — blocks/parcels, oriented subdivision, buildability checks;
+- `citygen/generator.py` — scene pipeline и building placement;
+- `citygen/footprints.py` — footprint types, aliases, orientation transform;
+- `citygen/roofs.py` — roof types, aliases, roof height functions;
+- `citygen/sampling.py` — surface/roof/facade sampling;
+- `citygen/export.py` — metadata JSON;
+- `configs/*.yaml` — только как examples/smoke configs, не как архитектурный источник;
+- `tests/` — что уже проверяется и какие docs references могут быть покрыты.
+
+## Требования к структуре `doc/`
+
+Сделай структуру документации понятной и code-driven. Минимально должны быть покрыты такие темы:
+
+```text
+doc/
+  configuration_reference.md     # полный YAML/config reference от citygen/config.py
+  roads.md                       # road models, primitives, profiles, surface classes
+  biomes.md                      # urban_fields, biome classification, biome effects
+  parcels.md                     # blocks/parcels, oriented subdivision, buildable areas
+  building_footprints.md         # footprint types, aliases, sampling, clearance
+  building_roofs.md              # roof types, aliases, height functions, sampling
+  generated_objects.md           # object feature ids, semantic classes, metadata counts
+  worldgen_catalogs.md           # catalogs, stages, adding ids
+  metadata.md                    # если metadata стала слишком большой для других docs
+  universal_showcase.md          # migrated showcase guide if still useful
+```
+
+Не обязательно создавать `metadata.md`, если metadata компактно и лучше описана в существующих разделах. Но если metadata уже размазана по docs, выдели отдельный справочник.
+
+## Требования к содержанию
+
+### `configuration_reference`
+
+Документ должен быть построен по dataclass/config schema и validator logic, а не по одному demo YAML.
+
+Опиши:
+
+- top-level sections: `seed`, `tile`, `tiles`, `terrain`, `urban_fields`, `roads`, `buildings`, `sampling`, `output`, `parcels`, `worldgen`;
+- defaults для полей;
+- типы значений;
+- validation rules и понятные failure cases;
+- aliases для footprint/roof models;
+- road profile definitions, model weights, biome weights;
+- parcel orientation settings;
+- multi-tile behavior;
+- output behavior для file path vs directory;
+- примеры минимального, road-profile, parcel, oriented-parcel и showcase configs;
+- ссылки на более глубокие topic docs.
+
+### `roads`
+
+Документ должен соответствовать `citygen/roads.py`:
+
+- road primitives: infinite line, segment, ring, polyline;
+- road models: `grid`, `radial_ring`, `radial`, `linear`, `organic`, `mixed`, `free`;
+- как работает `mixed` через biomes;
+- surface classification: `ground`, `road`, `sidewalk`, `road_median`;
+- road profiles и priority на пересечениях;
+- `nearest_distance`, `nearest_hardscape_distance`, `surface_kind`;
+- metadata: `road_models`, `road_profile_counts`, `road_profile_counts_by_biome`, `road_widths`, `road_median`;
+- ограничения MVP.
+
+### `parcels`
+
+Документ должен отражать текущую oriented parcel architecture:
+
+- `Block` с `geometry`, `bbox`, `orientation_degrees`;
+- local-space subdivision;
+- `Parcel.geometry`, `Parcel.buildable_geometry`, `Parcel.bbox`, `Parcel.inner`;
+- width/depth/area в local-space;
+- source orientation: `road_model`, `config`, `none`;
+- road clearance через oriented sample points;
+- building alignment с parcel orientation;
+- metadata: `parcel_counts`, `parcel_building_alignment`, `building_orientations`, `block_geometry`, `parcel_geometry`;
+- ограничения: no exact polygon clipping, no full GIS topology.
+
+### `building_footprints` и `building_roofs`
+
+Документы должны быть построены от catalogs и runtime-кода:
+
+- supported ids и aliases;
+- YAML fields и defaults;
+- geometry/sampling behavior;
+- interaction with oriented parcels;
+- validation rules;
+- metadata fields;
+- practical examples.
+
+### `biomes`
+
+Документ должен описывать:
+
+- `urban_fields` и поля;
+- классификацию `downtown`, `residential`, `industrial`, `suburb`;
+- building multipliers;
+- preferred road models;
+- road profile weights;
+- effect on mixed roads and parcels;
+- metadata diagnostics.
+
+### `generated_objects` и `worldgen_catalogs`
+
+Документы должны быть синхронизированы с `citygen/catalogs.py`:
+
+- все catalog ids должны быть перечислены;
+- stage ids должны быть перечислены;
+- semantic class ids нельзя менять и нужно явно задокументировать;
+- объясни, как добавлять новые ids без breaking changes;
+- metadata catalog summaries должны быть описаны.
+
+### `universal_showcase`
+
+Если переносишь `configs/demo_universal_showcase.md`, сделай из него не "документацию конкретного конфига", а guide:
+
+- какую комбинацию возможностей он демонстрирует;
+- какие code paths он smoke-test-ит;
+- какие metadata fields смотреть;
+- какие параметры менять для визуальной проверки roads, parcels, roofs, footprints;
+- ограничения по размеру/скорости.
+
+## Стиль документации
+
+Пиши документацию как справочник продукта и архитектуры, не как историю промптов.
+
+Требования:
+
+- русский язык допустим и предпочтителен, но имена API/YAML/metadata оставляй в точном английском виде;
+- используй короткие секции и таблицы там, где это помогает;
+- давай concrete YAML snippets;
+- давай concrete CLI snippets;
+- давай compact JSON metadata snippets;
+- явно разделяй "как настроить" и "как работает внутри";
+- явно называй MVP limitations;
+- не оставляй противоречащих друг другу описаний;
+- не ссылайся на demo config как на единственный источник истины;
+- не добавляй огромные сгенерированные outputs в документацию.
+
+## Ссылки и навигация
+
+Обнови:
+
+- `README.md`;
+- все `doc/*.md`;
+- references на `configs/README.md`;
+- references на `configs/demo_universal_showcase.md`;
+- любые markdown links, которые стали устаревшими.
+
+Проверь, что:
+
+- из `README.md` можно найти новый `doc/configuration_reference.md`;
+- из config reference можно перейти в topic docs;
+- topic docs ссылаются друг на друга без циклической путаницы;
+- не осталось ссылок на удаленные или переименованные docs.
+
+## Тесты и проверки
+
+Добавь или обнови tests, если текущие docs coverage tests ожидают старые пути.
+
+Минимально выполни:
+
+```bash
+uv run python -m unittest discover -s tests
+```
+
+Также проверь markdown/whitespace:
+
+```bash
+git diff --check
+```
+
+Если в проекте нет markdown link checker, сделай хотя бы простую ручную проверку через `rg`:
+
+```bash
+rg -n "configs/README.md|configs/demo_universal_showcase.md|demo_.*\\.yaml|doc/" README.md doc tests
+```
+
+и убедись, что найденные references актуальны.
+
+## Важные ограничения
+
+- Не меняй runtime-код без необходимости. Это задача про документацию и навигацию.
+- Не меняй semantic class ids.
+- Не удаляй важную информацию: переноси, уплотняй, структурируй.
+- Не оставляй два больших конкурирующих config reference в `configs/README.md` и `doc/configuration_reference.md`.
+- Не документируй несуществующие configs как актуальные demo.
+- Не выдумывай features, которых нет в коде.
+- Если код и старый doc расходятся, доверяй коду и отметь MVP limitation.
+
+## Критерии хорошего результата
+
+- Вся основная документация живет в `doc/`.
+- `configs/README.md` больше не является главным справочником или заменен коротким redirect/stub.
+- `configs/demo_universal_showcase.md` перенесен и переосмыслен как `doc/...`.
+- `doc/configuration_reference.md` описывает YAML schema по коду.
+- Topic docs синхронизированы с текущими road profiles, oriented parcels, footprints, roofs, catalogs и metadata.
+- README ведет пользователя в новую структуру docs.
+- Старые docs links не сломаны.
+- Tests проходят.
+
+## Финальный ответ
+
+В финальном ответе кратко укажи:
+
+- какие docs-файлы созданы, переименованы или удалены;
+- как теперь устроена документация в `doc/`;
+- куда перенесены `configs/README.md` и `configs/demo_universal_showcase.md`;
+- какие ссылки обновлены;
+- какие проверки запускались;
+- если что-то оставлено как stub или backward-compatible redirect, назови это явно.

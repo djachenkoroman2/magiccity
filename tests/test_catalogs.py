@@ -56,6 +56,18 @@ class CatalogTests(unittest.TestCase):
         for stage_id in WORLDGEN_STAGES:
             self.assertIn(f"`{stage_id}`", worldgen_doc)
 
+    def test_code_driven_docs_have_migrated_config_references(self) -> None:
+        config_reference = Path("doc/configuration_reference.md")
+        showcase_guide = Path("doc/universal_showcase.md")
+        config_stub = Path("configs/README.md").read_text(encoding="utf-8")
+
+        self.assertTrue(config_reference.exists())
+        self.assertTrue(showcase_guide.exists())
+        self.assertFalse(Path("configs/demo_universal_showcase.md").exists())
+        self.assertIn("../doc/configuration_reference.md", config_stub)
+        self.assertIn("CityGenConfig", config_reference.read_text(encoding="utf-8"))
+        self.assertIn("интеграционный showcase", showcase_guide.read_text(encoding="utf-8"))
+
     def test_metadata_contains_worldgen_and_catalog_summary(self) -> None:
         config = _config_from_text(
             """

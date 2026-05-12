@@ -1,13 +1,13 @@
-# Справочник по building roofs
+# Справочник по крышам зданий
 
-Building roof — это процедурная форма верхней поверхности здания. В `citygen` крыша определяет:
+Крыша здания (`building roof`) — это процедурная форма верхней поверхности здания. В `citygen` крыша определяет:
 
 - высоту `building_roof` точек;
-- верхнюю границу фасада, или eave-line;
-- распределение roof types в metadata;
+- верхнюю границу фасада, или линию карниза;
+- распределение типов roofs в metadata;
 - визуальный характер здания без перехода к полноценному mesh/CAD.
 
-Footprint по-прежнему задает область на земле. Roof sampling никогда не должен выходить за footprint и не должен попадать во внутренний двор `courtyard`. Если footprint получил parcel orientation, roof height вычисляется в local-space footprint, а точки остаются в world-space `x/y/z`.
+Footprint по-прежнему задает область на земле. Семплирование крыши никогда не должно выходить за footprint и не должно попадать во внутренний двор `courtyard`. Если footprint получил parcel orientation, высота крыши вычисляется в local-space footprint, а точки остаются в world-space `x/y/z`. Значения YAML по умолчанию описаны в `doc/configuration_reference.md`, ориентированные parcels — в `doc/parcels.md`, а геометрия footprint — в `doc/building_footprints.md`.
 
 ## YAML
 
@@ -43,15 +43,15 @@ buildings:
 | Параметр | По умолчанию | Описание |
 | --- | --- | --- |
 | `model` | `flat` | Тип крыши или `mixed`. |
-| `weights` | `{}` или стандартная смесь для `mixed` | Веса выбора concrete roof type. |
+| `weights` | `{}` или стандартная смесь для `mixed` | Веса выбора конкретного типа roof. |
 | `pitch_degrees` | `28.0` | Базовый угол ската. |
 | `pitch_jitter_degrees` | `8.0` | Детерминированное отклонение угла по зданию. |
 | `flat_slope_degrees` | `0.0` | Малый уклон плоской крыши. |
 | `eave_overhang_m` | `0.0` | Зарезервировано для будущего выноса карниза. |
-| `ridge_height_ratio` | `0.35` | Максимальный rise крыши как доля высоты здания. |
+| `ridge_height_ratio` | `0.35` | Максимальный подъем крыши как доля высоты здания. |
 | `mansard_break_ratio` | `0.45` | Положение перелома мансардной крыши. |
-| `dome_segments` | `16` | Зарезервировано для детализации curved roofs. |
-| `align_to_long_axis` | `true` | Ориентация ridge/arch относительно длинной оси footprint в local-space. |
+| `dome_segments` | `16` | Зарезервировано для детализации криволинейных roofs. |
+| `align_to_long_axis` | `true` | Ориентация конька или арки относительно длинной оси footprint в local-space. |
 
 ## Поддерживаемые типы
 
@@ -67,11 +67,11 @@ buildings:
 | `dome` | Купольная крыша. |
 | `barrel` | Арочная или сводчатая крыша. |
 | `cone` | Коническая крыша. |
-| `mixed` | Выбор roof type по `weights`. |
+| `mixed` | Выбор типа roof по `weights`. |
 
 Alias-значения:
 
-| Alias | Canonical |
+| Alias | Каноническое значение |
 | --- | --- |
 | `single_slope` | `shed` |
 | `mono_pitch` | `shed` |
@@ -92,7 +92,7 @@ Alias-значения:
 base_z + height_m = max_roof_z
 ```
 
-Для скатных и curved roofs вычисляется `eave_z`:
+Для скатных и криволинейных roofs вычисляется `eave_z`:
 
 ```text
 eave_z = max_roof_z - roof_rise_m
@@ -104,15 +104,15 @@ eave_z = max_roof_z - roof_rise_m
 
 ### `flat`
 
-Плоская крыша. При `flat_slope_degrees: 0` все roof points лежат на `max_roof_z`. Если задать небольшой уклон, высота будет плавно меняться вдоль одной оси.
+Плоская крыша. При `flat_slope_degrees: 0` все roof-точки лежат на `max_roof_z`. Если задать небольшой уклон, высота будет плавно меняться вдоль одной оси.
 
 ### `shed`
 
-Односкатная крыша. Высота монотонно растет от одной стороны footprint local bbox к другой. Подходит для industrial и современных зданий.
+Односкатная крыша. Высота монотонно растет от одной стороны local bbox footprint к другой. Подходит для `industrial` и современных зданий.
 
 ### `gable`
 
-Двускатная крыша. Высота максимальна вдоль конька и снижается к двум противоположным сторонам. Конек ориентируется по длинной оси footprint local bbox.
+Двускатная крыша. Высота максимальна вдоль конька и снижается к двум противоположным сторонам. Конек ориентируется по длинной оси local bbox footprint.
 
 ### `hip`
 
@@ -124,7 +124,7 @@ eave_z = max_roof_z - roof_rise_m
 
 ### `pyramid`
 
-Шатровая крыша с максимумом в центре footprint local bbox и снижением к краям.
+Шатровая крыша с максимумом в центре local bbox footprint и снижением к краям.
 
 ### `mansard`
 
@@ -142,13 +142,13 @@ eave_z = max_roof_z - roof_rise_m
 
 Коническая крыша. Высота максимальна в центре и линейно снижается к краю. Хорошо подходит для круговых footprints и ротонд.
 
-## Footprint compatibility
+## Совместимость с footprints
 
-Все roof types работают со всеми footprint types, потому что roof height function применяется только к точкам, которые уже прошли `footprint.contains_xy`.
+Все типы roofs работают со всеми типами footprints, потому что функция высоты крыши применяется только к точкам, которые уже прошли `footprint.contains_xy`.
 
 Практически удачные сочетания:
 
-| Footprint | Roofs |
+| Footprint | Подходящие roofs |
 | --- | --- |
 | `rectangle` | `flat`, `shed`, `gable`, `hip`, `half_hip`, `mansard` |
 | `square` | `flat`, `hip`, `pyramid`, `dome` |
@@ -156,9 +156,9 @@ eave_z = max_roof_z - roof_rise_m
 | `slab` | `flat`, `shed`, `gable`, `barrel` |
 | `courtyard` | `flat`, `gable`, `hip`, `mansard` |
 
-## Metadata
+## Метаданные
 
-Metadata содержит roof aggregates:
+Metadata содержит агрегаты по roofs:
 
 ```json
 {
@@ -197,20 +197,20 @@ Metadata содержит roof aggregates:
 
 ## Демо
 
-Все типы крыш:
+Все типы roofs вместе с mixed footprints и parcels:
 
 ```bash
-uv run citygen --config configs/demo_building_roofs.yaml --out outputs/demo_building_roofs.ply
+uv run citygen --config configs/demo_universal_showcase.yaml --out outputs/demo_universal_showcase.ply
 ```
 
-Скатные крыши:
+Roof types на oriented parcels:
 
 ```bash
-uv run citygen --config configs/demo_pitched_roofs.yaml --out outputs/demo_pitched_roofs.ply
+uv run citygen --config configs/demo_oriented_parcels.yaml --out outputs/demo_oriented_parcels.ply
 ```
 
-Curved roofs:
+Parcel-aware выравнивание roof/footprint:
 
 ```bash
-uv run citygen --config configs/demo_curved_roofs.yaml --out outputs/demo_curved_roofs.ply
+uv run citygen --config configs/demo_parcel_alignment.yaml --out outputs/demo_parcel_alignment.ply
 ```

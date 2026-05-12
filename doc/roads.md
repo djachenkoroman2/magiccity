@@ -1,8 +1,15 @@
 # Справочник по дорогам
 
-`roads` описывает процедурную дорожную сеть, surface classes для дорог/тротуаров и опциональные road profiles. Все расчеты идут в горизонтальной плоскости `x/y`; высота остается осью `z` и добавляется позже на этапе sampling.
+`roads` описывает процедурную дорожную сеть, surface-классы для дорог/тротуаров и опциональные road profiles. Все расчеты идут в горизонтальной плоскости `x/y`; высота остается осью `z` и добавляется позже на этапе семплирования.
 
-Это MVP road layer, построенный на простых road primitives и distance-based классификации. Он не является GIS-графом дорог, не хранит перекрестки как топологические узлы и не делает polygon clipping дорожных коридоров.
+Это MVP-слой дорог, построенный на простых road primitives и классификации по расстоянию. Он не является GIS-графом дорог, не хранит перекрестки как топологические узлы и не делает polygon clipping дорожных коридоров.
+
+Смежные документы:
+
+- `doc/configuration_reference.md` — YAML-поля, значения по умолчанию и правила валидации;
+- `doc/biomes.md` — как биомы выбирают предпочтительную модель дорог и веса road profiles;
+- `doc/parcels.md` — как roads ограничивают buildable parcels и задают orientation context;
+- `doc/generated_objects.md` — какие road feature ids и semantic classes попадают в catalogs/metadata.
 
 ## YAML
 
@@ -20,19 +27,19 @@ roads:
   organic_wander_m: 0
 ```
 
-Если секция отсутствует, используется `grid` с совместимыми defaults.
+Если секция отсутствует, используется `grid` с совместимыми значениями по умолчанию.
 
 | Параметр | По умолчанию | Описание |
 | --- | --- | --- |
 | `model` | `grid` | Модель дорожной сети: `grid`, `radial_ring`, `radial`, `linear`, `organic`, `mixed`, `free`. |
 | `spacing_m` | `64.0` | Основной шаг между дорогами, кольцами или локальными узлами. |
-| `width_m` | `10.0` | Ширина проезжей части для совместимого default profile. |
-| `sidewalk_width_m` | `3.0` | Ширина тротуара с каждой стороны для совместимого default profile. |
+| `width_m` | `10.0` | Ширина проезжей части для совместимого profile по умолчанию. |
+| `sidewalk_width_m` | `3.0` | Ширина тротуара с каждой стороны для совместимого profile по умолчанию. |
 | `angle_degrees` | `0.0` | Базовый угол для `linear`, `radial`, `radial_ring`, частей `mixed` и oriented parcel blocks. Геометрия `grid` дорог остается axis-aligned. |
 | `radial_count` | `12` | Количество лучей для `radial` и `radial_ring`; должно быть `>= 3`. |
 | `ring_spacing_m` | `0.0` | Шаг колец для `radial_ring`; `0` означает использовать `spacing_m`. |
-| `organic_wander_m` | `0.0` | Амплитуда изгиба organic roads; `0` включает авторасчет от `spacing_m` и `terrain.height_noise_m`. |
-| `profiles` | disabled | Опциональные profile-aware ширины проезжей части, тротуаров и median. |
+| `organic_wander_m` | `0.0` | Амплитуда изгиба дорог модели `organic`; `0` включает авторасчет от `spacing_m` и `terrain.height_noise_m`. |
+| `profiles` | выключено | Опциональные profile-aware ширины проезжей части, тротуаров и median. |
 
 Валидатор требует:
 
@@ -42,7 +49,7 @@ roads.width_m + 2 * roads.sidewalk_width_m < roads.spacing_m
 
 При включенных road profiles дополнительно проверяется, что максимальная ширина corridor меньше `roads.spacing_m`.
 
-## Road Models
+## Модели дорог
 
 | Модель | Что строит | Основные параметры |
 | --- | --- | --- |
@@ -51,14 +58,14 @@ roads.width_m + 2 * roads.sidewalk_width_m < roads.spacing_m
 | `radial` | Только лучи от центра, без колец. | `radial_count`, `angle_degrees`, `spacing_m`. |
 | `linear` | Параллельные дороги вдоль главной оси и более редкие поперечные дороги. | `angle_degrees`, `spacing_m`. |
 | `organic` | Волнистые polyline-дороги в двух направлениях. | `spacing_m`, `organic_wander_m`, `terrain.height_noise_m`, `seed`. |
-| `mixed` | Одновременно строит `grid`, `radial_ring`, `linear`, `organic`, а при query выбирает network по биому. | `urban_fields`, biome preferred road model. |
+| `mixed` | Одновременно строит `grid`, `radial_ring`, `linear`, `organic`, а при запросе выбирает network по биому. | `urban_fields`, предпочтительная модель дорог биома. |
 | `free` | Нерегулярные segment-дороги между детерминированно смещенными локальными узлами. | `spacing_m`, `seed`. |
 
 Центр для `radial` и `radial_ring` берется из `urban_fields.center_x/center_y`, если `urban_fields.enabled: true`; иначе используется центр рабочего bbox.
 
-`mixed` не выбирает `radial` и `free` как biome-preferred models. Текущий набор mixed-подсетей: `grid`, `linear`, `organic`, `radial_ring`.
+`mixed` не выбирает `radial` и `free` как предпочтительные модели биомов. Текущий набор mixed-подсетей: `grid`, `linear`, `organic`, `radial_ring`.
 
-## Road Primitives
+## Дорожные primitives
 
 В коде дорожная сеть хранится как набор простых primitives:
 
@@ -74,14 +81,14 @@ roads.width_m + 2 * roads.sidewalk_width_m < roads.spacing_m
 - `model`;
 - стабильный `index`;
 - `profile_name`;
-- resolved `profile`;
+- разрешенный `profile`;
 - biome в anchor-точке primitive.
 
-Все surface checks вызывают `distance_to(x, y)` в world-space `x/y`.
+Все проверки surface вызывают `distance_to(x, y)` в world-space `x/y`.
 
-## Surface Classes
+## Классы поверхностей
 
-Для каждой sampled ground point вызывается `RoadNetwork.surface_kind(config, x, y)`. Результат:
+Для каждой семплированной ground-точки вызывается `RoadNetwork.surface_kind(config, x, y)`. Результат:
 
 | Surface kind | Semantic class | Когда выбирается |
 | --- | --- | --- |
@@ -90,7 +97,7 @@ roads.width_m + 2 * roads.sidewalk_width_m < roads.spacing_m
 | `sidewalk` | class id `3` | Точка попала в sidewalk band. |
 | `ground` | class id `1` | Точка вне hardscape corridor. |
 
-Без `roads.profiles.enabled` используется default profile из `roads.width_m` и `roads.sidewalk_width_m`.
+Без `roads.profiles.enabled` используется profile по умолчанию из `roads.width_m` и `roads.sidewalk_width_m`.
 
 С profile-aware дорогами поперечное сечение считается так:
 
@@ -109,11 +116,11 @@ distance <= sidewalk_outer_half  -> sidewalk
 otherwise                        -> ground
 ```
 
-Если несколько primitives одновременно покрывают точку, выбирается deterministic hit с priority: `road` выше `road_median`, `road_median` выше `sidewalk`. Пересечение двух median-like hits намеренно приводится к `road`, чтобы перекрестки boulevard не превращались в широкие median-пятна.
+Если несколько primitives одновременно покрывают точку, выбирается детерминированное попадание с приоритетом: `road` выше `road_median`, `road_median` выше `sidewalk`. Пересечение двух median-like попаданий намеренно приводится к `road`, чтобы перекрестки boulevard не превращались в широкие median-пятна.
 
-## Road Profiles
+## Дорожные профили
 
-Road profiles позволяют разным road primitives иметь разные ширины:
+Дорожные профили позволяют разным road primitives иметь разные ширины:
 
 ```yaml
 roads:
@@ -151,34 +158,34 @@ roads:
 
 | Поле | Описание |
 | --- | --- |
-| `enabled` | Включает profile-aware widths. |
-| `default` | Profile fallback; должен существовать в `definitions`. |
-| `definitions` | Profile definitions: `carriageway_width_m`, `sidewalk_width_m`, `median_width_m`. |
-| `model_weights` | Веса profile choice по road model. |
-| `biome_weights` | Веса profile choice по biome. |
+| `enabled` | Включает ширины из road profiles. |
+| `default` | Profile для запасного выбора; должен существовать в `definitions`. |
+| `definitions` | Описания profiles: `carriageway_width_m`, `sidewalk_width_m`, `median_width_m`. |
+| `model_weights` | Веса выбора profile по модели дорог. |
+| `biome_weights` | Веса выбора profile по биому. |
 
 Если одновременно заданы `model_weights` и `biome_weights`, генератор сначала пробует пересечение весов, перемножая значения. Если пересечение пустое, использует сумму доступных весов. Если весов нет, выбирается `default`.
 
-Выбор profile детерминирован: RNG seed включает global `seed`, tile coordinates, road model, primitive index, biome и stable primitive key.
+Выбор profile детерминирован: RNG seed включает глобальный `seed`, координаты тайла, модель дорог, index primitive, biome и stable primitive key.
 
-## Mixed Roads And Biomes
+## Смешанные дороги и биомы
 
-При `roads.model: mixed` строятся несколько подсетей, но в каждой точке используется только сеть preferred model для текущего biome:
+При `roads.model: mixed` строятся несколько подсетей, но в каждой точке используется только сеть предпочтительной модели для текущего биома:
 
-| Biome | Preferred road model |
+| Биом | Предпочтительная модель дорог |
 | --- | --- |
 | `downtown` | `radial_ring` |
 | `residential` | `grid` |
 | `industrial` | `linear` |
 | `suburb` | `organic` |
 
-Если `urban_fields.enabled: false`, классификация biome всегда residential-like, поэтому mixed roads фактически используют grid-поведение в каждой точке.
+Если `urban_fields.enabled: false`, классификация biome всегда близка к `residential`, поэтому mixed roads фактически используют поведение `grid` в каждой точке.
 
-## Interaction With Parcels And Buildings
+## Взаимодействие с parcels и зданиями
 
-Parcels и buildings используют дорожный слой как hardscape constraint:
+Parcels и buildings используют дорожный слой как hardscape-ограничение:
 
-- `nearest_distance(x, y)` дает расстояние до ближайшей road primitive axis/curve;
+- `nearest_distance(x, y)` дает расстояние до ближайшей оси или кривой road primitive;
 - `nearest_hardscape_distance(x, y)` вычитает half-width effective corridor;
 - parcel buildability проверяет center, corners, edge midpoints и interior sample points oriented buildable area;
 - building placement проверяет representative footprint points через `nearest_hardscape_distance`;
@@ -186,7 +193,7 @@ Parcels и buildings используют дорожный слой как hards
 
 Важно: `roads.angle_degrees` не поворачивает geometry `grid` road network, но может быть использован как base orientation для oriented parcels. Для фактически повернутых параллельных дорог используй `roads.model: linear`.
 
-## Metadata
+## Метаданные
 
 Metadata содержит дорожные агрегаты:
 
@@ -218,9 +225,9 @@ Metadata содержит дорожные агрегаты:
 }
 ```
 
-`class_counts` дополнительно показывает, сколько sampled points попало в `road`, `sidewalk` и `road_median`.
+`class_counts` дополнительно показывает, сколько семплированных точек попало в `road`, `sidewalk` и `road_median`.
 
-## Useful Demo Configs
+## Полезные демо-конфиги
 
 ```bash
 uv run citygen --config configs/mvp.yaml --out outputs/mvp_roads.ply
@@ -229,7 +236,7 @@ uv run citygen --config configs/demo_universal_showcase.yaml --out outputs/demo_
 uv run citygen --config configs/demo_oriented_parcels.yaml --out outputs/demo_oriented_parcels.ply
 ```
 
-Useful metadata checks:
+Полезные проверки metadata:
 
 ```bash
 jq '{road_models, road_profile_counts, road_widths, road_median, class_counts}' outputs/demo_road_profiles.metadata.json
@@ -240,8 +247,8 @@ jq '{road_models, block_geometry, parcel_geometry}' outputs/demo_oriented_parcel
 
 - Нет топологического road graph, lane graph, junction graph и turn restrictions.
 - Нет CRS/georeferencing, speed limits, lane counts или semantic road names.
-- Нет exact polygon clipping дорожных коридоров.
-- Road profiles задают только width bands, а не detailed curb/marking geometry.
+- Нет точного polygon clipping дорожных коридоров.
+- Road profiles задают только width bands, а не подробную геометрию curb/marking.
 - `mixed` выбирает сеть по biome в query point, а не смешивает primitives через настоящую boundary topology.
 - Organic roads являются deterministic polylines, но не гарантируют связность как транспортная сеть.
-- Road clearance для parcels/buildings остается conservative sample-point check.
+- Road clearance для parcels/buildings остается консервативной проверкой sample points.

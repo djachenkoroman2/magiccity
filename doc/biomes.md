@@ -4,9 +4,11 @@
 
 Параметры биомов теперь описаны в едином catalog layer: `citygen/catalogs.py`, `BiomeDefinition`. Старые функции `classify_biome()`, `biome_params()` и `preferred_road_model_for_biome()` сохранены как совместимые фасады.
 
+YAML-поля `urban_fields` описаны в `doc/configuration_reference.md`. Дорожная часть подробнее описана в `doc/roads.md`, а связь биомов с generated object ids — в `doc/generated_objects.md`.
+
 Текущая версия поддерживает четыре биома:
 
-| Биом | Tags | Краткое назначение | Preferred road model | Road profile preferences |
+| Биом | Теги | Краткое назначение | Предпочтительная модель дорог | Предпочтения road profiles |
 | --- | --- | --- | --- | --- |
 | `downtown` | `central`, `dense`, `highrise` | плотный центральный район с высокой застройкой | `radial_ring` | `collector`, `arterial`, `boulevard` |
 | `residential` | `urban`, `regular`, `housing` | обычная городская жилая ткань | `grid` | `local`, `collector`, `arterial` |
@@ -40,7 +42,7 @@ urban_fields:
 - metadata: распределение биомов пишется в `biome_counts`;
 - анализ сцены: биом помогает понять, почему в разных частях тайла различаются плотность, высотность и дороги.
 
-## Urban fields
+## Городские поля (`urban_fields`)
 
 Перед выбором биома citygen вычисляет набор плавных полей. Все поля clamp-ятся в диапазон `0..1`.
 
@@ -89,12 +91,12 @@ else:
 
 - `downtown` проверяется первым. Очень центральный и плотный район останется downtown даже при заметной industrialness.
 - `industrial` проверяется раньше suburb. Промышленная зона может победить зеленость или низкую плотность, если выполняет свой порог.
-- `residential` является fallback-биомом.
+- `residential` является запасным биомом.
 - `suburb` появляется либо от низкой плотности, либо от высокой зелености вне центра.
 
 ## Общая таблица характеристик
 
-| Биом | `build_probability` | `footprint_scale` | `height_min_multiplier` | `height_max_multiplier` | `setback_scale` | Preferred road model | Object weights |
+| Биом | `build_probability` | `footprint_scale` | `height_min_multiplier` | `height_max_multiplier` | `setback_scale` | Предпочтительная модель дорог | Object weights |
 | --- | ---: | ---: | ---: | ---: | ---: | --- | --- |
 | `downtown` | `0.94` | `1.08` | `1.45` | `1.75` | `0.65` | `radial_ring` | `building`, `road_network`, `parcel_blocks` |
 | `residential` | `0.78` | `0.92` | `0.85` | `0.82` | `1.00` | `grid` | `building`, `road_network`, `parcel_blocks` |
@@ -114,7 +116,7 @@ else:
 
 ## Как биом меняет здания
 
-Для каждого candidate-здания citygen:
+Для каждого candidate-здания `citygen`:
 
 1. Вычисляет биом в центре candidate.
 2. Берет параметры биома.
@@ -154,11 +156,13 @@ if urban_fields.enabled:
 effective_max_height = max(effective_min_height, effective_max_height)
 ```
 
-Clearance от дороги:
+Clearance от дороги в совместимом default-profile режиме:
 
 ```text
 roads.width_m / 2 + roads.sidewalk_width_m + effective_setback
 ```
+
+Если включены `roads.profiles`, используется effective hardscape width назначенного road profile; для зданий и parcels это проходит через `nearest_hardscape_distance(x, y)`.
 
 Поэтому даже при высокой `build_probability` здание может не появиться, если квартал слишком узкий, footprint слишком крупный, дороги слишком широкие или setback слишком большой.
 
@@ -182,7 +186,7 @@ roads:
 
 | Биом | Road model в `mixed` | Типичные road profiles |
 | --- | --- | --- |
-| `downtown` | `radial_ring` | `collector`, `arterial`, `boulevard`; wide median встречается чаще |
+| `downtown` | `radial_ring` | `collector`, `arterial`, `boulevard`; широкий median встречается чаще |
 | `residential` | `grid` | `local`, `collector`, иногда `arterial` |
 | `industrial` | `linear` | широкие `collector`/`arterial`, иногда `boulevard` |
 | `suburb` | `organic` | в основном `local`, иногда `collector` |
@@ -190,6 +194,8 @@ roads:
 Если выбрать обычный `roads.model`, например `grid` или `organic`, биомы все равно будут влиять на здания и, при включенных `roads.profiles`, на ширину/тип road primitive. Но геометрическая модель сети переключаться не будет.
 
 Road profile выбирается детерминированно по seed, road model, anchor-точке primitive и биому этой anchor-точки. Это MVP-подход поверх текущих road primitives: он дает стабильную ширину у каждой primitive и избегает мелкого мерцания ширины между соседними sample points.
+
+При `parcels.oriented_blocks: true` биом через `roads.model: mixed` также может влиять на orientation квартала: `residential/grid` и `industrial/linear` используют `roads.angle_degrees`, `downtown/radial_ring` использует направление вокруг city center, а `suburb/organic` получает детерминированный jitter. Подробности — в `doc/parcels.md`.
 
 ## `downtown`
 
@@ -214,7 +220,7 @@ centrality >= 0.68 and density >= 0.58
 
 Визуально и структурно:
 
-- высокая концентрация building roof и building facade точек;
+- высокая концентрация точек `building_roof` и `building_facade`;
 - более высокие вертикальные объемы;
 - меньше свободного пространства у дорог;
 - хорошо сочетается с частыми улицами и небольшими кварталами;
@@ -243,12 +249,12 @@ buildings:
 
 ## `residential`
 
-`residential` представляет обычную городскую жилую ткань. Это основной fallback-биом, который заполняет области без ярко выраженного центра, индустрии или пригорода.
+`residential` представляет обычную городскую жилую ткань. Это основной запасной биом, который заполняет области без ярко выраженного центра, индустрии или пригорода.
 
 Условие выбора:
 
 ```text
-fallback, если не подошли downtown, industrial и suburb
+запасной вариант, если не подошли downtown, industrial и suburb
 ```
 
 При `urban_fields.enabled: false` вся сцена всегда становится `residential`.
@@ -270,7 +276,7 @@ fallback, если не подошли downtown, industrial и suburb
 - умеренная высотность;
 - достаточно регулярная городская структура;
 - хорошо подходит для базовых MVP-сцен;
-- наиболее предсказуемый биом для тестов и baseline-конфигов.
+- наиболее предсказуемый биом для тестов и базовых конфигов.
 
 Полезные настройки:
 
@@ -409,7 +415,7 @@ buildings:
 | Меньше suburb | увеличить `density_bias` или уменьшить `green_bias` |
 | Разнообразнее дороги в `mixed` | включить `urban_fields` и подобрать bias так, чтобы в metadata было несколько `biome_counts` |
 
-## Диагностика через metadata
+## Диагностика через метаданные
 
 После генерации рядом с PLY создается файл:
 
@@ -422,12 +428,12 @@ outputs/example.metadata.json
 | Поле | Что показывает |
 | --- | --- |
 | `biome_counts` | сколько sample-точек bbox попало в каждый биом |
-| `road_models` | какие road models использовала сцена |
+| `road_models` | какие модели дорог использовала сцена |
 | `road_profile_counts` | какие road profiles были назначены road primitives |
 | `road_profile_counts_by_biome` | распределение road profiles по биомам anchor-точек |
 | `road_widths` | минимальная/максимальная ширина проезжей части, median и полного коридора |
 | `class_counts` | распределение point classes: ground, road, road_median, sidewalk, facades, roofs |
-| `config` | итоговый конфиг после применения defaults |
+| `config` | итоговый конфиг после применения значений по умолчанию |
 
 Пример:
 
@@ -455,8 +461,8 @@ outputs/example.metadata.json
 
 | Файл | Что полезно смотреть |
 | --- | --- |
-| `configs/demo_radial_ring.yaml` | downtown-подобная центральная структура |
-| `configs/demo_linear.yaml` | линейная структура, близкая к industrial preferred roads |
-| `configs/demo_organic.yaml` | organic streets, хорошо сочетающиеся с suburb |
-| `configs/demo_mixed_biomes.yaml` | смешение urban fields, биомов и `mixed` roads |
-| `configs/demo_multi_tile.yaml` | проверка непрерывности биомов на соседних тайлах |
+| `configs/demo_road_profiles.yaml` | mixed roads, urban fields, road profiles по биомам и `road_median` без зданий |
+| `configs/demo_universal_showcase.yaml` | mixed roads, несколько биомов, parcels, mixed footprints и mixed roofs |
+| `configs/demo_oriented_parcels.yaml` | mixed road context плюс oriented block/parcel subdivision |
+| `configs/demo_parcel_alignment.yaml` | placement с учетом parcels на mixed roads и urban fields |
+| `configs/mvp.yaml` | базовое поведение, близкое к `residential`, при выключенных `urban_fields` |

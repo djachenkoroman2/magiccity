@@ -1,0 +1,814 @@
+# Справочник по конфигурации
+
+Этот документ является справочником по YAML-конфигам `citygen`, построенным от исходного кода. Источник истины: `CityGenConfig` и вложенные значения по умолчанию dataclass-ов в `citygen/config.py`, логика валидатора, каталоги в `citygen/catalogs.py`, runtime-код дорог/parcels/зданий и экспорт metadata.
+
+`configs/*.yaml` остаются примерами запуска и проверочными конфигами. Они не являются источником схемы.
+
+Связанные тематические документы:
+
+- `doc/roads.md` — модели дорог, primitives, профили и surface-классы;
+- `doc/biomes.md` — `urban_fields`, классификация биомов и влияние биомов;
+- `doc/parcels.md` — block/parcel subdivision и oriented parcels;
+- `doc/building_footprints.md` — идентификаторы footprints, aliases и семплирование;
+- `doc/building_roofs.md` — идентификаторы roofs, aliases и функции высоты;
+- `doc/generated_objects.md` — feature ids объектов и semantic classes;
+- `doc/worldgen_catalogs.md` — каталоги и стадии пайплайна;
+- `doc/universal_showcase.md` — справочник по большому интеграционному демонстрационному сценарию.
+
+Запуск одного конфига:
+
+```bash
+uv run citygen --config configs/mvp.yaml --out outputs/mvp_tile.ply
+```
+
+Для multi-tile конфига `--out` должен быть директорией или может быть пропущен:
+
+```bash
+uv run citygen --config path/to/multi_tile_config.yaml --out outputs/multi_tile
+```
+
+## Общие правила YAML
+
+- Корневой объект должен быть YAML mapping, то есть словарем ключей и значений.
+- Обязательное поле только одно: `seed`.
+- Все остальные секции опциональны и получают значения по умолчанию.
+- Все размеры и расстояния задаются в метрах.
+- Горизонтальные координаты сцены: `x` и `y`; высота: `z`.
+- Булевы значения пишутся как `true` или `false`.
+- Текущий загрузчик читает описанные ниже поля. Секция `parcels` валидирует имена параметров строго, чтобы опечатки в новом слое участков не проходили молча.
+
+Минимальный валидный конфиг:
+
+```yaml
+seed: 7
+```
+
+Полный конфиг со всеми значениями по умолчанию:
+
+```yaml
+seed: 42
+tile:
+  x: 0
+  y: 0
+  size_m: 256
+  margin_m: 32
+terrain:
+  base_height_m: 0
+  height_noise_m: 1.5
+urban_fields:
+  enabled: false
+  center_x: 0
+  center_y: 0
+  city_radius_m: 1200
+  noise_scale_m: 350
+  density_bias: 0
+  industrial_bias: 0
+  green_bias: 0
+roads:
+  model: grid
+  spacing_m: 64
+  width_m: 10
+  sidewalk_width_m: 3
+  angle_degrees: 0
+  radial_count: 12
+  ring_spacing_m: 0
+  organic_wander_m: 0
+  profiles:
+    enabled: false
+    default: default
+    definitions:
+      default:
+        carriageway_width_m: 10
+        sidewalk_width_m: 3
+        median_width_m: 0
+    model_weights: {}
+    biome_weights: {}
+buildings:
+  enabled: true
+  min_height_m: 8
+  max_height_m: 60
+  setback_m: 6
+  footprint_min_m: 12
+  footprint_max_m: 36
+  footprint:
+    model: rectangle
+    weights: {}
+    circle_segments: 24
+    courtyard_ratio: 0.45
+    wing_width_ratio: 0.35
+    min_part_width_m: 5
+    align_to_roads: true
+  roof:
+    model: flat
+    weights: {}
+    pitch_degrees: 28
+    pitch_jitter_degrees: 8
+    flat_slope_degrees: 0
+    eave_overhang_m: 0
+    ridge_height_ratio: 0.35
+    mansard_break_ratio: 0.45
+    dome_segments: 16
+    align_to_long_axis: true
+parcels:
+  enabled: false
+  block_size_m: 96
+  block_jitter_m: 8
+  min_block_size_m: 32
+  min_parcel_width_m: 14
+  max_parcel_width_m: 42
+  min_parcel_depth_m: 18
+  max_parcel_depth_m: 56
+  parcel_setback_m: 2
+  split_jitter_ratio: 0.18
+  max_subdivision_depth: 3
+  building_alignment: parcel
+  orientation_jitter_degrees: 0
+  max_building_coverage: 0.72
+  require_building_inside_buildable_area: true
+  oriented_blocks: false
+  block_orientation_source: road_model
+  block_orientation_jitter_degrees: 0
+  organic_orientation_jitter_degrees: 10
+sampling:
+  mode: surface
+  ground_spacing_m: 2
+  road_spacing_m: 1.5
+  building_spacing_m: 2
+  jitter_ratio: 0.18
+output:
+  format: ply
+  include_rgb: true
+  include_class: true
+worldgen:
+  catalog_docs: true
+  strict_catalog_validation: true
+```
+
+## Корневые параметры
+
+| Параметр | Тип | Обязателен | Значение по умолчанию | Действие |
+| --- | --- | --- | --- | --- |
+| `seed` | integer | да | нет | Управляет всей детерминированной генерацией: рельефом, размещением зданий, размерами footprints, высотами, изгибами некоторых дорог и jitter. Один и тот же конфиг с тем же seed дает тот же результат. |
+| `tile` | mapping | нет | см. секцию `tile` | Описывает один тайл. Используется, когда секция `tiles` отсутствует. |
+| `tiles` | mapping | нет | отсутствует | Описывает пакет из нескольких тайлов. Если задана эта секция, CLI генерирует несколько PLY-файлов. |
+| `terrain` | mapping | нет | см. секцию `terrain` | Настраивает высоту поверхности. |
+| `urban_fields` | mapping | нет | см. секцию `urban_fields` | Включает процедурные городские поля и биомы. |
+| `roads` | mapping | нет | см. секцию `roads` | Настраивает модель дорог, ширину дорог и тротуары. |
+| `buildings` | mapping | нет | см. секцию `buildings` | Настраивает генерацию зданий. |
+| `parcels` | mapping | нет | см. секцию `parcels` | Включает прямоугольное разбиение blocks/parcels и размещение зданий внутри участков. |
+| `sampling` | mapping | нет | см. секцию `sampling` | Настраивает плотность и регулярность точек. |
+| `output` | mapping | нет | см. секцию `output` | Настраивает PLY-поля. |
+| `worldgen` | mapping | нет | см. секцию `worldgen` | Настраивает флаги валидации catalogs/worldgen. |
+
+## `tile`
+
+Секция `tile` описывает один квадратный тайл в мировой сетке.
+
+```yaml
+tile:
+  x: 0
+  y: 0
+  size_m: 256
+  margin_m: 32
+```
+
+| Параметр | Тип | По умолчанию | Возможные значения | Действие |
+| --- | --- | --- | --- | --- |
+| `x` | integer | `0` | любое целое число | Индекс тайла по мировой оси X. Может быть отрицательным. |
+| `y` | integer | `0` | любое целое число | Индекс тайла по мировой оси Y. Может быть отрицательным. |
+| `size_m` | number | `256.0` | `> 0` | Размер стороны тайла в метрах. Чем больше значение, тем больше площадь и обычно больше точек. |
+| `margin_m` | number | `32.0` | `> 0` | Рабочий запас вокруг тайла. Дороги и здания строятся в расширенной области, затем точки обрезаются обратно до bbox тайла. |
+
+BBox тайла считается так:
+
+```text
+min_x = tile.x * tile.size_m
+min_y = tile.y * tile.size_m
+max_x = min_x + tile.size_m
+max_y = min_y + tile.size_m
+```
+
+`margin_m` помогает получить более естественные края: здания и дороги могут быть рассчитаны за пределами тайла, но в итоговый PLY попадут только точки внутри исходного bbox.
+
+## `tiles`
+
+Секция `tiles` включает генерацию нескольких тайлов за один запуск. Она заменяет одиночный режим `tile`.
+
+Вариант с явным списком:
+
+```yaml
+tiles:
+  items:
+    - {x: 0, y: 0}
+    - {x: 1, y: 0}
+    - {x: 0, y: 1, size_m: 192, margin_m: 48}
+  size_m: 128
+  margin_m: 40
+```
+
+Вариант с диапазонами:
+
+```yaml
+tiles:
+  x_range: [0, 2]
+  y_range: [0, 2]
+  size_m: 128
+  margin_m: 40
+```
+
+| Параметр | Тип | По умолчанию | Возможные значения | Действие |
+| --- | --- | --- | --- | --- |
+| `items` | list of mappings | нет | непустой список тайлов | Явно перечисляет тайлы. Каждый элемент обязан иметь `x` и `y`; `size_m` и `margin_m` можно задать на элементе. |
+| `items[].x` | integer | нет | любое целое число | Индекс конкретного тайла по X. |
+| `items[].y` | integer | нет | любое целое число | Индекс конкретного тайла по Y. |
+| `items[].size_m` | number | `tiles.size_m`, затем `tile.size_m`, затем `256.0` | `> 0` | Размер конкретного тайла. |
+| `items[].margin_m` | number | `tiles.margin_m`, затем `tile.margin_m`, затем `32.0` | `> 0` | Margin конкретного тайла. |
+| `x_range` | two-item integer list | нет | `[start, stop]`, где `stop > start` | Диапазон индексов X по правилу Python `range(start, stop)`: stop не включается. |
+| `y_range` | two-item integer list | нет | `[start, stop]`, где `stop > start` | Диапазон индексов Y по правилу Python `range(start, stop)`: stop не включается. |
+| `size_m` | number | `tile.size_m`, затем `256.0` | `> 0` | Общий размер тайлов в `items` или range-режиме. |
+| `margin_m` | number | `tile.margin_m`, затем `32.0` | `> 0` | Общий margin тайлов в `items` или range-режиме. |
+
+Правила:
+
+- Нужно задать либо `items`, либо обе секции `x_range` и `y_range`.
+- Если есть `items`, диапазоны не используются.
+- `x_range: [0, 2]` и `y_range: [0, 2]` создают четыре тайла: `(0,0)`, `(0,1)`, `(1,0)`, `(1,1)`.
+- Для нескольких тайлов CLI пишет файлы вида `tile_X_Y.ply` и `tile_X_Y.metadata.json`.
+- Если multi-tile конфигу передать `--out something.ply`, это ошибка: нужен путь к директории.
+
+## `terrain`
+
+Секция `terrain` описывает процедурную высоту поверхности.
+
+```yaml
+terrain:
+  base_height_m: 0
+  height_noise_m: 1.5
+```
+
+| Параметр | Тип | По умолчанию | Возможные значения | Действие |
+| --- | --- | --- | --- | --- |
+| `base_height_m` | number | `0.0` | любое число | Базовая высота поверхности по оси Z. Поднимает или опускает весь рельеф. |
+| `height_noise_m` | number | `1.5` | любое число; обычно `>= 0` | Амплитуда процедурного шума высоты. `0` дает плоскую поверхность на `base_height_m`. |
+
+Высота рельефа зависит от `seed`, координат `x/y` и настроек `terrain`. Она используется для точек земли, дорог, тротуаров и базовой высоты зданий.
+
+## `urban_fields`
+
+Секция `urban_fields` включает плавные городские поля и выбор биома в каждой точке мира.
+
+```yaml
+urban_fields:
+  enabled: true
+  center_x: 128
+  center_y: 128
+  city_radius_m: 460
+  noise_scale_m: 180
+  density_bias: 0.04
+  industrial_bias: 0.08
+  green_bias: 0.02
+```
+
+| Параметр | Тип | По умолчанию | Возможные значения | Действие |
+| --- | --- | --- | --- | --- |
+| `enabled` | boolean | `false` | `true`, `false` | Включает urban fields. При `false` используется нейтральный режим, близкий к `residential`. |
+| `center_x` | number | `0.0` | любое число | X-координата городского центра. Влияет на `centrality`, биомы и центр radial/ring дорог при включенных fields. |
+| `center_y` | number | `0.0` | любое число | Y-координата городского центра. |
+| `city_radius_m` | number | `1200.0` | `> 0` | Радиус влияния городского центра. Большое значение растягивает downtown/residential переходы. |
+| `noise_scale_m` | number | `350.0` | `> 0` | Масштаб плавного шума. Больше значение дает более крупные и медленные изменения районов. |
+| `density_bias` | number | `0.0` | любое число; практически полезно около `-1..1` | Смещает поле плотности. Положительное значение повышает шанс плотных и высотных районов. Итоговое поле clamp-ится в `0..1`. |
+| `industrial_bias` | number | `0.0` | любое число; практически полезно около `-1..1` | Смещает поле промышленности. Положительное значение повышает вероятность industrial-биома. |
+| `green_bias` | number | `0.0` | любое число; практически полезно около `-1..1` | Смещает green/open-space поле. Положительное значение повышает вероятность suburb-биома. |
+
+Внутри считаются поля:
+
+| Поле | Смысл | Где используется |
+| --- | --- | --- |
+| `centrality` | близость к городскому центру | выбор биома, потенциал высоты |
+| `density` | плотность городской ткани | выбор биома, вероятность зданий, высотность |
+| `height_potential` | потенциал высотности | множитель максимальной высоты зданий |
+| `green_index` | зеленость или открытость района | выбор suburb-биома |
+| `industrialness` | промышленный характер района | выбор industrial-биома |
+| `orderliness` | регулярность планировки | сейчас вычисляется, но напрямую дорогами не используется |
+
+Поддерживаемые биомы:
+
+| Биом | Когда выбирается | Эффект на здания | Предпочтительная модель дорог для `roads.model: mixed` |
+| --- | --- | --- | --- |
+| `downtown` | высокая centrality и высокая density | больше шанс здания, выше высоты, чуть крупнее footprint, меньше setback | `radial_ring` |
+| `residential` | запасной вариант для обычной городской ткани | средние параметры | `grid` |
+| `industrial` | высокая industrialness вне самого центра | крупнее footprints, ниже высотность, умеренный setback | `linear` |
+| `suburb` | низкая density или высокая green_index вне центра | реже здания, ниже высоты, меньше footprints, больше setback | `organic` |
+
+При `enabled: false` классификация всегда возвращает `residential`. Поэтому `roads.model: mixed` без включенных `urban_fields` фактически будет использовать поведение `grid` в каждой точке.
+
+## `roads`
+
+Секция `roads` описывает осевые линии дорог, ширину проезжей части и тротуары.
+
+```yaml
+roads:
+  model: grid
+  spacing_m: 64
+  width_m: 10
+  sidewalk_width_m: 3
+  angle_degrees: 0
+  radial_count: 12
+  ring_spacing_m: 0
+  organic_wander_m: 0
+```
+
+| Параметр | Тип | По умолчанию | Возможные значения | Действие |
+| --- | --- | --- | --- | --- |
+| `model` | string | `grid` | `grid`, `radial_ring`, `radial`, `linear`, `organic`, `mixed`, `free` | Выбирает алгоритм построения дорожной сети. |
+| `spacing_m` | number | `64.0` | `> 0` | Основной шаг между дорогами или узлами сети. Чем меньше значение, тем плотнее дорожная сеть. |
+| `width_m` | number | `10.0` | `> 0` | Полная ширина проезжей части. Точка считается `road`, если расстояние до оси дороги не больше `width_m / 2`. |
+| `sidewalk_width_m` | number | `3.0` | `> 0` | Ширина тротуара с каждой стороны дороги. Точка считается `sidewalk`, если она за пределами дороги, но в пределах `width_m / 2 + sidewalk_width_m`. |
+| `profiles` | mapping | выключено | mapping | Опциональные road profiles с разной шириной проезжей части, тротуаров и центрального разделителя. |
+| `angle_degrees` | number | `0.0` | любое число | Поворот в градусах. Используется в `radial`, `radial_ring` и `linear`; в `mixed` влияет на соответствующие подмодели. |
+| `radial_count` | integer | `12` | `>= 3` | Количество лучей в моделях `radial` и `radial_ring`. |
+| `ring_spacing_m` | number | `0.0` | `>= 0` | Шаг кольцевых дорог для `radial_ring`. `0` означает использовать `spacing_m`. |
+| `organic_wander_m` | number | `0.0` | `>= 0` | Амплитуда изгиба дорог модели `organic`. `0` включает авторасчет от `spacing_m` и `terrain.height_noise_m`. |
+
+Валидатор требует:
+
+```text
+roads.width_m + 2 * roads.sidewalk_width_m < roads.spacing_m
+```
+
+Если условие нарушено, дороги с тротуарами занимают весь квартал и конфиг считается ошибочным.
+
+### Значения `roads.model`
+
+| Значение | Что генерирует | На что реагирует |
+| --- | --- | --- |
+| `grid` | Регулярную ортогональную сетку бесконечных линий по X и Y. | `spacing_m`, `width_m`, `sidewalk_width_m`. `angle_degrees` не используется. |
+| `radial_ring` | Лучи из центра и концентрические кольца. | `radial_count`, `angle_degrees`, `spacing_m`, `ring_spacing_m`. Центр берется из `urban_fields.center_x/center_y`, если fields включены; иначе из центра рабочего bbox. |
+| `radial` | Только лучи из центра, без колец. | `radial_count`, `angle_degrees`, `spacing_m`. Центр выбирается так же, как у `radial_ring`. |
+| `linear` | Параллельные дороги вдоль главной оси и более редкие поперечные дороги. | `angle_degrees`, `spacing_m`. Поперечный шаг равен `spacing_m * 2.5`. |
+| `organic` | Волнистые polyline-дороги в двух направлениях. | `spacing_m`, `organic_wander_m`, `terrain.height_noise_m`, `seed`. |
+| `mixed` | Набор подмоделей `grid`, `radial_ring`, `linear`, `organic` и выбор модели по биому в каждой точке. | Требует осмысленных `urban_fields` для разнообразия. Не выбирает `radial` и `free` как предпочтительные модели биомов. |
+| `free` | Нерегулярную сеть сегментов между детерминированно смещенными локальными узлами. | `spacing_m`, `seed`. Создает более хаотичную сеть, чем `organic`. |
+
+Surface-класс точки определяется по расстоянию до ближайшей дорожной primitive:
+
+```text
+distance <= width_m / 2                         -> road
+distance <= width_m / 2 + sidewalk_width_m      -> sidewalk
+иначе                                           -> ground
+```
+
+### `roads.profiles`
+
+Если `roads.profiles.enabled: true`, каждая дорожная primitive получает детерминированно выбранный profile. Profile задает поперечное сечение дороги:
+
+```yaml
+roads:
+  profiles:
+    enabled: true
+    default: collector
+    definitions:
+      local:
+        carriageway_width_m: 7
+        sidewalk_width_m: 2
+        median_width_m: 0
+      collector:
+        carriageway_width_m: 10
+        sidewalk_width_m: 3
+        median_width_m: 0
+      arterial:
+        carriageway_width_m: 14
+        sidewalk_width_m: 4
+        median_width_m: 1.5
+      boulevard:
+        carriageway_width_m: 16
+        sidewalk_width_m: 4
+        median_width_m: 6
+    model_weights:
+      grid: {local: 0.45, collector: 0.40, arterial: 0.15}
+      radial_ring: {collector: 0.20, arterial: 0.45, boulevard: 0.35}
+      linear: {collector: 0.35, arterial: 0.50, boulevard: 0.15}
+      organic: {local: 0.80, collector: 0.20}
+    biome_weights:
+      downtown: {collector: 0.15, arterial: 0.45, boulevard: 0.40}
+      residential: {local: 0.55, collector: 0.35, arterial: 0.10}
+      industrial: {collector: 0.30, arterial: 0.55, boulevard: 0.15}
+      suburb: {local: 0.85, collector: 0.15}
+```
+
+| Параметр | Тип | Действие |
+| --- | --- | --- |
+| `enabled` | boolean | Включает ширины из road profiles. При `false` используется совместимое поведение через `roads.width_m` и `roads.sidewalk_width_m`. |
+| `default` | string | Profile для запасного выбора; должен быть описан в `definitions`. |
+| `definitions.*.carriageway_width_m` | number | Суммарная ширина проезжей части без `road_median`. |
+| `definitions.*.sidewalk_width_m` | number | Ширина тротуара с каждой стороны. |
+| `definitions.*.median_width_m` | number | Ширина центрального разделителя; при `> 0` генерирует class `road_median`. |
+| `model_weights` | mapping | Веса profiles по модели дорог. |
+| `biome_weights` | mapping | Веса profiles по биому anchor-точки дорожной primitive. |
+
+Для profile с `road_median` классификация идет от оси дороги наружу: `road_median`, затем `road`, затем `sidewalk`, затем `ground`. На перекрытиях дорог `road` имеет приоритет над `road_median`, чтобы пересечения не превращались в сплошной разделитель.
+
+Валидатор требует положительные `carriageway_width_m`/`sidewalk_width_m`, `median_width_m >= 0`, существующие имена profiles в weights, положительные суммы весов и:
+
+```text
+max(carriageway_width_m + median_width_m + 2 * sidewalk_width_m) < roads.spacing_m
+```
+
+## `buildings`
+
+Секция `buildings` управляет генерацией зданий, формой footprint и геометрией крыши.
+
+```yaml
+buildings:
+  enabled: true
+  min_height_m: 8
+  max_height_m: 60
+  setback_m: 6
+  footprint_min_m: 12
+  footprint_max_m: 36
+  footprint:
+    model: mixed
+    weights:
+      rectangle: 0.30
+      square: 0.10
+      circle: 0.08
+      slab: 0.12
+      courtyard: 0.12
+      l_shape: 0.10
+      u_shape: 0.10
+      t_shape: 0.08
+    circle_segments: 24
+    courtyard_ratio: 0.45
+    wing_width_ratio: 0.35
+    min_part_width_m: 5
+    align_to_roads: true
+  roof:
+    model: mixed
+    weights:
+      flat: 0.22
+      shed: 0.10
+      gable: 0.16
+      hip: 0.14
+      half_hip: 0.08
+      pyramid: 0.08
+      mansard: 0.08
+      dome: 0.06
+      barrel: 0.04
+      cone: 0.04
+    pitch_degrees: 28
+    pitch_jitter_degrees: 8
+    flat_slope_degrees: 0
+    eave_overhang_m: 0
+    ridge_height_ratio: 0.35
+    mansard_break_ratio: 0.45
+    dome_segments: 16
+    align_to_long_axis: true
+```
+
+| Параметр | Тип | По умолчанию | Возможные значения | Действие |
+| --- | --- | --- | --- | --- |
+| `enabled` | boolean | `true` | `true`, `false` | Включает или выключает генерацию зданий. При `false` остаются только точки `ground`/`road`/`sidewalk`. |
+| `min_height_m` | number | `8.0` | `> 0`, `<= max_height_m` | Базовая минимальная высота здания. Биомы могут умножать ее. |
+| `max_height_m` | number | `60.0` | `> 0`, `>= min_height_m` | Базовая максимальная высота здания. Биомы и `height_potential` могут умножать ее. |
+| `setback_m` | number | `6.0` | `> 0` | Дополнительный отступ здания от защищенной зоны дороги и тротуара. Больше setback дает меньше зданий и больше свободного места у дорог. |
+| `footprint_min_m` | number | `12.0` | `> 0`, `<= footprint_max_m` | Минимальный размер footprint по ширине и глубине до biome-множителя. |
+| `footprint_max_m` | number | `36.0` | `> 0`, `>= footprint_min_m` | Максимальный размер footprint по ширине и глубине до biome-множителя. |
+| `footprint` | mapping | см. ниже | mapping | Настраивает тип контура здания на земле. Если отсутствует, используется `rectangle`. |
+| `roof` | mapping | см. ниже | mapping | Настраивает геометрию крыши. Если отсутствует, используется `flat`. |
+
+### `buildings.footprint`
+
+`buildings.footprint` описывает форму здания в плане.
+
+| Параметр | Тип | По умолчанию | Возможные значения | Действие |
+| --- | --- | --- | --- | --- |
+| `model` | string | `rectangle` | `rectangle`, `square`, `circle`, `slab`, `courtyard`, `l_shape`, `u_shape`, `t_shape`, `mixed` | Выбирает тип footprint. |
+| `weights` | mapping | `{}` для `rectangle`; стандартная смесь для `mixed` без weights | ключи типов footprint, значения `>= 0` | Веса выбора формы при `model: mixed`. Сумма должна быть положительной. |
+| `circle_segments` | integer | `24` | `>= 8` | Количество сегментов для аппроксимации кругового фасада. |
+| `courtyard_ratio` | number | `0.45` | `0 < value < 0.8` | Доля внешнего размера, занимаемая внутренним двором у `courtyard`. |
+| `wing_width_ratio` | number | `0.35` | `0 < value < 0.8` | Базовая относительная ширина крыла для `l_shape`, `u_shape`, `t_shape`. |
+| `min_part_width_m` | number | `5.0` | `> 0` | Минимальная ширина крыла или периметральной части. Если форма слишком мала, генератор детерминированно возвращается к `rectangle`. |
+| `align_to_roads` | boolean | `true` | `true`, `false` | Зарезервировано для будущей ориентации вытянутых форм по дорогам. В parcel mode orientation приходит от parcel geometry. |
+
+Поддерживаемые канонические типы footprints:
+
+| Тип | Действие |
+| --- | --- |
+| `rectangle` | Базовый прямоугольник, совместимый со старым поведением. |
+| `square` | Квадратный footprint с равными шириной и глубиной. |
+| `circle` | Круговая/ротондная форма, фасад аппроксимируется `circle_segments`. |
+| `slab` | Вытянутая полоса или пластина. |
+| `courtyard` | Периметральный блок с пустым внутренним двором; roof points во двор не попадают. |
+| `l_shape` | Г-образная форма из двух крыльев. |
+| `u_shape` | П-образная форма с полузакрытым двором. |
+| `t_shape` | Т-образная форма из пересекающихся крыльев. |
+| `mixed` | Детерминированно выбирает один из конкретных типов по `weights`. |
+
+Alias-значения в YAML нормализуются:
+
+| Alias | Каноническое значение |
+| --- | --- |
+| `rotunda` | `circle` |
+| `perimeter` | `courtyard` |
+| `strip` | `slab` |
+| `plate` | `slab` |
+| `g_shape` | `l_shape` |
+| `p_shape` | `u_shape` |
+
+### `buildings.roof`
+
+`buildings.roof` описывает форму крыши и функцию высоты для семплирования крыши.
+
+| Параметр | Тип | По умолчанию | Возможные значения | Действие |
+| --- | --- | --- | --- | --- |
+| `model` | string | `flat` | `flat`, `shed`, `gable`, `hip`, `half_hip`, `pyramid`, `mansard`, `dome`, `barrel`, `cone`, `mixed` | Выбирает тип крыши. |
+| `weights` | mapping | `{}` для `flat`; стандартная смесь для `mixed` без weights | ключи типов roof, значения `>= 0` | Веса выбора крыши при `model: mixed`. Сумма должна быть положительной. |
+| `pitch_degrees` | number | `28.0` | `0..75` | Базовый угол скатной крыши. |
+| `pitch_jitter_degrees` | number | `8.0` | `>= 0` | Детерминированное случайное отклонение угла. |
+| `flat_slope_degrees` | number | `0.0` | `0..15` | Малый уклон для `flat`. `0` сохраняет старое плоское поведение. |
+| `eave_overhang_m` | number | `0.0` | `>= 0` | Зарезервировано для будущего выноса карниза; текущий MVP не расширяет footprint. |
+| `ridge_height_ratio` | number | `0.35` | `0 < value <= 0.8` | Верхняя граница подъема крыши как доля высоты здания. |
+| `mansard_break_ratio` | number | `0.45` | `0.1..0.9` | Положение перелома мансардной крыши. |
+| `dome_segments` | integer | `16` | `>= 8` | Зарезервировано для детализации криволинейных крыш и metadata; функция высоты аналитическая. |
+| `align_to_long_axis` | boolean | `true` | `true`, `false` | Ориентирует конек или арку относительно длинной оси локального bbox footprint. |
+
+Поддерживаемые канонические типы roofs:
+
+| Тип | Действие |
+| --- | --- |
+| `flat` | Плоская крыша, дефолт обратной совместимости. |
+| `shed` | Односкатная крыша с монотонным уклоном. |
+| `gable` | Двускатная крыша с коньком вдоль длинной оси. |
+| `hip` | Четырехскатная вальмовая крыша. |
+| `half_hip` | Полувальмовая крыша, промежуточная между gable и hip. |
+| `pyramid` | Шатровая крыша с максимумом в центре. |
+| `mansard` | Ломаная мансардная крыша с переломом ската. |
+| `dome` | Купольная крыша с плавным подъемом к центру. |
+| `barrel` | Арочная/сводчатая крыша по одной оси. |
+| `cone` | Коническая крыша с линейным снижением к краю. |
+| `mixed` | Детерминированно выбирает один из конкретных типов по `weights`. |
+
+Alias-значения `roof.model`:
+
+| Alias | Каноническое значение |
+| --- | --- |
+| `single_slope` | `shed` |
+| `mono_pitch` | `shed` |
+| `dual_pitch` | `gable` |
+| `pitched` | `gable` |
+| `hipped` | `hip` |
+| `half_hipped` | `half_hip` |
+| `tent` | `pyramid` |
+| `vault` | `barrel` |
+| `arched` | `barrel` |
+| `conical` | `cone` |
+
+Даже если `enabled: false`, числовые поля секции все равно проходят валидацию.
+
+Как это влияет на сцену:
+
+- Центры-кандидаты создаются детерминированно от `seed`; при `parcels.enabled: true` здания создаются из buildable parcels.
+- Типы footprint/roof, размеры footprint и высоты выбираются детерминированным случайным выбором от `seed`.
+- Здание отбрасывается, если его footprint слишком близко к дороге или тротуару.
+- Здание отбрасывается, если пересекается с уже принятым зданием.
+- `base_z` здания берется из высоты рельефа в центре footprint.
+- В облако точек попадают roof-точки с высотой по `roof.model` и facade-точки по реальной границе footprint до линии карниза.
+
+Clearance от дорог считается так:
+
+```text
+roads.width_m / 2 + roads.sidewalk_width_m + effective_setback
+```
+
+Где `effective_setback` может быть изменен биомом.
+
+Если здания почти не появляются, обычно нужно увеличить `roads.spacing_m` или уменьшить `roads.width_m`, `roads.sidewalk_width_m`, `buildings.setback_m`, `buildings.footprint_min_m`.
+
+## `parcels`
+
+Секция `parcels` включает явный слой прямоугольных кварталов и земельных участков. При `enabled: false` генератор использует прежнее размещение зданий по центрам-кандидатам.
+
+```yaml
+parcels:
+  enabled: true
+  block_size_m: 96
+  block_jitter_m: 8
+  min_block_size_m: 32
+  min_parcel_width_m: 14
+  max_parcel_width_m: 42
+  min_parcel_depth_m: 18
+  max_parcel_depth_m: 56
+  parcel_setback_m: 2
+  split_jitter_ratio: 0.18
+  max_subdivision_depth: 3
+  building_alignment: parcel
+  orientation_jitter_degrees: 0
+  max_building_coverage: 0.72
+  require_building_inside_buildable_area: true
+  oriented_blocks: false
+  block_orientation_source: road_model
+  block_orientation_jitter_degrees: 0
+  organic_orientation_jitter_degrees: 10
+```
+
+| Параметр | Тип | По умолчанию | Возможные значения | Действие |
+| --- | --- | --- | --- | --- |
+| `enabled` | boolean | `false` | `true`, `false` | Включает размещение зданий через parcels. |
+| `block_size_m` | number | `96.0` | `> 0`, `>= min_block_size_m` | Шаг прямоугольной сетки candidate blocks в рабочем bbox. |
+| `block_jitter_m` | number | `8.0` | `>= 0` | Детерминированный inset краев block, чтобы участки не выглядели идеально одинаковыми. |
+| `min_block_size_m` | number | `32.0` | `> 0` | Минимальная ширина и глубина block после обрезки по рабочему bbox. |
+| `min_parcel_width_m` | number | `14.0` | `> 0`, `<= max_parcel_width_m` | Минимальная ширина parcel. |
+| `max_parcel_width_m` | number | `42.0` | `> 0`, `>= min_parcel_width_m` | Целевая максимальная ширина parcel до остановки subdivision. |
+| `min_parcel_depth_m` | number | `18.0` | `> 0`, `<= max_parcel_depth_m` | Минимальная глубина parcel. |
+| `max_parcel_depth_m` | number | `56.0` | `> 0`, `>= min_parcel_depth_m` | Целевая максимальная глубина parcel до остановки subdivision. |
+| `parcel_setback_m` | number | `2.0` | `>= 0` | Внутренний отступ parcel для получения `parcel.inner`. |
+| `split_jitter_ratio` | number | `0.18` | `0..0.45` | Детерминированный jitter позиции split как доля текущего размера. |
+| `max_subdivision_depth` | integer | `3` | `>= 0` | Максимальная глубина рекурсивного деления block. |
+| `building_alignment` | string | `parcel` | `parcel`, `global` | При `parcel` footprint здания выравнивается по локальным осям участка; `global` оставляет глобальные оси. |
+| `orientation_jitter_degrees` | number | `0.0` | `>= 0` | Детерминированное отклонение orientation здания от parcel orientation. |
+| `max_building_coverage` | number | `0.72` | `> 0`, `<= 1` | Максимальная доля buildable area, которую может занять footprint. |
+| `require_building_inside_buildable_area` | boolean | `true` | `true`, `false` | Требует, чтобы representative points footprint лежали внутри buildable area parcel. |
+| `oriented_blocks` | boolean | `false` | `true`, `false` | Включает local-space subdivision повернутых blocks. |
+| `block_orientation_source` | string | `road_model` | `road_model`, `config`, `none` | Источник orientation для blocks. |
+| `block_orientation_jitter_degrees` | number | `0.0` | `>= 0` | Детерминированный jitter orientation block. |
+| `organic_orientation_jitter_degrees` | number | `10.0` | `>= 0` | Минимальный jitter для organic blocks при источнике `road_model`. |
+
+MVP не строит полноценные GIS-полигоны кварталов из дорожного графа. Вместо этого он создает road-aware прямоугольные blocks/parcels, отбрасывает участки без достаточного clearance от `road`/`sidewalk` и размещает здания только внутри buildable area parcel. При `oriented_blocks: true` subdivision идет в local-space block, а `bbox` остается только axis-aligned envelope для broad phase. Для `block_orientation_source: road_model` модели `grid`, `linear`, `free` и `organic` используют `roads.angle_degrees` как базовую orientation; `radial` и `radial_ring` вычисляют направление от центра.
+
+Metadata получает агрегированные секции `parcel_counts`, `parcel_building_alignment`, `building_orientations`, `block_geometry` и `parcel_geometry`: количество blocks/parcels, buildable и occupied parcels, распределение parcels по биомам, число зданий с `parcel_id`, режим alignment и сводку orientation.
+
+Подробный архитектурный справочник по этому слою находится в `doc/parcels.md`.
+
+## `sampling`
+
+Секция `sampling` управляет плотностью точек и случайным смещением samples.
+
+```yaml
+sampling:
+  mode: surface
+  ground_spacing_m: 2
+  road_spacing_m: 1.5
+  building_spacing_m: 2
+  jitter_ratio: 0.18
+```
+
+| Параметр | Тип | По умолчанию | Возможные значения | Действие |
+| --- | --- | --- | --- | --- |
+| `mode` | string | `surface` | только `surface` | Режим семплирования. В текущем MVP другие значения запрещены. |
+| `ground_spacing_m` | number | `2.0` | `> 0` | Примерный шаг точек земли. Больше значение дает меньше ground-точек. |
+| `road_spacing_m` | number | `1.5` | `> 0` | Примерный шаг точек дорог и тротуаров. Больше значение дает меньше road/sidewalk-точек. |
+| `building_spacing_m` | number | `2.0` | `> 0` | Шаг точек крыш и фасадов. Больше значение дает меньше building-точек. |
+| `jitter_ratio` | number | `0.18` | `0 <= value <= 0.45` | Случайное смещение точки как доля текущего spacing. `0` дает регулярную сетку. |
+
+Практические эффекты:
+
+- Уменьшение spacing увеличивает плотность и размер PLY.
+- Увеличение spacing ускоряет предварительный просмотр и уменьшает файлы.
+- Для ground/road/road_median/sidewalk сначала берется минимальный шаг из `ground_spacing_m` и `road_spacing_m`, затем лишние точки прореживаются под нужный класс.
+- `building_spacing_m` отдельно применяется к крышам и фасадам.
+- Jitter детерминирован от `seed`, поэтому не ломает воспроизводимость.
+
+## `output`
+
+Секция `output` управляет форматом PLY.
+
+```yaml
+output:
+  format: ply
+  include_rgb: true
+  include_class: true
+```
+
+| Параметр | Тип | По умолчанию | Возможные значения | Действие |
+| --- | --- | --- | --- | --- |
+| `format` | string | `ply` | только `ply` | Формат вывода. Сейчас поддерживается только ASCII PLY. |
+| `include_rgb` | boolean | `true` | `true`, `false` | Добавляет в PLY vertex-поля `red`, `green`, `blue`. |
+| `include_class` | boolean | `true` | `true`, `false` | Добавляет в PLY vertex-поле `class`. |
+
+При `include_rgb: true` и `include_class: true` каждая строка vertex содержит:
+
+```text
+x y z red green blue class
+```
+
+При `include_rgb: false` и `include_class: false` каждая строка содержит только:
+
+```text
+x y z
+```
+
+Классы точек:
+
+| Class id | Имя | RGB |
+| --- | --- | --- |
+| `1` | `ground` | `107, 132, 85` |
+| `2` | `road` | `47, 50, 54` |
+| `3` | `sidewalk` | `174, 174, 166` |
+| `4` | `building_facade` | `176, 164, 148` |
+| `5` | `building_roof` | `112, 116, 122` |
+| `6` | `road_median` | `118, 128, 84` |
+
+Для каждого PLY также пишется metadata-файл рядом с ним:
+
+```text
+outputs/example.ply
+outputs/example.metadata.json
+```
+
+Metadata содержит `seed`, bbox тайла, количество точек, распределение классов, mapping классов, использованные модели дорог, `road_profile_counts`, `road_profile_counts_by_biome`, `road_widths`, `road_median`, counts по биомам, `building_counts`, `parcel_counts`, `parcel_building_alignment`, `building_orientations`, `block_geometry`, `parcel_geometry`, списки поддержанных типов footprint/roof и полный конфиг после применения значений по умолчанию.
+
+## `worldgen`
+
+Секция `worldgen` опциональна и управляет флагами валидации catalogs/worldgen. Она не меняет runtime-распределение сцены.
+
+```yaml
+worldgen:
+  catalog_docs: true
+  strict_catalog_validation: true
+```
+
+| Параметр | Тип | По умолчанию | Действие |
+| --- | --- | --- | --- |
+| `catalog_docs` | boolean | `true` | Документирует намерение держать docs, основанные на catalogs, включенными; сейчас используется как флаг resolved config. |
+| `strict_catalog_validation` | boolean | `true` | При загрузке конфига проверяет встроенные catalogs на неизвестные ids, некорректные weights и битые ссылки. |
+
+Слой дорог подробно описан в `doc/roads.md`. Архитектура catalogs описана в `doc/worldgen_catalogs.md`, а список feature ids генерируемых объектов — в `doc/generated_objects.md`.
+
+## Ограничения валидатора
+
+Конфиг считается ошибочным, если нарушено любое из условий:
+
+| Условие | Сообщение или смысл |
+| --- | --- |
+| Нет `seed` | `Missing required field: seed` |
+| Корневой YAML не mapping | конфиг должен быть YAML mapping |
+| Секция вроде `tile`, `roads`, `sampling` не mapping | секция должна быть mapping |
+| `tile.size_m <= 0` | размер тайла должен быть положительным |
+| `tile.margin_m <= 0` | margin должен быть положительным |
+| `tiles` не mapping | секция `tiles` должна быть mapping |
+| `tiles.items` не list | список тайлов должен быть list |
+| `tiles.items` пустой | должен быть хотя бы один тайл |
+| `tiles.x_range` или `tiles.y_range` не `[int, int]` | диапазон должен быть списком из двух целых |
+| `range.stop <= range.start` | конец диапазона должен быть больше начала |
+| `roads.model` не из списка поддерживаемых | поддерживаются `free`, `grid`, `linear`, `mixed`, `organic`, `radial`, `radial_ring` |
+| `roads.radial_count < 3` | нужно хотя бы три луча |
+| `roads.ring_spacing_m < 0` | ring spacing не может быть отрицательным |
+| `roads.organic_wander_m < 0` | organic wander не может быть отрицательным |
+| `roads.width_m + 2 * roads.sidewalk_width_m >= roads.spacing_m` | дорога с тротуарами должна быть уже квартального шага |
+| `roads.profiles.default` не описан в `definitions` | default profile должен существовать |
+| `roads.profiles.*_weights` содержит неизвестную модель дорог, biome или profile | веса должны ссылаться на поддержанные сущности |
+| `roads.profiles.*_weights` имеет сумму `<= 0` | для выбора profile нужна положительная сумма весов |
+| `max(profile corridor width) >= roads.spacing_m` | самый широкий road profile должен помещаться в квартальный шаг |
+| Любой обязательный positive spacing/size/height `<= 0` | значение должно быть положительным |
+| `buildings.max_height_m < buildings.min_height_m` | максимум высоты должен быть не меньше минимума |
+| `buildings.footprint_max_m < buildings.footprint_min_m` | максимум footprint должен быть не меньше минимума |
+| `buildings.footprint.model` не из списка поддерживаемых | поддерживаются `rectangle`, `square`, `circle`, `slab`, `courtyard`, `l_shape`, `u_shape`, `t_shape`, `mixed` |
+| `buildings.footprint.weights` содержит неизвестный ключ | ключи должны быть конкретными footprint types, без `mixed` |
+| `buildings.footprint.weights.* < 0` | веса не могут быть отрицательными |
+| `buildings.footprint.model: mixed` и сумма weights `<= 0` | для mixed нужна положительная сумма весов |
+| `buildings.footprint.circle_segments < 8` | круг должен иметь хотя бы 8 сегментов |
+| `buildings.footprint.courtyard_ratio` вне `0..0.8` | доля двора должна быть в допустимом диапазоне |
+| `buildings.footprint.wing_width_ratio` вне `0..0.8` | доля крыла должна быть в допустимом диапазоне |
+| `buildings.roof.model` не из списка поддерживаемых | поддерживаются `flat`, `shed`, `gable`, `hip`, `half_hip`, `pyramid`, `mansard`, `dome`, `barrel`, `cone`, `mixed` |
+| `buildings.roof.weights` содержит неизвестный ключ | ключи должны быть конкретными roof types, без `mixed` |
+| `buildings.roof.weights.* < 0` | веса не могут быть отрицательными |
+| `buildings.roof.model: mixed` и сумма weights `<= 0` | для mixed нужна положительная сумма весов |
+| `buildings.roof.pitch_degrees` вне `0..75` | базовый угол ската должен быть в допустимом диапазоне |
+| `buildings.roof.pitch_jitter_degrees < 0` | jitter угла не может быть отрицательным |
+| `buildings.roof.flat_slope_degrees` вне `0..15` | уклон плоской крыши должен быть малым |
+| `buildings.roof.eave_overhang_m < 0` | вынос карниза не может быть отрицательным |
+| `buildings.roof.ridge_height_ratio` вне `0..0.8` | rise крыши должен быть ограничен |
+| `buildings.roof.mansard_break_ratio` вне `0.1..0.9` | перелом мансарды должен быть внутри ската |
+| `buildings.roof.dome_segments < 8` | купольная детализация должна иметь хотя бы 8 сегментов |
+| Неизвестный ключ в `parcels` | имена параметров `parcels` валидируются строго |
+| `parcels.block_jitter_m < 0` | jitter block не может быть отрицательным |
+| `parcels.parcel_setback_m < 0` | parcel setback не может быть отрицательным |
+| `parcels.building_alignment` неизвестен | поддерживаются `parcel` и `global` |
+| `parcels.orientation_jitter_degrees < 0` | orientation jitter не может быть отрицательным |
+| `parcels.max_building_coverage` вне `0..1` | coverage должен быть положительным и не больше `1` |
+| `parcels.block_orientation_source` неизвестен | поддерживаются `road_model`, `config`, `none` |
+| `parcels.block_orientation_jitter_degrees < 0` | block orientation jitter не может быть отрицательным |
+| `parcels.organic_orientation_jitter_degrees < 0` | organic orientation jitter не может быть отрицательным |
+| `parcels.split_jitter_ratio` вне `0..0.45` | split jitter должен быть в допустимом диапазоне |
+| `parcels.max_subdivision_depth < 0` | глубина subdivision не может быть отрицательной |
+| `parcels.max_parcel_width_m < parcels.min_parcel_width_m` | максимум ширины parcel должен быть не меньше минимума |
+| `parcels.max_parcel_depth_m < parcels.min_parcel_depth_m` | максимум глубины parcel должен быть не меньше минимума |
+| `parcels.block_size_m < parcels.min_block_size_m` | размер block должен быть не меньше минимального block |
+| `sampling.mode != surface` | поддерживается только `surface` |
+| `sampling.jitter_ratio` вне `0..0.45` | jitter должен быть в допустимом диапазоне |
+| `output.format != ply` | поддерживается только `ply` |
+| Неизвестный ключ в `worldgen` | поддерживаются `catalog_docs`, `strict_catalog_validation` |
+| встроенные catalogs не проходят строгую валидацию | определения catalogs должны ссылаться только на известные ids и иметь валидные weights |
+
+## Примеры конфигов
+
+| Файл | Что демонстрирует |
+| --- | --- |
+| `configs/mvp.yaml` | Базовый MVP: дороги `grid`, sidewalks, terrain, buildings, RGB и class labels. |
+| `configs/demo_road_profiles.yaml` | `roads.model: mixed`, road profiles, `road_median`, веса profiles по биомам; здания выключены. |
+| `configs/demo_parcels.yaml` | Parcel subdivision и здания, привязанные к parcels, на легком тайле. |
+| `configs/demo_parcel_alignment.yaml` | Выравнивание зданий по parcels, mixed roads, profiles, footprints и roofs. |
+| `configs/demo_oriented_parcels.yaml` | Oriented block/parcel subdivision, orientation context от road model и выровненные здания. |
+| `configs/demo_universal_showcase.yaml` | Большой интеграционный демонстрационный сценарий: mixed roads, profiles, биомы, parcels, mixed footprints, mixed roofs. См. `doc/universal_showcase.md`. |
+
+Список намеренно отражает только YAML-файлы, которые реально есть в текущем `configs/`. Тематические документы выше описывают возможности шире, чем отдельные demos.
