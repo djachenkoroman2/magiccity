@@ -7,7 +7,7 @@ from typing import Any
 
 from .biomes import classify_biome
 from .config import CityGenConfig, ParcelsConfig
-from .geometry import BBox, Building, OrientedRect, Rect, rect_to_oriented, stable_rng
+from .geometry import BBox, Building, OrientedRect, Rect, normalize_degrees, rect_to_oriented, stable_rng
 from .roads import RoadNetworkLike
 
 
@@ -17,6 +17,15 @@ class Block:
     bbox: Rect
     parcel_count: int
     buildable_parcel_count: int
+    geometry: OrientedRect | None = None
+
+    def __post_init__(self) -> None:
+        if self.geometry is None:
+            object.__setattr__(self, "geometry", rect_to_oriented(self.bbox))
+
+    @property
+    def orientation_degrees(self) -> float:
+        return self.geometry.orientation_degrees
 
 
 @dataclass(frozen=True)
@@ -29,34 +38,35 @@ class Parcel:
     road_distance_m: float
     buildable: bool
     orientation_degrees: float = 0.0
+    geometry: OrientedRect | None = None
+    buildable_geometry: OrientedRect | None = None
+
+    def __post_init__(self) -> None:
+        geometry = self.geometry or rect_to_oriented(self.bbox, self.orientation_degrees)
+        buildable_geometry = self.buildable_geometry or rect_to_oriented(self.inner, geometry.orientation_degrees)
+        object.__setattr__(self, "geometry", geometry)
+        object.__setattr__(self, "buildable_geometry", buildable_geometry)
+        object.__setattr__(self, "orientation_degrees", geometry.orientation_degrees)
 
     @property
     def center_x(self) -> float:
-        return self.bbox.center_x
+        return self.geometry.center_x
 
     @property
     def center_y(self) -> float:
-        return self.bbox.center_y
+        return self.geometry.center_y
 
     @property
     def width(self) -> float:
-        return self.bbox.width
+        return self.geometry.width
 
     @property
     def depth(self) -> float:
-        return self.bbox.depth
+        return self.geometry.depth
 
     @property
     def area_m2(self) -> float:
-        return self.width * self.depth
-
-    @property
-    def geometry(self) -> OrientedRect:
-        return rect_to_oriented(self.bbox, self.orientation_degrees)
-
-    @property
-    def buildable_geometry(self) -> OrientedRect:
-        return rect_to_oriented(self.inner, self.orientation_degrees)
+        return self.geometry.area_m2
 
 
 def build_blocks_and_parcels(
@@ -82,25 +92,36 @@ def build_blocks_and_parcels(
             if candidate.width < parcel_config.min_block_size_m or candidate.depth < parcel_config.min_block_size_m:
                 continue
 
-            parcel_rects = _subdivide_block(candidate, parcel_config, rng)
+            block_geometry = _block_geometry(config, ix, iy, candidate, bbox, road_network)
+            local_block = Rect(
+                -candidate.width * 0.5,
+                -candidate.depth * 0.5,
+                candidate.width * 0.5,
+                candidate.depth * 0.5,
+            )
+            parcel_rects = _subdivide_block(local_block, parcel_config, rng)
             block_parcels: list[Parcel] = []
-            for index, rect in enumerate(parcel_rects):
-                inner = _inset_rect(rect, parcel_config.parcel_setback_m)
-                if inner is None:
+            for index, local_rect in enumerate(parcel_rects):
+                geometry = _local_rect_to_oriented(block_geometry, local_rect)
+                buildable_geometry = geometry.inset(parcel_config.parcel_setback_m)
+                if buildable_geometry is None:
                     continue
-                biome = classify_biome(config.seed, config.urban_fields, rect.center_x, rect.center_y)
-                distance = road_network.nearest_distance(rect.center_x, rect.center_y)
+                biome = classify_biome(config.seed, config.urban_fields, geometry.center_x, geometry.center_y)
+                distance = road_network.nearest_distance(geometry.center_x, geometry.center_y)
                 buildable = (
-                    inner.width >= parcel_config.min_parcel_width_m * 0.55
-                    and inner.depth >= parcel_config.min_parcel_depth_m * 0.55
-                    and _rect_is_clear(road_network, inner, road_clearance)
+                    buildable_geometry.width >= parcel_config.min_parcel_width_m * 0.55
+                    and buildable_geometry.depth >= parcel_config.min_parcel_depth_m * 0.55
+                    and _oriented_rect_is_clear(road_network, buildable_geometry, road_clearance)
                 )
                 block_parcels.append(
                     Parcel(
                         id=f"{block_id}_parcel_{index}",
                         block_id=block_id,
-                        bbox=rect,
-                        inner=inner,
+                        bbox=geometry.bbox,
+                        inner=buildable_geometry.bbox,
+                        orientation_degrees=geometry.orientation_degrees,
+                        geometry=geometry,
+                        buildable_geometry=buildable_geometry,
                         biome=biome,
                         road_distance_m=distance,
                         buildable=buildable,
@@ -115,7 +136,8 @@ def build_blocks_and_parcels(
             blocks.append(
                 Block(
                     id=block_id,
-                    bbox=candidate,
+                    bbox=block_geometry.bbox,
+                    geometry=block_geometry,
                     parcel_count=len(block_parcels),
                     buildable_parcel_count=buildable_count,
                 )
@@ -166,6 +188,92 @@ def _block_rect(ix: int, iy: int, block_size: float, config: ParcelsConfig, bbox
     max_x = min(bbox.max_x, (ix + 1) * block_size - inset_x1)
     max_y = min(bbox.max_y, (iy + 1) * block_size - inset_y1)
     return Rect(min_x, min_y, max_x, max_y)
+
+
+def _block_geometry(
+    config: CityGenConfig,
+    ix: int,
+    iy: int,
+    rect: Rect,
+    bbox: BBox,
+    road_network: RoadNetworkLike,
+) -> OrientedRect:
+    angle = _block_orientation_degrees(config, ix, iy, rect, bbox, road_network)
+    return OrientedRect(
+        center_x=rect.center_x,
+        center_y=rect.center_y,
+        width=rect.width,
+        depth=rect.depth,
+        angle_degrees=angle,
+    )
+
+
+def _block_orientation_degrees(
+    config: CityGenConfig,
+    ix: int,
+    iy: int,
+    rect: Rect,
+    bbox: BBox,
+    road_network: RoadNetworkLike,
+) -> float:
+    if not config.parcels.oriented_blocks:
+        return 0.0
+
+    source = config.parcels.block_orientation_source
+    model = road_network.road_model_at(config, rect.center_x, rect.center_y)
+    if source == "none":
+        base = 0.0
+    elif source == "config":
+        base = config.roads.angle_degrees
+    else:
+        base = _orientation_for_road_model(config, model, rect.center_x, rect.center_y, bbox)
+
+    jitter = config.parcels.block_orientation_jitter_degrees
+    if source == "road_model" and model == "organic":
+        jitter = max(jitter, config.parcels.organic_orientation_jitter_degrees)
+    if jitter > 0:
+        rng = stable_rng(config.seed, "block-orientation", config.tile.x, config.tile.y, ix, iy, model)
+        base += rng.uniform(-jitter, jitter)
+    return normalize_degrees(base)
+
+
+def _orientation_for_road_model(
+    config: CityGenConfig,
+    model: str,
+    x: float,
+    y: float,
+    bbox: BBox,
+) -> float:
+    if model == "grid":
+        return 0.0
+    if model in {"linear", "free", "organic"}:
+        return config.roads.angle_degrees
+    if model in {"radial", "radial_ring"}:
+        center_x, center_y = _city_center(config, bbox)
+        dx = x - center_x
+        dy = y - center_y
+        if math.hypot(dx, dy) < 1e-6:
+            return config.roads.angle_degrees
+        angle = math.degrees(math.atan2(dy, dx))
+        return angle + (90.0 if model == "radial_ring" else 0.0)
+    return config.roads.angle_degrees
+
+
+def _city_center(config: CityGenConfig, bbox: BBox) -> tuple[float, float]:
+    if config.urban_fields.enabled:
+        return config.urban_fields.center_x, config.urban_fields.center_y
+    return bbox.min_x + bbox.width * 0.5, bbox.min_y + bbox.depth * 0.5
+
+
+def _local_rect_to_oriented(block: OrientedRect, local_rect: Rect) -> OrientedRect:
+    center_x, center_y = block.local_to_world(local_rect.center_x, local_rect.center_y)
+    return OrientedRect(
+        center_x=center_x,
+        center_y=center_y,
+        width=local_rect.width,
+        depth=local_rect.depth,
+        angle_degrees=block.angle_degrees,
+    )
 
 
 def _subdivide_block(rect: Rect, config: ParcelsConfig, rng) -> list[Rect]:
@@ -220,6 +328,13 @@ def _rect_is_clear(road_network: RoadNetworkLike, rect: Rect, clearance_m: float
     return True
 
 
+def _oriented_rect_is_clear(road_network: RoadNetworkLike, rect: OrientedRect, clearance_m: float) -> bool:
+    for x, y in _oriented_rect_sample_points(rect):
+        if road_network.nearest_hardscape_distance(x, y) <= clearance_m:
+            return False
+    return True
+
+
 def _rect_sample_points(rect: Rect) -> tuple[tuple[float, float], ...]:
     return (
         (rect.center_x, rect.center_y),
@@ -232,6 +347,27 @@ def _rect_sample_points(rect: Rect) -> tuple[tuple[float, float], ...]:
         (rect.max_x, rect.center_y),
         (rect.max_x, rect.max_y),
     )
+
+
+def _oriented_rect_sample_points(rect: OrientedRect) -> tuple[tuple[float, float], ...]:
+    half_w = rect.width * 0.5
+    half_d = rect.depth * 0.5
+    local_points = (
+        (0.0, 0.0),
+        (-half_w, -half_d),
+        (-half_w, 0.0),
+        (-half_w, half_d),
+        (0.0, -half_d),
+        (0.0, half_d),
+        (half_w, -half_d),
+        (half_w, 0.0),
+        (half_w, half_d),
+        (-half_w * 0.5, -half_d * 0.5),
+        (-half_w * 0.5, half_d * 0.5),
+        (half_w * 0.5, -half_d * 0.5),
+        (half_w * 0.5, half_d * 0.5),
+    )
+    return tuple(rect.local_to_world(x, y) for x, y in local_points)
 
 
 def _average(values) -> float:

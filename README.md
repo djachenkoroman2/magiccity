@@ -217,6 +217,7 @@ uv run citygen --config configs/demo_multi_tile.yaml --out outputs/multi_tile
 | `configs/demo_universal_showcase.yaml` | Большой showcase-тайл: mixed roads, urban fields, биомы, mixed footprints и mixed roofs. |
 | `configs/demo_parcels.yaml` | Parcel subdivision: прямоугольные blocks/parcels и здания, привязанные к участкам. |
 | `configs/demo_parcel_alignment.yaml` | Parcel-aware placement: buildings внутри buildable area и parallel to parcel geometry. |
+| `configs/demo_oriented_parcels.yaml` | Oriented blocks/parcels: local-space subdivision повернутых кварталов и aligned buildings. |
 | `configs/demo_building_footprints.yaml` | Несколько типов building footprint в одном тайле. |
 | `configs/demo_courtyard_blocks.yaml` | Периметральные здания с внутренними дворами. |
 | `configs/demo_building_roofs.yaml` | Все поддержанные типы roof geometry в одном тайле. |
@@ -571,11 +572,15 @@ parcels:
   orientation_jitter_degrees: 0
   max_building_coverage: 0.72
   require_building_inside_buildable_area: true
+  oriented_blocks: false
+  block_orientation_source: road_model
+  block_orientation_jitter_degrees: 0
+  organic_orientation_jitter_degrees: 10
 ```
 
-Когда `enabled: true`, генератор строит прямоугольные candidate blocks в рабочем bbox, делит их на parcels и размещает здания внутри buildable area участка. При `building_alignment: parcel` footprint здания строится в local-space участка и ориентируется параллельно parcel geometry; для текущих generated parcels это обычно угол `0`, но roof/facade sampling уже используют orientation-aware footprint методы.
+Когда `enabled: true`, генератор строит прямоугольные candidate blocks в рабочем bbox, делит их на parcels и размещает здания внутри buildable area участка. При `oriented_blocks: true` block получает orientation от road model, `roads.angle_degrees` или `none`, а subdivision идет в local-space block. При `building_alignment: parcel` footprint здания строится в local-space участка и ориентируется параллельно parcel geometry.
 
-Это MVP-аппроксимация поверх текущих road primitives: она не пытается построить идеальные GIS-полигоны кварталов для organic/free/radial дорог, но дает явный слой участков, детерминированную привязку `building.parcel_id`, `parcel_counts`, `parcel_building_alignment`, `building_orientations` и `parcel_geometry` в metadata.
+Это MVP-аппроксимация поверх текущих road primitives: она не пытается построить идеальные GIS-полигоны кварталов для organic/free/radial дорог, но дает явный слой участков, детерминированную привязку `building.parcel_id`, `parcel_counts`, `parcel_building_alignment`, `building_orientations`, `block_geometry` и `parcel_geometry` в metadata.
 
 Подробный справочник по parcels находится в `doc/parcels.md`.
 
@@ -684,7 +689,7 @@ Metadata содержит:
 - `biome_counts`;
 - `building_counts` с распределением по footprint type и биомам;
 - `parcel_counts` с blocks/parcels/buildable/occupied статистикой;
-- `parcel_building_alignment`, `building_orientations`, `parcel_geometry`;
+- `parcel_building_alignment`, `building_orientations`, `block_geometry`, `parcel_geometry`;
 - `supported_footprint_types`;
 - `building_counts.by_roof` с распределением зданий по roof type;
 - `supported_roof_types`;

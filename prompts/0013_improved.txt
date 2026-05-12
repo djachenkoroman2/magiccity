@@ -1,0 +1,383 @@
+Ты senior Python-инженер и архитектор процедурных генераторов городских point clouds.
+
+В репозитории есть рабочий MVP `citygen`: CLI на Python, YAML-конфиги, детерминированный `seed`, тайлы, road primitives, несколько road models, road profiles, worldgen catalogs, urban fields, биомы, parcels, parcel-aware building placement, разные building footprints, разные roof geometry, surface sampling, ASCII PLY export и metadata JSON. Координатная конвенция проекта: горизонтальная плоскость `x/y`, высота `z`. Справочники: `README.md`, `configs/README.md`, `doc/biomes.md`, `doc/parcels.md`, `doc/building_footprints.md`, `doc/building_roofs.md`, `doc/generated_objects.md`, `doc/worldgen_catalogs.md`.
+
+Сейчас buildings уже могут выравниваться по `parcel.orientation_degrees`, но сами generated parcels все еще фактически axis-aligned. Нужно реализовать следующий этап: при разбиении blocks на parcels учитывать ориентацию квартала. Parcels должны наследовать или вычислять orientation от block/road context, subdivide-иться в локальной системе квартала и отдавать buildable geometry с правильной ориентацией. Здания затем должны автоматически размещаться параллельно уже ориентированным parcel boundaries.
+
+Не останавливайся на описании подхода: внеси рабочие изменения в код, YAML-конфиги, документацию и тесты.
+
+## Главная цель
+
+`citygen` должен поддерживать oriented block/parcel subdivision:
+
+- block geometry может иметь orientation, а не только axis-aligned `Rect`;
+- subdivision block -> parcels выполняется в local-space block;
+- каждый parcel получает world-space bbox, oriented geometry и oriented buildable area;
+- parcel dimensions (`width`, `depth`, `area_m2`) считаются в local-space parcel, а не только по axis-aligned bbox;
+- road clearance и buildability checks работают для oriented parcels;
+- building placement использует oriented parcel buildable area и выравнивается по parcel orientation;
+- metadata честно показывает, сколько parcels axis-aligned, сколько oriented, какие orientations использовались;
+- старые configs продолжают работать и по умолчанию остаются максимально близкими к текущему результату.
+
+Под "учитывать ориентацию квартала" в этом этапе понимается:
+
+```text
+block has local axes
+parcels are split along block local axes
+parcel local axes inherit block local axes
+building local axes align with parcel local axes
+```
+
+Если block orientation равен `0`, результат должен быть совместим с текущим axis-aligned поведением. Если block orientation не равен `0`, parcels должны быть повернуты вместе с block, а не оставаться нарезанными по глобальным `x/y`.
+
+## Важные понятия
+
+- `Block orientation`: угол локальной оси квартала в плоскости `x/y`.
+- `Block local space`: координаты, в которых block является прямоугольником, а subdivision работает обычными split-ами.
+- `Oriented parcel`: parcel, чей local-space rect преобразуется в world-space через rotation/translation.
+- `Parcel bbox`: axis-aligned bounding box oriented parcel; нужен только для broad phase, metadata и cropping.
+- `Buildable oriented area`: inset oriented parcel после setbacks.
+- `Road-aligned parcels`: parcels, чья orientation следует road model или ближайшему road primitive.
+
+## Обязательные принципы
+
+1. Сохрани обратную совместимость:
+   - `configs/mvp.yaml` должен запускаться без изменений;
+   - существующие `demo_*.yaml` должны продолжить работать;
+   - старые поля `parcels`, `buildings`, `roads`, `sampling`, `output` должны остаться валидными;
+   - если oriented subdivision выключен или orientation равен `0`, результат должен быть близок к текущему;
+   - существующие semantic class ids нельзя менять;
+   - существующие metadata fields нельзя удалять.
+
+2. Сохрани детерминированность:
+   - одинаковый seed и config дают одинаковые block orientations, parcel geometry, buildings, points и metadata;
+   - не используй глобальный недетерминированный `random`;
+   - все random choices используй через stable hash-based RNG с namespace, seed, tile coordinates, block id и parcel id.
+
+3. Уважай координатную систему:
+   - горизонтальная плоскость: `x/y`;
+   - высота: `z`;
+   - geometry containment и расстояния считаются в `x/y`;
+   - PLY остается `x y z`, где `z` — высота.
+
+4. Не добавляй тяжелые зависимости:
+   - задача решается dataclass-ами, affine transforms и простыми geometry helpers;
+   - не нужен Shapely, GIS/topology stack, CRS, triangulation engine или mesh boolean.
+
+5. Не делай большой rewrite:
+   - используй уже добавленный/существующий geometry layer (`OrientedRect`, transforms, footprint orientation);
+   - текущие `Rect` и axis-aligned helpers можно сохранить как совместимый путь;
+   - точные polygon booleans для дорог не нужны.
+
+## Ориентация blocks
+
+Добавь или расширь block geometry так, чтобы `Block` мог хранить:
+
+- stable `id`;
+- oriented geometry;
+- axis-aligned bbox для broad phase;
+- `orientation_degrees`;
+- local width/depth;
+- count parcels/buildable parcels как раньше.
+
+Один разумный путь:
+
+```python
+@dataclass(frozen=True)
+class Block:
+    id: str
+    bbox: Rect
+    geometry: OrientedRect
+    parcel_count: int
+    buildable_parcel_count: int
+
+    @property
+    def orientation_degrees(self) -> float:
+        return self.geometry.orientation_degrees
+```
+
+Если менять `Block` слишком рискованно, сохрани старое поле `bbox` и добавь `orientation_degrees` / `geometry` как новые поля с дефолтом `0`.
+
+### Источник orientation
+
+Выбери практичный MVP-источник ориентации, который хорошо ложится на текущий road architecture.
+
+Предпочтительный порядок:
+
+1. Если road model имеет явный angle (`grid`, `linear`, `free` или текущий `roads.angle_degrees`), используй его как base orientation для nearby blocks.
+2. Если `roads.model: mixed`, block orientation может зависеть от effective biome/road model около центра block:
+   - `residential/grid`: grid angle;
+   - `industrial/linear`: linear axis angle;
+   - `downtown/radial_ring`: radial tangent или radial direction около block center;
+   - `suburb/organic`: organic/base angle с небольшим deterministic jitter.
+3. Если точный road tangent недоступен, используй conservative fallback: `roads.angle_degrees` + deterministic small block jitter.
+4. Если `urban_fields.enabled: false`, используй residential-like default.
+
+Не нужно строить полноценный road topology. Достаточно, чтобы orientation была детерминированной, визуально понятной и отражалась в metadata.
+
+## YAML-настройка
+
+Добавь опциональные настройки в `parcels`, если они нужны для управления поведением. Они должны быть обратносуместимыми.
+
+Пример допустимого формата:
+
+```yaml
+parcels:
+  enabled: true
+  block_orientation:
+    enabled: true
+    source: road_model
+    jitter_degrees: 0
+    organic_jitter_degrees: 10
+```
+
+Можно выбрать более компактный формат, например:
+
+```yaml
+parcels:
+  oriented_blocks: true
+  block_orientation_source: road_model
+  block_orientation_jitter_degrees: 0
+```
+
+Требования:
+
+- отсутствие новых полей должно сохранять старое поведение настолько близко, насколько возможно;
+- `enabled: false` для oriented subdivision должен давать axis-aligned blocks/parcels;
+- jitter должен быть `>= 0`;
+- unknown source должен давать понятный `ConfigError`;
+- настройки должны быть отражены в `configs/README.md` и `doc/parcels.md`.
+
+Если считаешь, что orientation should be on by default because parcel-aware buildings already exist, сделай это аккуратно:
+
+- старые configs должны проходить;
+- demo should show oriented parcels;
+- изменения baseline distribution должны быть объяснены в docs/final answer.
+
+## Subdivision в local-space
+
+Текущий `_subdivide_block(rect, config, rng)` работает с axis-aligned `Rect`. Нужно адаптировать subdivision так, чтобы:
+
+- block сначала задавался как `OrientedRect`;
+- subdivision происходил в local-space block;
+- каждый local parcel rect преобразовывался в world-space oriented parcel;
+- parcel id generation оставалась стабильной;
+- `parcel.width` и `parcel.depth` были local dimensions;
+- `parcel.bbox` был world-space axis-aligned bbox oriented parcel;
+- `parcel.center_x/center_y` были world-space center;
+- `parcel.inner` или `buildable_geometry` сохраняли orientation.
+
+Один возможный путь:
+
+```python
+@dataclass(frozen=True)
+class Parcel:
+    id: str
+    block_id: str
+    bbox: Rect
+    geometry: OrientedRect
+    buildable_geometry: OrientedRect
+    biome: str
+    road_distance_m: float
+    buildable: bool
+```
+
+Для совместимости можно оставить старые поля:
+
+- `bbox` как world-space axis-aligned bbox;
+- `inner` как axis-aligned bbox buildable area для старого кода;
+- `geometry` и `buildable_geometry` как точная oriented geometry;
+- `orientation_degrees` как property/field.
+
+Важно: точная проверка containment/buildability должна использовать oriented geometry, а `bbox` только broad phase.
+
+## Road clearance и buildability
+
+Обнови проверки:
+
+- `_rect_is_clear` или аналог должен принимать oriented geometry;
+- sample points для road clearance должны включать center, corners, edge midpoints и несколько representative interior points в world-space;
+- `nearest_hardscape_distance` / `surface_kind` должны вызываться с world-space `x/y`;
+- buildable parcel рядом с widened roads, sidewalks и `road_median` должен отбрасываться так же консервативно, как раньше.
+
+Не нужно exact polygon-road clipping. Но нельзя считать oriented parcel clear только по его axis-aligned bbox center.
+
+## Building placement
+
+Убедись, что существующий parcel-aware placement действительно использует oriented parcel geometry:
+
+- building center берется из oriented buildable area;
+- footprint строится в parcel local orientation;
+- `building.orientation_degrees == parcel.orientation_degrees` при `orientation_jitter_degrees: 0`;
+- footprint representative points лежат внутри oriented buildable area;
+- roof height и facade sampling работают после rotation;
+- здания не попадают на road/sidewalk/road_median.
+
+Если текущий placement уже это поддерживает, добавь tests, которые доказывают работу на реально rotated parcels, а не только на angle `0`.
+
+## Metadata
+
+Расширь metadata JSON, не удаляя существующие поля.
+
+Добавь или уточни агрегаты:
+
+```json
+"parcel_geometry": {
+  "oriented_parcels": 72,
+  "axis_aligned_parcels": 20,
+  "buildable_area_failures": 8,
+  "orientation_bucket_degrees": {
+    "0": 20,
+    "15": 28,
+    "45": 18,
+    "90": 26
+  }
+},
+"block_geometry": {
+  "oriented_blocks": 10,
+  "axis_aligned_blocks": 3,
+  "orientation_source": "road_model",
+  "orientation_bucket_degrees": {
+    "0": 3,
+    "15": 4,
+    "45": 2,
+    "90": 4
+  }
+}
+```
+
+Можно выбрать другой компактный формат, но metadata должна помогать ответить:
+
+- были ли реально oriented blocks/parcels;
+- какие orientations использовались;
+- сколько зданий aligned с oriented parcels;
+- сколько parcels/buildable areas были отброшены.
+
+## Demo config
+
+Добавь или обнови демонстрационный конфиг, например:
+
+```text
+configs/demo_oriented_parcels.yaml
+```
+
+Он должен показывать:
+
+- `parcels.enabled: true`;
+- oriented block/parcel subdivision включен;
+- buildings enabled;
+- несколько footprint types и roof types;
+- mixed roads или road angle, чтобы orientation была визуально заметна;
+- metadata с `oriented_parcels > 0`;
+- `parcel_building_alignment.aligned_buildings == buildings_with_parcel_id`;
+- достаточно точек, чтобы визуально проверить повернутые parcels/buildings.
+
+Если возможно, подбери параметры так, чтобы:
+
+- было хотя бы 20 buildings;
+- было несколько orientation buckets;
+- были road/sidewalk/road_median classes;
+- demo не был слишком тяжелым для тестового запуска.
+
+## Документация
+
+Обнови документацию точечно:
+
+- `doc/parcels.md`: опиши block orientation, local-space subdivision, oriented parcels, validation и ограничения MVP;
+- `doc/building_footprints.md`: уточни, что parcel mode теперь получает orientation от oriented parcel geometry;
+- `doc/generated_objects.md`: обнови описание `parcel_blocks` и buildings;
+- `configs/README.md`: добавь новые YAML-поля и validation rules;
+- `README.md`: если добавлен demo config, добавь его в список demos и коротко опиши oriented parcels.
+
+Не переписывай всю документацию. Обнови только места, необходимые пользователю и будущему разработчику.
+
+## Тесты
+
+Добавь или обнови unit tests.
+
+Минимальный набор:
+
+1. Config validation:
+   - старые configs загружаются;
+   - новые orientation fields валидны;
+   - unknown orientation source дает `ConfigError`;
+   - отрицательный block orientation jitter дает `ConfigError`.
+
+2. Block/parcel geometry:
+   - axis-aligned block остается совместимым;
+   - rotated block создает parcels с тем же orientation;
+   - subdivision в local-space сохраняет ожидаемые local width/depth;
+   - world-space parcel bbox корректно охватывает corners;
+   - `local_to_world` / `world_to_local` round-trip проходят для parcel geometry.
+
+3. Buildability:
+   - road clearance проверяет oriented sample points;
+   - oriented parcel рядом с road отбрасывается, если его rotated corners/edges попадают в hardscape;
+   - buildable area учитывает inset в local-space.
+
+4. Building placement:
+   - buildings на rotated parcels получают `parcel_id`;
+   - `building.orientation_degrees` совпадает с `parcel.orientation_degrees` при jitter `0`;
+   - footprint sample points лежат внутри oriented buildable area;
+   - roof/facade samples остаются внутри footprint;
+   - buildings не попадают на `road`, `sidewalk`, `road_median`.
+
+5. Детерминированность:
+   - одинаковый seed/config дают одинаковые block orientations, parcel geometry, buildings и metadata;
+   - изменение seed или orientation jitter меняет expected orientation distribution.
+
+6. Metadata/export:
+   - metadata содержит block/parcel orientation aggregates;
+   - `parcel_geometry.oriented_parcels > 0` для demo;
+   - старые metadata поля сохраняются;
+   - CLI создает PLY и metadata для demo config.
+
+7. Backward compatibility:
+   - `configs/mvp.yaml` генерируется;
+   - существующие `demo_*.yaml` генерируются или проходят config load smoke;
+   - существующие footprint/roof/parcels tests не ломаются.
+
+## Проверка
+
+Минимально выполни:
+
+```bash
+uv run python -m unittest discover -s tests
+uv run citygen --config configs/mvp.yaml --out outputs/mvp_oriented_parcels_check.ply
+uv run citygen --config configs/demo_oriented_parcels.yaml --out outputs/demo_oriented_parcels.ply
+```
+
+Затем проверь metadata:
+
+```text
+outputs/demo_oriented_parcels.metadata.json
+```
+
+Критерии хорошего результата:
+
+- тесты проходят;
+- baseline config генерируется без ошибок;
+- demo config генерируется без ошибок;
+- metadata содержит старые поля и новые block/parcel orientation aggregates;
+- `parcel_geometry.oriented_parcels > 0`;
+- buildings aligned с parcel orientation;
+- footprint sample points не выходят за oriented buildable area;
+- buildings не размещаются поверх `road`, `sidewalk` или `road_median`;
+- количество точек в demo достаточно большое, чтобы визуально проверить результат.
+
+Если из-за текущей road architecture не получается надежно вычислять road tangent для всех road models, выбери практичный MVP fallback и честно опиши его в docs/final answer. Главное — subdivision должен работать в local-space квартала, а не только по глобальным `x/y`.
+
+## Финальный ответ
+
+В финальном ответе кратко укажи:
+
+- какие файлы изменены;
+- где реализованы oriented blocks/parcels;
+- как определяется block orientation;
+- какие YAML-поля поддержаны;
+- какие metadata fields добавлены;
+- какой demo config добавлен или обновлен;
+- сколько точек сгенерировалось при CLI-проверке;
+- какие тесты запускались.
+
+Если где-то выбран консервативный MVP-подход вместо полноценной road-topology-aware parcelization, назови это прямо. Это нормально: цель этапа — корректное local-space subdivision с orientation и понятная архитектура для дальнейшего развития.

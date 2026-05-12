@@ -181,6 +181,10 @@ class ParcelsConfig:
     orientation_jitter_degrees: float = 0.0
     max_building_coverage: float = 0.72
     require_building_inside_buildable_area: bool = True
+    oriented_blocks: bool = False
+    block_orientation_source: str = "road_model"
+    block_orientation_jitter_degrees: float = 0.0
+    organic_orientation_jitter_degrees: float = 10.0
 
 
 @dataclass(frozen=True)
@@ -611,6 +615,10 @@ def _parcels_config(raw: dict[str, Any]) -> ParcelsConfig:
         "orientation_jitter_degrees",
         "max_building_coverage",
         "require_building_inside_buildable_area",
+        "oriented_blocks",
+        "block_orientation_source",
+        "block_orientation_jitter_degrees",
+        "organic_orientation_jitter_degrees",
     }
     for key in raw:
         if key not in supported:
@@ -640,6 +648,18 @@ def _parcels_config(raw: dict[str, Any]) -> ParcelsConfig:
             raw,
             "require_building_inside_buildable_area",
             defaults.require_building_inside_buildable_area,
+        ),
+        oriented_blocks=_bool(raw, "oriented_blocks", defaults.oriented_blocks),
+        block_orientation_source=_str(raw, "block_orientation_source", defaults.block_orientation_source),
+        block_orientation_jitter_degrees=_float(
+            raw,
+            "block_orientation_jitter_degrees",
+            defaults.block_orientation_jitter_degrees,
+        ),
+        organic_orientation_jitter_degrees=_float(
+            raw,
+            "organic_orientation_jitter_degrees",
+            defaults.organic_orientation_jitter_degrees,
         ),
     )
 
@@ -785,6 +805,12 @@ def _validate(cfg: CityGenConfig) -> None:
         raise ConfigError("parcels.orientation_jitter_degrees must be >= 0.")
     if not 0 < cfg.parcels.max_building_coverage <= 1:
         raise ConfigError("parcels.max_building_coverage must be between 0 and 1.")
+    if cfg.parcels.block_orientation_source not in {"road_model", "config", "none"}:
+        raise ConfigError("parcels.block_orientation_source must be one of: config, none, road_model.")
+    if cfg.parcels.block_orientation_jitter_degrees < 0:
+        raise ConfigError("parcels.block_orientation_jitter_degrees must be >= 0.")
+    if cfg.parcels.organic_orientation_jitter_degrees < 0:
+        raise ConfigError("parcels.organic_orientation_jitter_degrees must be >= 0.")
     if not 0 <= cfg.parcels.split_jitter_ratio <= 0.45:
         raise ConfigError("parcels.split_jitter_ratio must be between 0 and 0.45.")
     if cfg.parcels.max_subdivision_depth < 0:

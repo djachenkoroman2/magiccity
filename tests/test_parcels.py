@@ -101,6 +101,48 @@ parcels:
         self.assertEqual(oriented.depth, parcel.inner.depth)
         self.assertTrue(oriented.contains_xy(parcel.inner.center_x, parcel.inner.center_y))
 
+    def test_oriented_blocks_subdivide_parcels_in_local_space(self) -> None:
+        config = load_config("configs/demo_oriented_parcels.yaml")
+        scene = generate_scene(config)
+
+        self.assertTrue(config.parcels.oriented_blocks)
+        self.assertGreater(len(scene.blocks), 0)
+        self.assertGreater(len(scene.parcels), 0)
+        self.assertTrue(any(not _is_axis_aligned(block.orientation_degrees) for block in scene.blocks))
+        self.assertTrue(any(not _is_axis_aligned(parcel.orientation_degrees) for parcel in scene.parcels))
+
+        blocks = {block.id: block for block in scene.blocks}
+        parcel = next(parcel for parcel in scene.parcels if not _is_axis_aligned(parcel.orientation_degrees))
+        block = blocks[parcel.block_id]
+
+        self.assertAlmostEqual(parcel.orientation_degrees, block.orientation_degrees, places=6)
+        self.assertLessEqual(parcel.width, config.parcels.max_parcel_width_m + 1e-6)
+        self.assertLessEqual(parcel.depth, config.parcels.max_parcel_depth_m + 1e-6)
+        for x, y in parcel.geometry.corners():
+            self.assertTrue(parcel.bbox.contains_xy(x, y))
+            local = parcel.geometry.world_to_local(x, y)
+            round_trip = parcel.geometry.local_to_world(*local)
+            self.assertAlmostEqual(round_trip[0], x, places=6)
+            self.assertAlmostEqual(round_trip[1], y, places=6)
+
+    def test_buildings_align_to_oriented_parcels_and_avoid_hardscape(self) -> None:
+        config = load_config("configs/demo_oriented_parcels.yaml")
+        scene = generate_scene(config)
+        parcels = {parcel.id: parcel for parcel in scene.parcels}
+        oriented_buildings = [
+            building
+            for building in scene.buildings
+            if building.parcel_id is not None and not _is_axis_aligned(parcels[building.parcel_id].orientation_degrees)
+        ]
+
+        self.assertGreater(len(oriented_buildings), 0)
+        for building in oriented_buildings:
+            parcel = parcels[building.parcel_id]
+            self.assertAlmostEqual(building.orientation_degrees, parcel.orientation_degrees, places=6)
+            for x, y in building.footprint.clearance_sample_points():
+                self.assertTrue(parcel.buildable_geometry.contains_xy(x, y))
+                self.assertEqual(scene.road_network.surface_kind(config, x, y), "ground")
+
     def test_buildings_stay_inside_parcels_and_avoid_roads(self) -> None:
         config = load_config("configs/demo_parcels.yaml")
         scene = generate_scene(config)
@@ -147,6 +189,7 @@ parcels:
         self.assertIn("by_parcel_biome", metadata["building_counts"])
         self.assertIn("parcel_building_alignment", metadata)
         self.assertIn("building_orientations", metadata)
+        self.assertIn("block_geometry", metadata)
         self.assertIn("parcel_geometry", metadata)
         self.assertEqual(
             metadata["parcel_building_alignment"]["buildings_with_parcel_id"],
@@ -156,6 +199,8 @@ parcels:
             metadata["parcel_building_alignment"]["aligned_buildings"],
             metadata["building_counts"]["total"],
         )
+        self.assertIn("orientation_bucket_degrees", metadata["block_geometry"])
+        self.assertIn("orientation_bucket_degrees", metadata["parcel_geometry"])
 
     def test_cli_smoke_writes_demo_parcels(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -185,6 +230,22 @@ parcels:
             metadata["parcel_building_alignment"]["buildings_with_parcel_id"],
         )
 
+    def test_cli_smoke_writes_demo_oriented_parcels(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            out_path = Path(tmp) / "demo_oriented_parcels.ply"
+            exit_code = main(["--config", "configs/demo_oriented_parcels.yaml", "--out", str(out_path)])
+            metadata_path = out_path.with_suffix(".metadata.json")
+            metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(exit_code, 0)
+        self.assertGreater(metadata["point_count"], 0)
+        self.assertGreater(metadata["block_geometry"]["oriented_blocks"], 0)
+        self.assertGreater(metadata["parcel_geometry"]["oriented_parcels"], 0)
+        self.assertEqual(
+            metadata["parcel_building_alignment"]["aligned_buildings"],
+            metadata["parcel_building_alignment"]["buildings_with_parcel_id"],
+        )
+
 
 def _config_from_text(text: str):
     with tempfile.TemporaryDirectory() as tmp:
@@ -204,6 +265,11 @@ def _rect_contains(outer, inner) -> bool:
 
 def _rects_overlap(a, b) -> bool:
     return not (a.max_x < b.min_x or a.min_x > b.max_x or a.max_y < b.min_y or a.min_y > b.max_y)
+
+
+def _is_axis_aligned(angle_degrees: float) -> bool:
+    angle = angle_degrees % 90.0
+    return min(angle, 90.0 - angle) <= 1e-6
 
 
 if __name__ == "__main__":

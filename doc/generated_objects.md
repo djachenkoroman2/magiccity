@@ -59,7 +59,7 @@ Metadata:
 
 ## Parcels
 
-`parcel_blocks` включается через `parcels.enabled: true`. Генератор создает прямоугольные candidate blocks, subdivides them into parcels и использует buildable geometry parcel для buildings. Сейчас generated parcels axis-aligned, но каждый parcel имеет orientation и adapter в `OrientedRect`.
+`parcel_blocks` включается через `parcels.enabled: true`. Генератор создает прямоугольные candidate blocks, subdivides them into parcels и использует buildable geometry parcel для buildings. При `parcels.oriented_blocks: true` block получает orientation, subdivision идет в block local-space, а каждый parcel хранит world-space `OrientedRect`.
 
 Biome interaction:
 
@@ -70,11 +70,12 @@ Metadata:
 
 - `parcel_counts`;
 - `parcel_building_alignment`;
+- `block_geometry`;
 - `parcel_geometry`;
 - `building_counts.by_parcel_biome`;
 - `object_feature_counts.parcel_blocks`.
 
-Ограничение MVP: parcels являются прямоугольной аппроксимацией поверх road primitives, не cadastral/GIS layer. Rotated/polygon parcels подготовлены на уровне geometry API, но текущий generator их еще не строит.
+Ограничение MVP: parcels являются прямоугольной аппроксимацией поверх road primitives, не cadastral/GIS layer. Поддерживаются oriented rectangles, но не arbitrary polygon parcels и не exact road polygon clipping.
 
 ## Buildings
 

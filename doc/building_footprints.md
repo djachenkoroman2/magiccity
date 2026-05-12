@@ -48,7 +48,7 @@ buildings:
 | `courtyard_ratio` | `0.45` | Размер внутреннего двора относительно внешнего блока. |
 | `wing_width_ratio` | `0.35` | Относительная ширина крыла у L/U/T форм. |
 | `min_part_width_m` | `5.0` | Минимальная ширина крыла или периметральной части. |
-| `align_to_roads` | `true` | Зарезервировано для дальнейшей ориентации slab-форм; текущий MVP генерирует axis-aligned footprints. |
+| `align_to_roads` | `true` | Зарезервировано для дальнейшей road-specific ориентации slab-форм. В parcel mode orientation приходит от parcel geometry. |
 
 ## Поддерживаемые типы
 
@@ -79,7 +79,7 @@ Alias-значения:
 
 В текущем MVP формы реализованы без тяжелых GIS-зависимостей:
 
-- `rectangle`, `square`, `slab` — один axis-aligned прямоугольник;
+- `rectangle`, `square`, `slab` — один прямоугольник в footprint local-space;
 - `circle` — круг с фасадом, аппроксимированным регулярной ломаной;
 - `courtyard` — внешний прямоугольник плюс прямоугольная пустота;
 - `l_shape`, `u_shape`, `t_shape` — union-of-rectangles без фасадов на внутренних стыках.
@@ -114,7 +114,7 @@ Facade sampling:
 
 Эта модель быстрее и проще полноценного polygon collision. Она может отбрасывать некоторые допустимые здания, но не должна ставить очевидные здания на дороги или тротуары.
 
-Parcel mode использует прямоугольную MVP-аппроксимацию кварталов и участков поверх текущих road primitives. Footprints строятся в local-space участка и затем получают world-space transform: при `parcels.building_alignment: parcel` локальные оси здания параллельны локальным осям parcel. Для текущих axis-aligned parcels угол равен `0`, но методы `contains_xy`, `boundary_segments` и `clearance_sample_points` уже учитывают transform. Подробно этот слой описан в `doc/parcels.md`.
+Parcel mode использует прямоугольную MVP-аппроксимацию кварталов и участков поверх текущих road primitives. Footprints строятся в local-space участка и затем получают world-space transform: при `parcels.building_alignment: parcel` локальные оси здания параллельны локальным осям parcel. Если включены `parcels.oriented_blocks`, эта orientation приходит от local-space subdivision повернутого block. Подробно этот слой описан в `doc/parcels.md`.
 
 ## Формы
 

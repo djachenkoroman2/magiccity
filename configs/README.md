@@ -467,7 +467,7 @@ buildings:
 | `courtyard_ratio` | number | `0.45` | `0 < value < 0.8` | Доля внешнего размера, занимаемая внутренним двором у `courtyard`. |
 | `wing_width_ratio` | number | `0.35` | `0 < value < 0.8` | Базовая относительная ширина крыла для `l_shape`, `u_shape`, `t_shape`. |
 | `min_part_width_m` | number | `5.0` | `> 0` | Минимальная ширина крыла или периметральной части. Если форма слишком мала, генератор детерминированно fallback-ится к `rectangle`. |
-| `align_to_roads` | boolean | `true` | `true`, `false` | Зарезервировано для ориентации вытянутых форм относительно дорог; текущая MVP-геометрия остается axis-aligned. |
+| `align_to_roads` | boolean | `true` | `true`, `false` | Зарезервировано для будущей road-specific ориентации вытянутых форм. В parcel mode orientation приходит от parcel geometry. |
 
 Поддерживаемые canonical footprint types:
 
@@ -584,6 +584,10 @@ parcels:
   orientation_jitter_degrees: 0
   max_building_coverage: 0.72
   require_building_inside_buildable_area: true
+  oriented_blocks: false
+  block_orientation_source: road_model
+  block_orientation_jitter_degrees: 0
+  organic_orientation_jitter_degrees: 10
 ```
 
 | Параметр | Тип | По умолчанию | Возможные значения | Действие |
@@ -603,10 +607,14 @@ parcels:
 | `orientation_jitter_degrees` | number | `0.0` | `>= 0` | Детерминированное отклонение orientation здания от parcel orientation. |
 | `max_building_coverage` | number | `0.72` | `> 0`, `<= 1` | Максимальная доля buildable area, которую может занять footprint. |
 | `require_building_inside_buildable_area` | boolean | `true` | `true`, `false` | Требует, чтобы representative points footprint лежали внутри buildable area parcel. |
+| `oriented_blocks` | boolean | `false` | `true`, `false` | Включает local-space subdivision повернутых blocks. |
+| `block_orientation_source` | string | `road_model` | `road_model`, `config`, `none` | Источник orientation для blocks. |
+| `block_orientation_jitter_degrees` | number | `0.0` | `>= 0` | Детерминированный jitter orientation block. |
+| `organic_orientation_jitter_degrees` | number | `10.0` | `>= 0` | Минимальный jitter для organic blocks при source `road_model`. |
 
-MVP не строит полноценные GIS-полигоны кварталов из дорожного графа. Вместо этого он создает road-aware прямоугольные blocks/parcels, отбрасывает участки без достаточного road/sidewalk clearance и размещает здания только внутри buildable area parcel. Generated parcels пока axis-aligned, но placement использует parcel geometry/orientation API.
+MVP не строит полноценные GIS-полигоны кварталов из дорожного графа. Вместо этого он создает road-aware прямоугольные blocks/parcels, отбрасывает участки без достаточного road/sidewalk clearance и размещает здания только внутри buildable area parcel. При `oriented_blocks: true` subdivision идет в local-space block, а `bbox` остается только broad phase axis-aligned envelope.
 
-Metadata получает агрегированные секции `parcel_counts`, `parcel_building_alignment`, `building_orientations` и `parcel_geometry`: количество blocks/parcels, buildable и occupied parcels, распределение parcels по биомам, число зданий с `parcel_id`, alignment mode и orientation summary.
+Metadata получает агрегированные секции `parcel_counts`, `parcel_building_alignment`, `building_orientations`, `block_geometry` и `parcel_geometry`: количество blocks/parcels, buildable и occupied parcels, распределение parcels по биомам, число зданий с `parcel_id`, alignment mode и orientation summary.
 
 Подробный архитектурный справочник по этому слою находится в `../doc/parcels.md`.
 
@@ -686,7 +694,7 @@ outputs/example.ply
 outputs/example.metadata.json
 ```
 
-Metadata содержит seed, bbox тайла, количество точек, распределение классов, mapping классов, использованные road models, `road_profile_counts`, `road_profile_counts_by_biome`, `road_widths`, `road_median`, biome counts, `building_counts`, `parcel_counts`, `parcel_building_alignment`, `building_orientations`, `parcel_geometry`, списки поддержанных footprint/roof types и полный конфиг после применения defaults.
+Metadata содержит seed, bbox тайла, количество точек, распределение классов, mapping классов, использованные road models, `road_profile_counts`, `road_profile_counts_by_biome`, `road_widths`, `road_median`, biome counts, `building_counts`, `parcel_counts`, `parcel_building_alignment`, `building_orientations`, `block_geometry`, `parcel_geometry`, списки поддержанных footprint/roof types и полный конфиг после применения defaults.
 
 ## `worldgen`
 
@@ -757,6 +765,9 @@ Catalog architecture описана в `doc/worldgen_catalogs.md`, а списо
 | `parcels.building_alignment` неизвестен | поддерживаются `parcel` и `global` |
 | `parcels.orientation_jitter_degrees < 0` | orientation jitter не может быть отрицательным |
 | `parcels.max_building_coverage` вне `0..1` | coverage должен быть положительным и не больше `1` |
+| `parcels.block_orientation_source` неизвестен | поддерживаются `road_model`, `config`, `none` |
+| `parcels.block_orientation_jitter_degrees < 0` | block orientation jitter не может быть отрицательным |
+| `parcels.organic_orientation_jitter_degrees < 0` | organic orientation jitter не может быть отрицательным |
 | `parcels.split_jitter_ratio` вне `0..0.45` | split jitter должен быть в допустимом диапазоне |
 | `parcels.max_subdivision_depth < 0` | глубина subdivision не может быть отрицательной |
 | `parcels.max_parcel_width_m < parcels.min_parcel_width_m` | максимум ширины parcel должен быть не меньше минимума |
@@ -788,6 +799,7 @@ Catalog architecture описана в `doc/worldgen_catalogs.md`, а списо
 | `demo_universal_showcase.yaml` | Большой showcase-тайл: mixed roads, urban fields, биомы, mixed footprints, mixed roofs и parcels. См. `demo_universal_showcase.md`. |
 | `demo_parcels.yaml` | Parcel subdivision: прямоугольные blocks/parcels и здания, привязанные к участкам. |
 | `demo_parcel_alignment.yaml` | Parcel-aware placement: здания выравниваются по buildable geometry участка, metadata показывает alignment/orientation aggregates. |
+| `demo_oriented_parcels.yaml` | Oriented blocks/parcels: local-space subdivision повернутых кварталов и aligned buildings. |
 | `demo_building_footprints.yaml` | Несколько типов building footprint в одном тайле. |
 | `demo_courtyard_blocks.yaml` | Периметральные здания с внутренними дворами. |
 | `demo_building_roofs.yaml` | Все поддержанные roof types в одном тайле. |

@@ -123,6 +123,7 @@ def write_metadata(path: str | Path, config: CityGenConfig, scene: Scene, points
         "parcel_counts": scene.parcel_counts,
         "parcel_building_alignment": _parcel_building_alignment(config, scene),
         "building_orientations": _building_orientation_summary(scene),
+        "block_geometry": _block_geometry_summary(config, scene),
         "parcel_geometry": _parcel_geometry_summary(scene),
         "supported_footprint_types": list(FOOTPRINT_KINDS),
         "supported_roof_types": list(ROOF_KINDS),
@@ -204,13 +205,38 @@ def _building_orientation_summary(scene: Scene) -> dict[str, float | int]:
     }
 
 
-def _parcel_geometry_summary(scene: Scene) -> dict[str, int]:
-    axis_aligned = sum(
-        1 for parcel in scene.parcels if angle_delta_degrees(parcel.orientation_degrees, 0.0) <= 1e-6
-    )
+def _block_geometry_summary(config: CityGenConfig, scene: Scene) -> dict[str, Any]:
+    axis_aligned = sum(1 for block in scene.blocks if _is_axis_aligned(block.orientation_degrees))
+    oriented = len(scene.blocks) - axis_aligned
+    return {
+        "oriented_blocks": oriented,
+        "axis_aligned_blocks": axis_aligned,
+        "orientation_source": config.parcels.block_orientation_source,
+        "oriented_blocks_enabled": config.parcels.oriented_blocks,
+        "orientation_bucket_degrees": _orientation_buckets(
+            block.orientation_degrees for block in scene.blocks
+        ),
+    }
+
+
+def _parcel_geometry_summary(scene: Scene) -> dict[str, Any]:
+    axis_aligned = sum(1 for parcel in scene.parcels if _is_axis_aligned(parcel.orientation_degrees))
     oriented = len(scene.parcels) - axis_aligned
     return {
         "oriented_parcels": oriented,
         "axis_aligned_parcels": axis_aligned,
         "buildable_area_failures": sum(1 for parcel in scene.parcels if not parcel.buildable),
+        "orientation_bucket_degrees": _orientation_buckets(
+            parcel.orientation_degrees for parcel in scene.parcels
+        ),
     }
+
+
+def _orientation_buckets(values) -> dict[str, int]:
+    counts: Counter[int] = Counter(round(normalize_degrees(value)) % 360 for value in values)
+    return {str(bucket): count for bucket, count in sorted(counts.items())}
+
+
+def _is_axis_aligned(angle_degrees: float) -> bool:
+    angle = normalize_degrees(angle_degrees) % 90.0
+    return min(angle, 90.0 - angle) <= 1e-6

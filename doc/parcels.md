@@ -25,6 +25,10 @@ parcels:
   orientation_jitter_degrees: 0
   max_building_coverage: 0.72
   require_building_inside_buildable_area: true
+  oriented_blocks: false
+  block_orientation_source: road_model
+  block_orientation_jitter_degrees: 0
+  organic_orientation_jitter_degrees: 10
 ```
 
 Если секция отсутствует, используется `enabled: false`, и генератор сохраняет прежний режим размещения зданий.
@@ -46,8 +50,12 @@ parcels:
 | `orientation_jitter_degrees` | `0.0` | Детерминированное отклонение от parcel orientation. По умолчанию здания строго параллельны границам участка. |
 | `max_building_coverage` | `0.72` | Верхняя доля buildable area, которую может занимать footprint. |
 | `require_building_inside_buildable_area` | `true` | Требует, чтобы representative points footprint лежали внутри buildable area. |
+| `oriented_blocks` | `false` | Включает oriented block/parcel subdivision. При `false` blocks/parcels остаются axis-aligned. |
+| `block_orientation_source` | `road_model` | Источник ориентации block: `road_model`, `config` или `none`. |
+| `block_orientation_jitter_degrees` | `0.0` | Детерминированный jitter ориентации block. |
+| `organic_orientation_jitter_degrees` | `10.0` | Минимальный jitter для organic blocks при `block_orientation_source: road_model`. |
 
-Валидатор требует положительные размеры, согласованные min/max-значения, `split_jitter_ratio` в диапазоне `0..0.45`, `orientation_jitter_degrees >= 0`, `max_building_coverage` в диапазоне `0..1` и известные имена параметров в секции `parcels`.
+Валидатор требует положительные размеры, согласованные min/max-значения, `split_jitter_ratio` в диапазоне `0..0.45`, `orientation_jitter_degrees >= 0`, block orientation jitter values `>= 0`, `max_building_coverage` в диапазоне `0..1` и известные имена параметров в секции `parcels`.
 
 ## Как Это Работает
 
@@ -55,13 +63,17 @@ parcels:
 2. По `work_bbox` проходит регулярная сетка с шагом `block_size_m`.
 3. Каждая candidate cell превращается в прямоугольный `Block`; края немного inset-ятся через `block_jitter_m`.
 4. Слишком маленькие blocks отбрасываются по `min_block_size_m`.
-5. Каждый block рекурсивно делится по длинной оси, пока parcel не укладывается в `max_parcel_width_m` и `max_parcel_depth_m` или пока не достигнут `max_subdivision_depth`.
-6. Для каждого parcel считается `inner` через `parcel_setback_m`, biome в центре участка, расстояние до ближайшей road primitive и parcel geometry. Сейчас generated parcels остаются axis-aligned, поэтому orientation равен `0`.
-7. Parcel считается buildable, если его `inner` достаточно велик и representative points проходят road/sidewalk clearance.
-8. Building generation проходит по buildable parcels детерминированно от `seed` и `parcel.id`.
-9. Footprint строится в локальной системе участка и получает orientation по `building_alignment`.
+5. Если `oriented_blocks: true`, block получает orientation. При `block_orientation_source: road_model` используются effective road model/biome около центра block; `config` берет `roads.angle_degrees`, а `none` оставляет `0`.
+6. Каждый block рекурсивно делится в local-space по длинной оси, пока parcel не укладывается в `max_parcel_width_m` и `max_parcel_depth_m` или пока не достигнут `max_subdivision_depth`.
+7. Каждый local parcel rect преобразуется в world-space `OrientedRect`. `parcel.bbox` остается axis-aligned broad phase bbox, а точные checks используют `parcel.geometry`.
+8. Для каждого parcel считается buildable area через local-space inset `parcel_setback_m`, biome в центре участка, расстояние до ближайшей road primitive и parcel geometry.
+9. Parcel считается buildable, если его buildable geometry достаточно велика и representative points проходят road/sidewalk/median clearance.
+10. Building generation проходит по buildable parcels детерминированно от `seed` и `parcel.id`.
+11. Footprint строится в локальной системе участка и получает orientation по `building_alignment`.
 
 Это сознательная MVP-аппроксимация. Текущие дороги представлены primitives и distance-based классификацией, а не полноценным топологическим графом, поэтому `parcels` не обещают идеальную GIS-полигонализацию кварталов для `organic`, `free`, `radial` или `mixed` roads.
+
+Для `mixed` road model orientation выбирается практично: residential/grid обычно дает `0`, industrial/linear следует `roads.angle_degrees`, downtown/radial_ring использует tangent вокруг city center, suburb/organic получает base angle с deterministic jitter. Это не road-tangent solver, а lightweight MVP-связь parcels с road context.
 
 ## Placement Зданий
 
@@ -125,7 +137,19 @@ Metadata получает агрегированную секцию `parcel_coun
   "parcel_geometry": {
     "oriented_parcels": 0,
     "axis_aligned_parcels": 134,
-    "buildable_area_failures": 96
+    "buildable_area_failures": 96,
+    "orientation_bucket_degrees": {
+      "0": 134
+    }
+  },
+  "block_geometry": {
+    "oriented_blocks": 0,
+    "axis_aligned_blocks": 24,
+    "orientation_source": "road_model",
+    "oriented_blocks_enabled": false,
+    "orientation_bucket_degrees": {
+      "0": 24
+    }
   }
 }
 ```
@@ -142,6 +166,12 @@ uv run citygen --config configs/demo_parcels.yaml --out outputs/demo_parcels.ply
 
 ```bash
 uv run citygen --config configs/demo_parcel_alignment.yaml --out outputs/demo_parcel_alignment.ply
+```
+
+Демо oriented parcels:
+
+```bash
+uv run citygen --config configs/demo_oriented_parcels.yaml --out outputs/demo_oriented_parcels.ply
 ```
 
 Большой showcase с включенными parcels:
@@ -181,8 +211,9 @@ jq '{point_count, building_counts, parcel_counts}' outputs/demo_parcels.metadata
 
 ## Ограничения MVP
 
-- Blocks и generated parcels пока прямоугольные и axis-aligned; geometry layer уже хранит orientation для будущих rotated parcels.
+- Blocks и generated parcels остаются прямоугольными, но могут быть oriented. Полноценные arbitrary polygon parcels не поддерживаются.
 - Нет Shapely/GIS stack и нет polygon clipping дорожных коридоров.
+- Orientation для blocks берется из road model/config эвристикой, без вычисления точного nearest road tangent.
 - Road/sidewalk avoidance проверяется через representative sample points и distance to road primitives.
 - Overlap зданий фильтруется консервативно по bbox.
 - Полный список parcel polygons не пишется в metadata, чтобы metadata оставалась компактной.

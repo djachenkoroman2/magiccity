@@ -155,6 +155,10 @@ parcels:
   orientation_jitter_degrees: 3
   max_building_coverage: 0.65
   require_building_inside_buildable_area: true
+  oriented_blocks: true
+  block_orientation_source: road_model
+  block_orientation_jitter_degrees: 4
+  organic_orientation_jitter_degrees: 12
 """
         )
 
@@ -162,6 +166,10 @@ parcels:
         self.assertEqual(config.parcels.orientation_jitter_degrees, 3.0)
         self.assertEqual(config.parcels.max_building_coverage, 0.65)
         self.assertTrue(config.parcels.require_building_inside_buildable_area)
+        self.assertTrue(config.parcels.oriented_blocks)
+        self.assertEqual(config.parcels.block_orientation_source, "road_model")
+        self.assertEqual(config.parcels.block_orientation_jitter_degrees, 4.0)
+        self.assertEqual(config.parcels.organic_orientation_jitter_degrees, 12.0)
 
     def test_invalid_parcel_alignment_config_is_error(self) -> None:
         with self.assertRaises(ConfigError):
@@ -191,6 +199,26 @@ seed: 7
 parcels:
   enabled: true
   max_building_coverage: 1.5
+"""
+            )
+
+        with self.assertRaises(ConfigError):
+            _config_from_text(
+                """
+seed: 7
+parcels:
+  enabled: true
+  block_orientation_source: nearest_lane
+"""
+            )
+
+        with self.assertRaises(ConfigError):
+            _config_from_text(
+                """
+seed: 7
+parcels:
+  enabled: true
+  block_orientation_jitter_degrees: -1
 """
             )
 
