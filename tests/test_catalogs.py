@@ -6,6 +6,8 @@ import random
 import tempfile
 import unittest
 
+import yaml
+
 from citygen.biomes import biome_definition, biome_params, classify_biome, preferred_road_model_for_biome
 from citygen.catalogs import DEFAULT_CATALOGS, WORLDGEN_STAGES, catalog_summary, validate_catalogs
 from citygen.classes import POINT_CLASSES
@@ -68,6 +70,44 @@ class CatalogTests(unittest.TestCase):
         self.assertIn("CityGenConfig", config_reference.read_text(encoding="utf-8"))
         self.assertIn("интеграционный showcase", showcase_guide.read_text(encoding="utf-8"))
 
+    def test_mkdocs_html_documentation_config(self) -> None:
+        mkdocs_path = Path("mkdocs.yml")
+        index_path = Path("doc/index.md")
+
+        self.assertTrue(mkdocs_path.exists())
+        self.assertTrue(index_path.exists())
+
+        mkdocs_config = yaml.safe_load(mkdocs_path.read_text(encoding="utf-8"))
+        self.assertEqual(mkdocs_config["docs_dir"], "doc")
+        self.assertEqual(mkdocs_config["site_dir"], ".mkdocs_html")
+        self.assertFalse(mkdocs_config["use_directory_urls"])
+        self.assertIn("html/**", mkdocs_config["exclude_docs"])
+        self.assertIn("scripts/mkdocs_export_doc_html.py", mkdocs_config["hooks"])
+        self.assertTrue(Path("scripts/mkdocs_export_doc_html.py").exists())
+
+        nav_targets = []
+        for item in mkdocs_config["nav"]:
+            nav_targets.extend(item.values())
+
+        for doc_name in (
+            "index.md",
+            "configuration_reference.md",
+            "roads.md",
+            "biomes.md",
+            "parcels.md",
+            "building_footprints.md",
+            "building_roofs.md",
+            "generated_objects.md",
+            "worldgen_catalogs.md",
+            "universal_showcase.md",
+        ):
+            self.assertIn(doc_name, nav_targets)
+            self.assertTrue(Path("doc", doc_name).exists())
+
+        index_text = index_path.read_text(encoding="utf-8")
+        self.assertIn("Документация MagicCity", index_text)
+        self.assertIn("doc/html/index.html", _readme_text())
+
     def test_metadata_contains_worldgen_and_catalog_summary(self) -> None:
         config = _config_from_text(
             """
@@ -119,6 +159,10 @@ def _config_from_text(text: str):
         path = Path(tmp) / "config.yaml"
         path.write_text(text, encoding="utf-8")
         return load_config(path)
+
+
+def _readme_text() -> str:
+    return Path("README.md").read_text(encoding="utf-8")
 
 
 if __name__ == "__main__":

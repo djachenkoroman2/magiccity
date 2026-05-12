@@ -1,0 +1,203 @@
+Ты senior Python-инженер, technical writer и архитектор документации для процедурных генераторов городских point clouds.
+
+В репозитории есть рабочий MVP `citygen`: CLI на Python, YAML-конфиги, детерминированный `seed`, тайлы, road primitives, несколько road models, road profiles, worldgen catalogs, urban fields, биомы, parcels, oriented block/parcel subdivision, parcel-aware building placement, разные building footprints, разные roof geometry, surface sampling, ASCII PLY export и metadata JSON. Координатная конвенция проекта: горизонтальная плоскость `x/y`, высота `z`.
+
+Документация уже перенесена в `doc/` и должна оставаться русскоязычной. Нужно добавить сборку HTML-документации с одной точкой входа, чтобы все сгенерированные HTML-файлы и ассеты располагались в `doc/html/`.
+
+Не останавливайся на описании подхода: внеси рабочие изменения в конфигурацию проекта, документацию и проверки.
+
+## Главная цель
+
+Сделать статическую HTML-документацию на основе текущих Markdown-файлов в `doc/`:
+
+- единая точка входа: `doc/html/index.html`;
+- все сгенерированные HTML-файлы и ассеты лежат внутри `doc/html/`;
+- исходные Markdown-файлы остаются в `doc/`;
+- `doc/html/` не должен считываться как входная документация при повторной сборке;
+- навигация должна покрывать все основные документы;
+- документация и UI должны быть пригодны для русского языка;
+- README должен объяснять, как собрать и открыть HTML-документацию.
+
+## Предпочтительный инструмент
+
+Используй MkDocs как простой генератор статической документации.
+
+Добавь или обнови:
+
+```text
+mkdocs.yml
+doc/index.md
+README.md
+pyproject.toml / uv dependency metadata, если нужно
+tests, если в проекте уже есть проверки документации
+```
+
+Если `mkdocs` еще не подключен как dev-зависимость, добавь его через проектный механизм зависимостей. Для проекта с `uv` предпочтительно:
+
+```bash
+uv add --dev mkdocs
+```
+
+Если из-за ограничений окружения нельзя обновить lock-файл через `uv add`, внеси минимально корректные изменения вручную только там, где это принято в проекте, и явно объясни это в финальном ответе.
+
+## Требования к `mkdocs.yml`
+
+Создай конфиг в корне репозитория:
+
+```yaml
+site_name: MagicCity Docs
+site_url: ""
+docs_dir: doc
+site_dir: doc/html
+
+use_directory_urls: false
+exclude_docs: |
+  html/**
+
+nav:
+  - Главная: index.md
+  - Конфигурация: configuration_reference.md
+  - Дороги: roads.md
+  - Биомы: biomes.md
+  - Parcels: parcels.md
+  - Footprints зданий: building_footprints.md
+  - Крыши зданий: building_roofs.md
+  - Генерируемые объекты: generated_objects.md
+  - Worldgen catalogs: worldgen_catalogs.md
+  - Universal showcase: universal_showcase.md
+
+theme:
+  name: mkdocs
+  locale: ru
+```
+
+Можно улучшить названия пунктов навигации, но они должны оставаться русскоязычными и понятными.
+
+Критически важно:
+
+- `docs_dir` должен быть `doc`;
+- `site_dir` должен быть `doc/html`;
+- `exclude_docs` должен исключать `html/**`, иначе повторная сборка может начать читать сгенерированный HTML как входные документы;
+- `use_directory_urls: false` нужен, чтобы локальное открытие файлов через браузер было удобным.
+
+## Требования к `doc/index.md`
+
+Создай или обнови `doc/index.md` как единую Markdown-точку входа в документацию.
+
+Минимальное содержание:
+
+```md
+# Документация MagicCity
+
+MagicCity — процедурный генератор городских point clouds. Эта документация описывает YAML-конфиги, runtime-модели, дороги, биомы, parcels, buildings, sampling, catalogs и metadata.
+
+## Разделы
+
+- [Справочник по конфигурации](configuration_reference.md)
+- [Дороги](roads.md)
+- [Биомы](biomes.md)
+- [Parcels](parcels.md)
+- [Footprints зданий](building_footprints.md)
+- [Крыши зданий](building_roofs.md)
+- [Генерируемые объекты](generated_objects.md)
+- [Worldgen catalogs](worldgen_catalogs.md)
+- [Universal showcase](universal_showcase.md)
+```
+
+Можно добавить короткие описания разделов, команды запуска и ссылку на README, но не превращай index в дубликат полного README.
+
+## Обновление README
+
+В `README.md` добавь короткий раздел на русском языке:
+
+- как собрать HTML-документацию;
+- где лежит точка входа;
+- как открыть локально;
+- что исходники документации остаются в `doc/*.md`.
+
+Пример команд:
+
+```bash
+uv run mkdocs build --clean
+```
+
+Результат:
+
+```text
+doc/html/index.html
+```
+
+Не нужно запускать web server как обязательный путь. Статический HTML должен открываться локально. Можно дополнительно упомянуть preview:
+
+```bash
+uv run mkdocs serve
+```
+
+## Ссылки и навигация
+
+Проверь, что:
+
+- из `doc/index.md` доступны все основные документы;
+- из HTML-сайта есть единая навигация;
+- существующие относительные ссылки между Markdown-файлами не ломаются;
+- `doc/html/` не попадает в nav как исходный раздел;
+- нет ссылок на удаленный `configs/demo_universal_showcase.md`;
+- `configs/README.md` остается коротким stub-указателем, а не второй большой документацией.
+
+## Git и generated output
+
+Нужно принять осознанное решение по `doc/html/`:
+
+- если проект хочет хранить собранную HTML-документацию в репозитории, сгенерируй `doc/html/` и оставь файлы в рабочем дереве;
+- если проект не хранит generated output, добавь `doc/html/` в `.gitignore` и в финальном ответе укажи команду сборки.
+
+Так как в этой задаче явно требуется, чтобы все файлы были расположены в `doc/html`, предпочтительно выполнить сборку хотя бы один раз и убедиться, что `doc/html/index.html` создан.
+
+Не добавляй огромные бинарные артефакты. Обычный статический HTML/CSS/JS от MkDocs допустим.
+
+## Проверки
+
+Минимально выполни:
+
+```bash
+uv run mkdocs build --clean
+uv run python -m unittest discover -s tests
+git diff --check
+```
+
+Дополнительно проверь ссылки и старые пути через `rg`:
+
+```bash
+rg -n "configs/demo_universal_showcase.md|doc/html|mkdocs|configuration_reference.md|universal_showcase.md" README.md doc configs tests mkdocs.yml
+```
+
+Ожидаемый результат:
+
+- `uv run mkdocs build --clean` проходит;
+- `doc/html/index.html` существует;
+- `doc/html/` содержит HTML-версии основных документов;
+- tests проходят;
+- `git diff --check` проходит;
+- README содержит русскую инструкцию по сборке HTML-документации.
+
+## Ограничения
+
+- Не переписывай содержание всей документации без необходимости.
+- Не меняй runtime-код генератора.
+- Не меняй semantic class ids.
+- Не меняй YAML schema ради документации.
+- Не делай Sphinx, Docusaurus или тяжелый frontend, если MkDocs достаточно.
+- Не оставляй англоязычный README-раздел вокруг новой HTML-документации.
+- Не допускай, чтобы `doc/html/` рекурсивно включался во входные docs.
+
+## Финальный ответ
+
+В финальном ответе кратко укажи:
+
+- какие файлы созданы или изменены;
+- где находится единая HTML-точка входа;
+- какой генератор документации используется;
+- как собрать HTML-документацию;
+- была ли сгенерирована `doc/html/`;
+- добавлен ли `doc/html/` в `.gitignore` или HTML оставлен как артефакт в рабочем дереве;
+- какие проверки запускались.

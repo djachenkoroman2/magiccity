@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="ru" data-bs-theme="light">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        
+        
+        <link rel="shortcut icon" href="img/favicon.ico">
+        <title>Биомы - Документация MagicCity</title>
+        <link href="css/bootstrap.min.css" rel="stylesheet">
+        <link href="css/fontawesome.min.css" rel="stylesheet">
+        <link href="css/brands.min.css" rel="stylesheet">
+        <link href="css/solid.min.css" rel="stylesheet">
+        <link href="css/v4-font-face.min.css" rel="stylesheet">
+        <link href="css/base.css" rel="stylesheet">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="index.html">Документация MagicCity</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#navbar-collapse" aria-controls="navbar-collapse" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="nav-item">
+                                <a href="index.html" class="nav-link">Главная</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="configuration_reference.html" class="nav-link">Конфигурация</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="roads.html" class="nav-link">Дороги</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="biomes.html" class="nav-link active" aria-current="page">Биомы</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="parcels.html" class="nav-link">Parcels</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="building_footprints.html" class="nav-link">Footprints зданий</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="building_roofs.html" class="nav-link">Крыши зданий</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="generated_objects.html" class="nav-link">Генерируемые объекты</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="worldgen_catalogs.html" class="nav-link">Worldgen catalogs</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="universal_showcase.html" class="nav-link">Universal showcase</a>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ms-md-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a rel="prev" href="roads.html" class="nav-link">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" href="parcels.html" class="nav-link">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#citygen" class="nav-link">Справочник по биомам citygen</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#_1" class="nav-link">Где используются биомы</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#urban_fields" class="nav-link">Городские поля (urban_fields)</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#_2" class="nav-link">Как выбирается биом</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#_3" class="nav-link">Общая таблица характеристик</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#_4" class="nav-link">Как биом меняет здания</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#_5" class="nav-link">Как биом меняет дороги</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#downtown" class="nav-link">downtown</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#residential" class="nav-link">residential</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#industrial" class="nav-link">industrial</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#suburb" class="nav-link">suburb</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#_6" class="nav-link">Настройка распределения биомов</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#_7" class="nav-link">Диагностика через метаданные</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#-" class="nav-link">Связанные демо-конфиги</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="citygen">Справочник по биомам citygen</h1>
+<p>Этот документ описывает биомы, которые используются в <code>citygen</code> для процедурного выбора характера района. Биом влияет на вероятность появления зданий, размеры footprints, высотность, отступы от дорог, road profiles и, при <code>roads.model: mixed</code>, на предпочитаемую модель дорожной сети.</p>
+<p>Параметры биомов теперь описаны в едином catalog layer: <code>citygen/catalogs.py</code>, <code>BiomeDefinition</code>. Старые функции <code>classify_biome()</code>, <code>biome_params()</code> и <code>preferred_road_model_for_biome()</code> сохранены как совместимые фасады.</p>
+<p>YAML-поля <code>urban_fields</code> описаны в <code>doc/configuration_reference.md</code>. Дорожная часть подробнее описана в <code>doc/roads.md</code>, а связь биомов с generated object ids — в <code>doc/generated_objects.md</code>.</p>
+<p>Текущая версия поддерживает четыре биома:</p>
+<table>
+<thead>
+<tr>
+<th>Биом</th>
+<th>Теги</th>
+<th>Краткое назначение</th>
+<th>Предпочтительная модель дорог</th>
+<th>Предпочтения road profiles</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>downtown</code></td>
+<td><code>central</code>, <code>dense</code>, <code>highrise</code></td>
+<td>плотный центральный район с высокой застройкой</td>
+<td><code>radial_ring</code></td>
+<td><code>collector</code>, <code>arterial</code>, <code>boulevard</code></td>
+</tr>
+<tr>
+<td><code>residential</code></td>
+<td><code>urban</code>, <code>regular</code>, <code>housing</code></td>
+<td>обычная городская жилая ткань</td>
+<td><code>grid</code></td>
+<td><code>local</code>, <code>collector</code>, <code>arterial</code></td>
+</tr>
+<tr>
+<td><code>industrial</code></td>
+<td><code>industrial</code>, <code>large_footprints</code></td>
+<td>промышленная зона с крупными низкими объемами</td>
+<td><code>linear</code></td>
+<td><code>collector</code>, <code>arterial</code>, <code>boulevard</code></td>
+</tr>
+<tr>
+<td><code>suburb</code></td>
+<td><code>suburban</code>, <code>green</code>, <code>lowrise</code></td>
+<td>пригородная и зеленая низкоплотная зона</td>
+<td><code>organic</code></td>
+<td><code>local</code>, <code>collector</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="_1">Где используются биомы</h2>
+<p>Биомы включаются через секцию <code>urban_fields</code>. Если <code>urban_fields.enabled: false</code>, вся сцена считается <code>residential</code>.</p>
+<pre><code class="language-yaml">urban_fields:
+  enabled: true
+  center_x: 128
+  center_y: 128
+  city_radius_m: 460
+  noise_scale_m: 180
+  density_bias: 0.04
+  industrial_bias: 0.08
+  green_bias: 0.02
+</code></pre>
+<p>Биом вычисляется в мировых координатах <code>x/y</code>. Поэтому соседние тайлы при одинаковом <code>seed</code> и согласованных <code>urban_fields</code> получают непрерывную картину районов.</p>
+<p>Основные места применения:</p>
+<ul>
+<li>генерация зданий: <code>build_probability</code>, <code>footprint_scale</code>, <code>height_min_multiplier</code>, <code>height_max_multiplier</code>, <code>setback_scale</code>;</li>
+<li>дорожная сеть <code>mixed</code>: выбор road model по биому в каждой точке;</li>
+<li>road profiles: выбор ширины/типа дороги по biome-aware weights;</li>
+<li>generated objects: catalog хранит object weights для будущих placement stages;</li>
+<li>metadata: распределение биомов пишется в <code>biome_counts</code>;</li>
+<li>анализ сцены: биом помогает понять, почему в разных частях тайла различаются плотность, высотность и дороги.</li>
+</ul>
+<h2 id="urban_fields">Городские поля (<code>urban_fields</code>)</h2>
+<p>Перед выбором биома citygen вычисляет набор плавных полей. Все поля clamp-ятся в диапазон <code>0..1</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Поле</th>
+<th>Смысл</th>
+<th>Основное влияние</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>centrality</code></td>
+<td>близость к центру города</td>
+<td>downtown, height potential, порядок городской ткани</td>
+</tr>
+<tr>
+<td><code>density</code></td>
+<td>плотность городской ткани</td>
+<td>downtown, suburb, шанс зданий, высотность</td>
+</tr>
+<tr>
+<td><code>height_potential</code></td>
+<td>потенциал высотности</td>
+<td>множитель максимальной высоты при включенных urban fields</td>
+</tr>
+<tr>
+<td><code>green_index</code></td>
+<td>зеленость или открытость</td>
+<td>suburb</td>
+</tr>
+<tr>
+<td><code>industrialness</code></td>
+<td>промышленный характер</td>
+<td>industrial</td>
+</tr>
+<tr>
+<td><code>orderliness</code></td>
+<td>регулярность среды</td>
+<td>сейчас вычисляется, но напрямую не меняет дороги или здания</td>
+</tr>
+</tbody>
+</table>
+<p>Если <code>urban_fields.enabled: false</code>, поля имеют фиксированные нейтральные значения:</p>
+<table>
+<thead>
+<tr>
+<th>Поле</th>
+<th>Значение</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>centrality</code></td>
+<td><code>0.5</code></td>
+</tr>
+<tr>
+<td><code>density</code></td>
+<td><code>0.5</code></td>
+</tr>
+<tr>
+<td><code>height_potential</code></td>
+<td><code>0.5</code></td>
+</tr>
+<tr>
+<td><code>green_index</code></td>
+<td><code>0.35</code></td>
+</tr>
+<tr>
+<td><code>industrialness</code></td>
+<td><code>0.12</code></td>
+</tr>
+<tr>
+<td><code>orderliness</code></td>
+<td><code>0.65</code></td>
+</tr>
+</tbody>
+</table>
+<p>Такая комбинация всегда классифицируется как <code>residential</code>.</p>
+<h2 id="_2">Как выбирается биом</h2>
+<p>Классификация идет по порядку. Первое подходящее правило побеждает.</p>
+<pre><code class="language-text">if urban_fields.enabled == false:
+    biome = residential
+else if centrality &gt;= 0.68 and density &gt;= 0.58:
+    biome = downtown
+else if industrialness &gt;= 0.58 and centrality &lt;= 0.78:
+    biome = industrial
+else if density &lt;= 0.38:
+    biome = suburb
+else if green_index &gt;= 0.68 and centrality &lt;= 0.55:
+    biome = suburb
+else:
+    biome = residential
+</code></pre>
+<p>Важные особенности:</p>
+<ul>
+<li><code>downtown</code> проверяется первым. Очень центральный и плотный район останется downtown даже при заметной industrialness.</li>
+<li><code>industrial</code> проверяется раньше suburb. Промышленная зона может победить зеленость или низкую плотность, если выполняет свой порог.</li>
+<li><code>residential</code> является запасным биомом.</li>
+<li><code>suburb</code> появляется либо от низкой плотности, либо от высокой зелености вне центра.</li>
+</ul>
+<h2 id="_3">Общая таблица характеристик</h2>
+<table>
+<thead>
+<tr>
+<th>Биом</th>
+<th style="text-align: right;"><code>build_probability</code></th>
+<th style="text-align: right;"><code>footprint_scale</code></th>
+<th style="text-align: right;"><code>height_min_multiplier</code></th>
+<th style="text-align: right;"><code>height_max_multiplier</code></th>
+<th style="text-align: right;"><code>setback_scale</code></th>
+<th>Предпочтительная модель дорог</th>
+<th>Object weights</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>downtown</code></td>
+<td style="text-align: right;"><code>0.94</code></td>
+<td style="text-align: right;"><code>1.08</code></td>
+<td style="text-align: right;"><code>1.45</code></td>
+<td style="text-align: right;"><code>1.75</code></td>
+<td style="text-align: right;"><code>0.65</code></td>
+<td><code>radial_ring</code></td>
+<td><code>building</code>, <code>road_network</code>, <code>parcel_blocks</code></td>
+</tr>
+<tr>
+<td><code>residential</code></td>
+<td style="text-align: right;"><code>0.78</code></td>
+<td style="text-align: right;"><code>0.92</code></td>
+<td style="text-align: right;"><code>0.85</code></td>
+<td style="text-align: right;"><code>0.82</code></td>
+<td style="text-align: right;"><code>1.00</code></td>
+<td><code>grid</code></td>
+<td><code>building</code>, <code>road_network</code>, <code>parcel_blocks</code></td>
+</tr>
+<tr>
+<td><code>industrial</code></td>
+<td style="text-align: right;"><code>0.64</code></td>
+<td style="text-align: right;"><code>1.45</code></td>
+<td style="text-align: right;"><code>0.90</code></td>
+<td style="text-align: right;"><code>0.75</code></td>
+<td style="text-align: right;"><code>0.85</code></td>
+<td><code>linear</code></td>
+<td><code>building</code>, <code>road_network</code>, <code>parcel_blocks</code></td>
+</tr>
+<tr>
+<td><code>suburb</code></td>
+<td style="text-align: right;"><code>0.38</code></td>
+<td style="text-align: right;"><code>0.72</code></td>
+<td style="text-align: right;"><code>0.55</code></td>
+<td style="text-align: right;"><code>0.45</code></td>
+<td style="text-align: right;"><code>1.45</code></td>
+<td><code>organic</code></td>
+<td><code>building</code>, <code>road_network</code>, <code>parcel_blocks</code></td>
+</tr>
+</tbody>
+</table>
+<p>Пояснения к параметрам:</p>
+<table>
+<thead>
+<tr>
+<th>Параметр</th>
+<th>Что означает</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>build_probability</code></td>
+<td>Базовая вероятность принять candidate-здание до проверки дорог, отступов и пересечений.</td>
+</tr>
+<tr>
+<td><code>footprint_scale</code></td>
+<td>Множитель для <code>buildings.footprint_min_m</code> и <code>buildings.footprint_max_m</code>.</td>
+</tr>
+<tr>
+<td><code>height_min_multiplier</code></td>
+<td>Множитель для <code>buildings.min_height_m</code>.</td>
+</tr>
+<tr>
+<td><code>height_max_multiplier</code></td>
+<td>Множитель для <code>buildings.max_height_m</code>.</td>
+</tr>
+<tr>
+<td><code>setback_scale</code></td>
+<td>Множитель для <code>buildings.setback_m</code>.</td>
+</tr>
+<tr>
+<td><code>preferred_road_model</code></td>
+<td>Модель дорог, которую использует <code>roads.model: mixed</code> в области этого биома.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="_4">Как биом меняет здания</h2>
+<p>Для каждого candidate-здания <code>citygen</code>:</p>
+<ol>
+<li>Вычисляет биом в центре candidate.</li>
+<li>Берет параметры биома.</li>
+<li>Считает вероятность постройки.</li>
+<li>Масштабирует footprint, высоту и setback.</li>
+<li>Проверяет clearance от дорог и пересечение с другими зданиями.</li>
+</ol>
+<p>Формулы:</p>
+<pre><code class="language-text">effective_probability = biome.build_probability
+
+if urban_fields.enabled:
+    effective_probability = min(
+        0.97,
+        biome.build_probability * (0.72 + density * 0.55)
+    )
+
+effective_setback = max(1.0, buildings.setback_m * biome.setback_scale)
+
+effective_footprint_min = max(
+    4.0,
+    buildings.footprint_min_m * biome.footprint_scale
+)
+
+effective_footprint_max = max(
+    effective_footprint_min,
+    buildings.footprint_max_m * biome.footprint_scale
+)
+
+effective_min_height = buildings.min_height_m * biome.height_min_multiplier
+effective_max_height = buildings.max_height_m * biome.height_max_multiplier
+
+if urban_fields.enabled:
+    effective_max_height *= 0.72 + height_potential * 0.72
+
+effective_max_height = max(effective_min_height, effective_max_height)
+</code></pre>
+<p>Clearance от дороги в совместимом default-profile режиме:</p>
+<pre><code class="language-text">roads.width_m / 2 + roads.sidewalk_width_m + effective_setback
+</code></pre>
+<p>Если включены <code>roads.profiles</code>, используется effective hardscape width назначенного road profile; для зданий и parcels это проходит через <code>nearest_hardscape_distance(x, y)</code>.</p>
+<p>Поэтому даже при высокой <code>build_probability</code> здание может не появиться, если квартал слишком узкий, footprint слишком крупный, дороги слишком широкие или setback слишком большой.</p>
+<h2 id="_5">Как биом меняет дороги</h2>
+<p>Биомы всегда могут влиять на выбор road profile, если включен <code>roads.profiles.enabled</code>. На выбор геометрической модели дороги биомы влияют только при:</p>
+<pre><code class="language-yaml">roads:
+  model: mixed
+</code></pre>
+<p>В этом режиме заранее строятся четыре сети:</p>
+<ul>
+<li><code>grid</code>;</li>
+<li><code>radial_ring</code>;</li>
+<li><code>linear</code>;</li>
+<li><code>organic</code>.</li>
+</ul>
+<p>При классификации каждой точки выбирается preferred road model текущего биома:</p>
+<table>
+<thead>
+<tr>
+<th>Биом</th>
+<th>Road model в <code>mixed</code></th>
+<th>Типичные road profiles</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>downtown</code></td>
+<td><code>radial_ring</code></td>
+<td><code>collector</code>, <code>arterial</code>, <code>boulevard</code>; широкий median встречается чаще</td>
+</tr>
+<tr>
+<td><code>residential</code></td>
+<td><code>grid</code></td>
+<td><code>local</code>, <code>collector</code>, иногда <code>arterial</code></td>
+</tr>
+<tr>
+<td><code>industrial</code></td>
+<td><code>linear</code></td>
+<td>широкие <code>collector</code>/<code>arterial</code>, иногда <code>boulevard</code></td>
+</tr>
+<tr>
+<td><code>suburb</code></td>
+<td><code>organic</code></td>
+<td>в основном <code>local</code>, иногда <code>collector</code></td>
+</tr>
+</tbody>
+</table>
+<p>Если выбрать обычный <code>roads.model</code>, например <code>grid</code> или <code>organic</code>, биомы все равно будут влиять на здания и, при включенных <code>roads.profiles</code>, на ширину/тип road primitive. Но геометрическая модель сети переключаться не будет.</p>
+<p>Road profile выбирается детерминированно по seed, road model, anchor-точке primitive и биому этой anchor-точки. Это MVP-подход поверх текущих road primitives: он дает стабильную ширину у каждой primitive и избегает мелкого мерцания ширины между соседними sample points.</p>
+<p>При <code>parcels.oriented_blocks: true</code> биом через <code>roads.model: mixed</code> также может влиять на orientation квартала: <code>residential/grid</code> и <code>industrial/linear</code> используют <code>roads.angle_degrees</code>, <code>downtown/radial_ring</code> использует направление вокруг city center, а <code>suburb/organic</code> получает детерминированный jitter. Подробности — в <code>doc/parcels.md</code>.</p>
+<h2 id="downtown"><code>downtown</code></h2>
+<p><code>downtown</code> представляет центральное ядро города: плотное, высотное, с высокой вероятностью застройки и меньшими отступами от дорог.</p>
+<p>Условие выбора:</p>
+<pre><code class="language-text">centrality &gt;= 0.68 and density &gt;= 0.58
+</code></pre>
+<p>Характеристики:</p>
+<table>
+<thead>
+<tr>
+<th>Характеристика</th>
+<th style="text-align: right;">Значение</th>
+<th>Эффект</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>build_probability</code></td>
+<td style="text-align: right;"><code>0.94</code></td>
+<td>почти каждый подходящий candidate пытается стать зданием</td>
+</tr>
+<tr>
+<td><code>footprint_scale</code></td>
+<td style="text-align: right;"><code>1.08</code></td>
+<td>footprints немного крупнее базовых</td>
+</tr>
+<tr>
+<td><code>height_min_multiplier</code></td>
+<td style="text-align: right;"><code>1.45</code></td>
+<td>минимальные высоты заметно выше</td>
+</tr>
+<tr>
+<td><code>height_max_multiplier</code></td>
+<td style="text-align: right;"><code>1.75</code></td>
+<td>максимальные высоты сильно выше</td>
+</tr>
+<tr>
+<td><code>setback_scale</code></td>
+<td style="text-align: right;"><code>0.65</code></td>
+<td>здания ближе к улицам</td>
+</tr>
+<tr>
+<td>preferred road model</td>
+<td style="text-align: right;"><code>radial_ring</code></td>
+<td>лучи и кольца вокруг центра</td>
+</tr>
+</tbody>
+</table>
+<p>Визуально и структурно:</p>
+<ul>
+<li>высокая концентрация точек <code>building_roof</code> и <code>building_facade</code>;</li>
+<li>более высокие вертикальные объемы;</li>
+<li>меньше свободного пространства у дорог;</li>
+<li>хорошо сочетается с частыми улицами и небольшими кварталами;</li>
+<li>в <code>mixed</code> получает радиально-кольцевую структуру.</li>
+</ul>
+<p>Полезные настройки:</p>
+<pre><code class="language-yaml">urban_fields:
+  enabled: true
+  center_x: 128
+  center_y: 128
+  city_radius_m: 400
+  noise_scale_m: 160
+  density_bias: 0.08
+roads:
+  model: mixed
+  spacing_m: 54
+  radial_count: 16
+  ring_spacing_m: 58
+buildings:
+  min_height_m: 12
+  max_height_m: 76
+  setback_m: 5
+</code></pre>
+<h2 id="residential"><code>residential</code></h2>
+<p><code>residential</code> представляет обычную городскую жилую ткань. Это основной запасной биом, который заполняет области без ярко выраженного центра, индустрии или пригорода.</p>
+<p>Условие выбора:</p>
+<pre><code class="language-text">запасной вариант, если не подошли downtown, industrial и suburb
+</code></pre>
+<p>При <code>urban_fields.enabled: false</code> вся сцена всегда становится <code>residential</code>.</p>
+<p>Характеристики:</p>
+<table>
+<thead>
+<tr>
+<th>Характеристика</th>
+<th style="text-align: right;">Значение</th>
+<th>Эффект</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>build_probability</code></td>
+<td style="text-align: right;"><code>0.78</code></td>
+<td>достаточно плотная, но не максимальная застройка</td>
+</tr>
+<tr>
+<td><code>footprint_scale</code></td>
+<td style="text-align: right;"><code>0.92</code></td>
+<td>footprints чуть меньше базовых</td>
+</tr>
+<tr>
+<td><code>height_min_multiplier</code></td>
+<td style="text-align: right;"><code>0.85</code></td>
+<td>минимальные высоты чуть ниже базовых</td>
+</tr>
+<tr>
+<td><code>height_max_multiplier</code></td>
+<td style="text-align: right;"><code>0.82</code></td>
+<td>максимальные высоты ниже базовых</td>
+</tr>
+<tr>
+<td><code>setback_scale</code></td>
+<td style="text-align: right;"><code>1.00</code></td>
+<td>базовые отступы без изменения</td>
+</tr>
+<tr>
+<td>preferred road model</td>
+<td style="text-align: right;"><code>grid</code></td>
+<td>регулярная сетка улиц</td>
+</tr>
+</tbody>
+</table>
+<p>Визуально и структурно:</p>
+<ul>
+<li>средняя плотность зданий;</li>
+<li>умеренная высотность;</li>
+<li>достаточно регулярная городская структура;</li>
+<li>хорошо подходит для базовых MVP-сцен;</li>
+<li>наиболее предсказуемый биом для тестов и базовых конфигов.</li>
+</ul>
+<p>Полезные настройки:</p>
+<pre><code class="language-yaml">urban_fields:
+  enabled: true
+  center_x: 128
+  center_y: 128
+  city_radius_m: 700
+  noise_scale_m: 240
+roads:
+  model: mixed
+  spacing_m: 64
+buildings:
+  min_height_m: 8
+  max_height_m: 48
+  setback_m: 6
+</code></pre>
+<h2 id="industrial"><code>industrial</code></h2>
+<p><code>industrial</code> представляет промышленные и складские районы. Он дает более крупные footprints, меньшую высотность и линейную дорожную структуру в <code>mixed</code>.</p>
+<p>Условие выбора:</p>
+<pre><code class="language-text">industrialness &gt;= 0.58 and centrality &lt;= 0.78
+</code></pre>
+<p>Характеристики:</p>
+<table>
+<thead>
+<tr>
+<th>Характеристика</th>
+<th style="text-align: right;">Значение</th>
+<th>Эффект</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>build_probability</code></td>
+<td style="text-align: right;"><code>0.64</code></td>
+<td>зданий меньше, чем в residential и downtown</td>
+</tr>
+<tr>
+<td><code>footprint_scale</code></td>
+<td style="text-align: right;"><code>1.45</code></td>
+<td>footprints значительно крупнее</td>
+</tr>
+<tr>
+<td><code>height_min_multiplier</code></td>
+<td style="text-align: right;"><code>0.90</code></td>
+<td>минимальные высоты немного ниже базовых</td>
+</tr>
+<tr>
+<td><code>height_max_multiplier</code></td>
+<td style="text-align: right;"><code>0.75</code></td>
+<td>максимальные высоты ниже базовых</td>
+</tr>
+<tr>
+<td><code>setback_scale</code></td>
+<td style="text-align: right;"><code>0.85</code></td>
+<td>отступы чуть меньше базовых</td>
+</tr>
+<tr>
+<td>preferred road model</td>
+<td style="text-align: right;"><code>linear</code></td>
+<td>вытянутая линейная структура</td>
+</tr>
+</tbody>
+</table>
+<p>Визуально и структурно:</p>
+<ul>
+<li>меньше зданий, но они крупнее в плане;</li>
+<li>высотность обычно ниже, чем в downtown;</li>
+<li>кварталы выглядят более складскими или производственными;</li>
+<li>в <code>mixed</code> дороги организуются вдоль основной оси с редкими поперечными улицами;</li>
+<li>чаще проявляется ближе к кольцевой зоне вокруг центра, потому что поле industrialness использует industrial ring.</li>
+</ul>
+<p>Полезные настройки:</p>
+<pre><code class="language-yaml">urban_fields:
+  enabled: true
+  center_x: 160
+  center_y: 160
+  city_radius_m: 300
+  noise_scale_m: 140
+  industrial_bias: 0.12
+roads:
+  model: mixed
+  spacing_m: 76
+  angle_degrees: 18
+buildings:
+  footprint_min_m: 16
+  footprint_max_m: 44
+  max_height_m: 42
+</code></pre>
+<h2 id="suburb"><code>suburb</code></h2>
+<p><code>suburb</code> представляет пригородные, зеленые и низкоплотные зоны. Он снижает вероятность зданий, уменьшает footprints и высоты, но увеличивает отступы.</p>
+<p>Условия выбора:</p>
+<pre><code class="language-text">density &lt;= 0.38
+</code></pre>
+<p>или:</p>
+<pre><code class="language-text">green_index &gt;= 0.68 and centrality &lt;= 0.55
+</code></pre>
+<p>Характеристики:</p>
+<table>
+<thead>
+<tr>
+<th>Характеристика</th>
+<th style="text-align: right;">Значение</th>
+<th>Эффект</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>build_probability</code></td>
+<td style="text-align: right;"><code>0.38</code></td>
+<td>застройка редкая</td>
+</tr>
+<tr>
+<td><code>footprint_scale</code></td>
+<td style="text-align: right;"><code>0.72</code></td>
+<td>footprints меньше базовых</td>
+</tr>
+<tr>
+<td><code>height_min_multiplier</code></td>
+<td style="text-align: right;"><code>0.55</code></td>
+<td>минимальные высоты сильно ниже</td>
+</tr>
+<tr>
+<td><code>height_max_multiplier</code></td>
+<td style="text-align: right;"><code>0.45</code></td>
+<td>максимальные высоты сильно ниже</td>
+</tr>
+<tr>
+<td><code>setback_scale</code></td>
+<td style="text-align: right;"><code>1.45</code></td>
+<td>отступы заметно больше</td>
+</tr>
+<tr>
+<td>preferred road model</td>
+<td style="text-align: right;"><code>organic</code></td>
+<td>волнистые, менее регулярные улицы</td>
+</tr>
+</tbody>
+</table>
+<p>Визуально и структурно:</p>
+<ul>
+<li>низкая плотность зданий;</li>
+<li>низкая высотность;</li>
+<li>больше свободного пространства между дорогой и зданиями;</li>
+<li>органичные улицы в <code>mixed</code>;</li>
+<li>хорошо сочетается с более выраженным рельефом и крупными кварталами.</li>
+</ul>
+<p>Полезные настройки:</p>
+<pre><code class="language-yaml">urban_fields:
+  enabled: true
+  center_x: 128
+  center_y: 128
+  city_radius_m: 460
+  noise_scale_m: 180
+  green_bias: 0.08
+roads:
+  model: mixed
+  spacing_m: 72
+  organic_wander_m: 18
+buildings:
+  min_height_m: 5
+  max_height_m: 28
+  setback_m: 10
+</code></pre>
+<h2 id="_6">Настройка распределения биомов</h2>
+<p>Главные ручки управления находятся в <code>urban_fields</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Цель</th>
+<th>Что изменить</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Больше downtown</td>
+<td>увеличить <code>density_bias</code>, расположить <code>center_x/center_y</code> внутри тайла, уменьшить или умеренно подобрать <code>city_radius_m</code></td>
+</tr>
+<tr>
+<td>Шире центральная зона</td>
+<td>увеличить <code>city_radius_m</code></td>
+</tr>
+<tr>
+<td>Более резкие и мелкие пятна районов</td>
+<td>уменьшить <code>noise_scale_m</code></td>
+</tr>
+<tr>
+<td>Более плавные и крупные районы</td>
+<td>увеличить <code>noise_scale_m</code></td>
+</tr>
+<tr>
+<td>Больше industrial</td>
+<td>увеличить <code>industrial_bias</code></td>
+</tr>
+<tr>
+<td>Больше suburb</td>
+<td>увеличить <code>green_bias</code> или уменьшить <code>density_bias</code></td>
+</tr>
+<tr>
+<td>Меньше suburb</td>
+<td>увеличить <code>density_bias</code> или уменьшить <code>green_bias</code></td>
+</tr>
+<tr>
+<td>Разнообразнее дороги в <code>mixed</code></td>
+<td>включить <code>urban_fields</code> и подобрать bias так, чтобы в metadata было несколько <code>biome_counts</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="_7">Диагностика через метаданные</h2>
+<p>После генерации рядом с PLY создается файл:</p>
+<pre><code class="language-text">outputs/example.metadata.json
+</code></pre>
+<p>В нем полезны поля:</p>
+<table>
+<thead>
+<tr>
+<th>Поле</th>
+<th>Что показывает</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>biome_counts</code></td>
+<td>сколько sample-точек bbox попало в каждый биом</td>
+</tr>
+<tr>
+<td><code>road_models</code></td>
+<td>какие модели дорог использовала сцена</td>
+</tr>
+<tr>
+<td><code>road_profile_counts</code></td>
+<td>какие road profiles были назначены road primitives</td>
+</tr>
+<tr>
+<td><code>road_profile_counts_by_biome</code></td>
+<td>распределение road profiles по биомам anchor-точек</td>
+</tr>
+<tr>
+<td><code>road_widths</code></td>
+<td>минимальная/максимальная ширина проезжей части, median и полного коридора</td>
+</tr>
+<tr>
+<td><code>class_counts</code></td>
+<td>распределение point classes: ground, road, road_median, sidewalk, facades, roofs</td>
+</tr>
+<tr>
+<td><code>config</code></td>
+<td>итоговый конфиг после применения значений по умолчанию</td>
+</tr>
+</tbody>
+</table>
+<p>Пример:</p>
+<pre><code class="language-json">{
+  &quot;biome_counts&quot;: {
+    &quot;downtown&quot;: 12,
+    &quot;industrial&quot;: 18,
+    &quot;residential&quot;: 34,
+    &quot;suburb&quot;: 17
+  },
+  &quot;road_models&quot;: [&quot;grid&quot;, &quot;linear&quot;, &quot;organic&quot;, &quot;radial_ring&quot;]
+}
+</code></pre>
+<p>Если <code>biome_counts</code> содержит только <code>residential</code>, проверь:</p>
+<ul>
+<li>включен ли <code>urban_fields.enabled</code>;</li>
+<li>находится ли <code>center_x/center_y</code> рядом с тайлом;</li>
+<li>не слишком ли большой или маленький <code>city_radius_m</code>;</li>
+<li>нужны ли <code>density_bias</code>, <code>industrial_bias</code> или <code>green_bias</code>;</li>
+<li>достаточно ли большой тайл, чтобы увидеть несколько зон.</li>
+</ul>
+<h2 id="-">Связанные демо-конфиги</h2>
+<table>
+<thead>
+<tr>
+<th>Файл</th>
+<th>Что полезно смотреть</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>configs/demo_road_profiles.yaml</code></td>
+<td>mixed roads, urban fields, road profiles по биомам и <code>road_median</code> без зданий</td>
+</tr>
+<tr>
+<td><code>configs/demo_universal_showcase.yaml</code></td>
+<td>mixed roads, несколько биомов, parcels, mixed footprints и mixed roofs</td>
+</tr>
+<tr>
+<td><code>configs/demo_oriented_parcels.yaml</code></td>
+<td>mixed road context плюс oriented block/parcel subdivision</td>
+</tr>
+<tr>
+<td><code>configs/demo_parcel_alignment.yaml</code></td>
+<td>placement с учетом parcels на mixed roads и urban fields</td>
+</tr>
+<tr>
+<td><code>configs/mvp.yaml</code></td>
+<td>базовое поведение, близкое к <code>residential</code>, при выключенных <code>urban_fields</code></td>
+</tr>
+</tbody>
+</table></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="js/bootstrap.bundle.min.js"></script>
+        <script>
+            var base_url = ".",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="js/base.js"></script>
+        <script src="search/main.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>

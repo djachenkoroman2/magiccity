@@ -1,0 +1,2162 @@
+<!DOCTYPE html>
+<html lang="ru" data-bs-theme="light">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        
+        
+        <link rel="shortcut icon" href="img/favicon.ico">
+        <title>Конфигурация - Документация MagicCity</title>
+        <link href="css/bootstrap.min.css" rel="stylesheet">
+        <link href="css/fontawesome.min.css" rel="stylesheet">
+        <link href="css/brands.min.css" rel="stylesheet">
+        <link href="css/solid.min.css" rel="stylesheet">
+        <link href="css/v4-font-face.min.css" rel="stylesheet">
+        <link href="css/base.css" rel="stylesheet">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="index.html">Документация MagicCity</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#navbar-collapse" aria-controls="navbar-collapse" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="nav-item">
+                                <a href="index.html" class="nav-link">Главная</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="configuration_reference.html" class="nav-link active" aria-current="page">Конфигурация</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="roads.html" class="nav-link">Дороги</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="biomes.html" class="nav-link">Биомы</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="parcels.html" class="nav-link">Parcels</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="building_footprints.html" class="nav-link">Footprints зданий</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="building_roofs.html" class="nav-link">Крыши зданий</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="generated_objects.html" class="nav-link">Генерируемые объекты</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="worldgen_catalogs.html" class="nav-link">Worldgen catalogs</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="universal_showcase.html" class="nav-link">Universal showcase</a>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ms-md-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a rel="prev" href="index.html" class="nav-link">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" href="roads.html" class="nav-link">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#_1" class="nav-link">Справочник по конфигурации</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#yaml" class="nav-link">Общие правила YAML</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#_2" class="nav-link">Корневые параметры</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#tile" class="nav-link">tile</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#tiles" class="nav-link">tiles</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#terrain" class="nav-link">terrain</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#urban_fields" class="nav-link">urban_fields</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#roads" class="nav-link">roads</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#buildings" class="nav-link">buildings</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#parcels" class="nav-link">parcels</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#sampling" class="nav-link">sampling</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#output" class="nav-link">output</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#worldgen" class="nav-link">worldgen</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#_3" class="nav-link">Ограничения валидатора</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#_4" class="nav-link">Примеры конфигов</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="_1">Справочник по конфигурации</h1>
+<p>Этот документ является справочником по YAML-конфигам <code>citygen</code>, построенным от исходного кода. Источник истины: <code>CityGenConfig</code> и вложенные значения по умолчанию dataclass-ов в <code>citygen/config.py</code>, логика валидатора, каталоги в <code>citygen/catalogs.py</code>, runtime-код дорог/parcels/зданий и экспорт metadata.</p>
+<p><code>configs/*.yaml</code> остаются примерами запуска и проверочными конфигами. Они не являются источником схемы.</p>
+<p>Связанные тематические документы:</p>
+<ul>
+<li><code>doc/roads.md</code> — модели дорог, primitives, профили и surface-классы;</li>
+<li><code>doc/biomes.md</code> — <code>urban_fields</code>, классификация биомов и влияние биомов;</li>
+<li><code>doc/parcels.md</code> — block/parcel subdivision и oriented parcels;</li>
+<li><code>doc/building_footprints.md</code> — идентификаторы footprints, aliases и семплирование;</li>
+<li><code>doc/building_roofs.md</code> — идентификаторы roofs, aliases и функции высоты;</li>
+<li><code>doc/generated_objects.md</code> — feature ids объектов и semantic classes;</li>
+<li><code>doc/worldgen_catalogs.md</code> — каталоги и стадии пайплайна;</li>
+<li><code>doc/universal_showcase.md</code> — справочник по большому интеграционному демонстрационному сценарию.</li>
+</ul>
+<p>Запуск одного конфига:</p>
+<pre><code class="language-bash">uv run citygen --config configs/mvp.yaml --out outputs/mvp_tile.ply
+</code></pre>
+<p>Для multi-tile конфига <code>--out</code> должен быть директорией или может быть пропущен:</p>
+<pre><code class="language-bash">uv run citygen --config path/to/multi_tile_config.yaml --out outputs/multi_tile
+</code></pre>
+<h2 id="yaml">Общие правила YAML</h2>
+<ul>
+<li>Корневой объект должен быть YAML mapping, то есть словарем ключей и значений.</li>
+<li>Обязательное поле только одно: <code>seed</code>.</li>
+<li>Все остальные секции опциональны и получают значения по умолчанию.</li>
+<li>Все размеры и расстояния задаются в метрах.</li>
+<li>Горизонтальные координаты сцены: <code>x</code> и <code>y</code>; высота: <code>z</code>.</li>
+<li>Булевы значения пишутся как <code>true</code> или <code>false</code>.</li>
+<li>Текущий загрузчик читает описанные ниже поля. Секция <code>parcels</code> валидирует имена параметров строго, чтобы опечатки в новом слое участков не проходили молча.</li>
+</ul>
+<p>Минимальный валидный конфиг:</p>
+<pre><code class="language-yaml">seed: 7
+</code></pre>
+<p>Полный конфиг со всеми значениями по умолчанию:</p>
+<pre><code class="language-yaml">seed: 42
+tile:
+  x: 0
+  y: 0
+  size_m: 256
+  margin_m: 32
+terrain:
+  base_height_m: 0
+  height_noise_m: 1.5
+urban_fields:
+  enabled: false
+  center_x: 0
+  center_y: 0
+  city_radius_m: 1200
+  noise_scale_m: 350
+  density_bias: 0
+  industrial_bias: 0
+  green_bias: 0
+roads:
+  model: grid
+  spacing_m: 64
+  width_m: 10
+  sidewalk_width_m: 3
+  angle_degrees: 0
+  radial_count: 12
+  ring_spacing_m: 0
+  organic_wander_m: 0
+  profiles:
+    enabled: false
+    default: default
+    definitions:
+      default:
+        carriageway_width_m: 10
+        sidewalk_width_m: 3
+        median_width_m: 0
+    model_weights: {}
+    biome_weights: {}
+buildings:
+  enabled: true
+  min_height_m: 8
+  max_height_m: 60
+  setback_m: 6
+  footprint_min_m: 12
+  footprint_max_m: 36
+  footprint:
+    model: rectangle
+    weights: {}
+    circle_segments: 24
+    courtyard_ratio: 0.45
+    wing_width_ratio: 0.35
+    min_part_width_m: 5
+    align_to_roads: true
+  roof:
+    model: flat
+    weights: {}
+    pitch_degrees: 28
+    pitch_jitter_degrees: 8
+    flat_slope_degrees: 0
+    eave_overhang_m: 0
+    ridge_height_ratio: 0.35
+    mansard_break_ratio: 0.45
+    dome_segments: 16
+    align_to_long_axis: true
+parcels:
+  enabled: false
+  block_size_m: 96
+  block_jitter_m: 8
+  min_block_size_m: 32
+  min_parcel_width_m: 14
+  max_parcel_width_m: 42
+  min_parcel_depth_m: 18
+  max_parcel_depth_m: 56
+  parcel_setback_m: 2
+  split_jitter_ratio: 0.18
+  max_subdivision_depth: 3
+  building_alignment: parcel
+  orientation_jitter_degrees: 0
+  max_building_coverage: 0.72
+  require_building_inside_buildable_area: true
+  oriented_blocks: false
+  block_orientation_source: road_model
+  block_orientation_jitter_degrees: 0
+  organic_orientation_jitter_degrees: 10
+sampling:
+  mode: surface
+  ground_spacing_m: 2
+  road_spacing_m: 1.5
+  building_spacing_m: 2
+  jitter_ratio: 0.18
+output:
+  format: ply
+  include_rgb: true
+  include_class: true
+worldgen:
+  catalog_docs: true
+  strict_catalog_validation: true
+</code></pre>
+<h2 id="_2">Корневые параметры</h2>
+<table>
+<thead>
+<tr>
+<th>Параметр</th>
+<th>Тип</th>
+<th>Обязателен</th>
+<th>Значение по умолчанию</th>
+<th>Действие</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>seed</code></td>
+<td>integer</td>
+<td>да</td>
+<td>нет</td>
+<td>Управляет всей детерминированной генерацией: рельефом, размещением зданий, размерами footprints, высотами, изгибами некоторых дорог и jitter. Один и тот же конфиг с тем же seed дает тот же результат.</td>
+</tr>
+<tr>
+<td><code>tile</code></td>
+<td>mapping</td>
+<td>нет</td>
+<td>см. секцию <code>tile</code></td>
+<td>Описывает один тайл. Используется, когда секция <code>tiles</code> отсутствует.</td>
+</tr>
+<tr>
+<td><code>tiles</code></td>
+<td>mapping</td>
+<td>нет</td>
+<td>отсутствует</td>
+<td>Описывает пакет из нескольких тайлов. Если задана эта секция, CLI генерирует несколько PLY-файлов.</td>
+</tr>
+<tr>
+<td><code>terrain</code></td>
+<td>mapping</td>
+<td>нет</td>
+<td>см. секцию <code>terrain</code></td>
+<td>Настраивает высоту поверхности.</td>
+</tr>
+<tr>
+<td><code>urban_fields</code></td>
+<td>mapping</td>
+<td>нет</td>
+<td>см. секцию <code>urban_fields</code></td>
+<td>Включает процедурные городские поля и биомы.</td>
+</tr>
+<tr>
+<td><code>roads</code></td>
+<td>mapping</td>
+<td>нет</td>
+<td>см. секцию <code>roads</code></td>
+<td>Настраивает модель дорог, ширину дорог и тротуары.</td>
+</tr>
+<tr>
+<td><code>buildings</code></td>
+<td>mapping</td>
+<td>нет</td>
+<td>см. секцию <code>buildings</code></td>
+<td>Настраивает генерацию зданий.</td>
+</tr>
+<tr>
+<td><code>parcels</code></td>
+<td>mapping</td>
+<td>нет</td>
+<td>см. секцию <code>parcels</code></td>
+<td>Включает прямоугольное разбиение blocks/parcels и размещение зданий внутри участков.</td>
+</tr>
+<tr>
+<td><code>sampling</code></td>
+<td>mapping</td>
+<td>нет</td>
+<td>см. секцию <code>sampling</code></td>
+<td>Настраивает плотность и регулярность точек.</td>
+</tr>
+<tr>
+<td><code>output</code></td>
+<td>mapping</td>
+<td>нет</td>
+<td>см. секцию <code>output</code></td>
+<td>Настраивает PLY-поля.</td>
+</tr>
+<tr>
+<td><code>worldgen</code></td>
+<td>mapping</td>
+<td>нет</td>
+<td>см. секцию <code>worldgen</code></td>
+<td>Настраивает флаги валидации catalogs/worldgen.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="tile"><code>tile</code></h2>
+<p>Секция <code>tile</code> описывает один квадратный тайл в мировой сетке.</p>
+<pre><code class="language-yaml">tile:
+  x: 0
+  y: 0
+  size_m: 256
+  margin_m: 32
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Параметр</th>
+<th>Тип</th>
+<th>По умолчанию</th>
+<th>Возможные значения</th>
+<th>Действие</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>x</code></td>
+<td>integer</td>
+<td><code>0</code></td>
+<td>любое целое число</td>
+<td>Индекс тайла по мировой оси X. Может быть отрицательным.</td>
+</tr>
+<tr>
+<td><code>y</code></td>
+<td>integer</td>
+<td><code>0</code></td>
+<td>любое целое число</td>
+<td>Индекс тайла по мировой оси Y. Может быть отрицательным.</td>
+</tr>
+<tr>
+<td><code>size_m</code></td>
+<td>number</td>
+<td><code>256.0</code></td>
+<td><code>&gt; 0</code></td>
+<td>Размер стороны тайла в метрах. Чем больше значение, тем больше площадь и обычно больше точек.</td>
+</tr>
+<tr>
+<td><code>margin_m</code></td>
+<td>number</td>
+<td><code>32.0</code></td>
+<td><code>&gt; 0</code></td>
+<td>Рабочий запас вокруг тайла. Дороги и здания строятся в расширенной области, затем точки обрезаются обратно до bbox тайла.</td>
+</tr>
+</tbody>
+</table>
+<p>BBox тайла считается так:</p>
+<pre><code class="language-text">min_x = tile.x * tile.size_m
+min_y = tile.y * tile.size_m
+max_x = min_x + tile.size_m
+max_y = min_y + tile.size_m
+</code></pre>
+<p><code>margin_m</code> помогает получить более естественные края: здания и дороги могут быть рассчитаны за пределами тайла, но в итоговый PLY попадут только точки внутри исходного bbox.</p>
+<h2 id="tiles"><code>tiles</code></h2>
+<p>Секция <code>tiles</code> включает генерацию нескольких тайлов за один запуск. Она заменяет одиночный режим <code>tile</code>.</p>
+<p>Вариант с явным списком:</p>
+<pre><code class="language-yaml">tiles:
+  items:
+    - {x: 0, y: 0}
+    - {x: 1, y: 0}
+    - {x: 0, y: 1, size_m: 192, margin_m: 48}
+  size_m: 128
+  margin_m: 40
+</code></pre>
+<p>Вариант с диапазонами:</p>
+<pre><code class="language-yaml">tiles:
+  x_range: [0, 2]
+  y_range: [0, 2]
+  size_m: 128
+  margin_m: 40
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Параметр</th>
+<th>Тип</th>
+<th>По умолчанию</th>
+<th>Возможные значения</th>
+<th>Действие</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>items</code></td>
+<td>list of mappings</td>
+<td>нет</td>
+<td>непустой список тайлов</td>
+<td>Явно перечисляет тайлы. Каждый элемент обязан иметь <code>x</code> и <code>y</code>; <code>size_m</code> и <code>margin_m</code> можно задать на элементе.</td>
+</tr>
+<tr>
+<td><code>items[].x</code></td>
+<td>integer</td>
+<td>нет</td>
+<td>любое целое число</td>
+<td>Индекс конкретного тайла по X.</td>
+</tr>
+<tr>
+<td><code>items[].y</code></td>
+<td>integer</td>
+<td>нет</td>
+<td>любое целое число</td>
+<td>Индекс конкретного тайла по Y.</td>
+</tr>
+<tr>
+<td><code>items[].size_m</code></td>
+<td>number</td>
+<td><code>tiles.size_m</code>, затем <code>tile.size_m</code>, затем <code>256.0</code></td>
+<td><code>&gt; 0</code></td>
+<td>Размер конкретного тайла.</td>
+</tr>
+<tr>
+<td><code>items[].margin_m</code></td>
+<td>number</td>
+<td><code>tiles.margin_m</code>, затем <code>tile.margin_m</code>, затем <code>32.0</code></td>
+<td><code>&gt; 0</code></td>
+<td>Margin конкретного тайла.</td>
+</tr>
+<tr>
+<td><code>x_range</code></td>
+<td>two-item integer list</td>
+<td>нет</td>
+<td><code>[start, stop]</code>, где <code>stop &gt; start</code></td>
+<td>Диапазон индексов X по правилу Python <code>range(start, stop)</code>: stop не включается.</td>
+</tr>
+<tr>
+<td><code>y_range</code></td>
+<td>two-item integer list</td>
+<td>нет</td>
+<td><code>[start, stop]</code>, где <code>stop &gt; start</code></td>
+<td>Диапазон индексов Y по правилу Python <code>range(start, stop)</code>: stop не включается.</td>
+</tr>
+<tr>
+<td><code>size_m</code></td>
+<td>number</td>
+<td><code>tile.size_m</code>, затем <code>256.0</code></td>
+<td><code>&gt; 0</code></td>
+<td>Общий размер тайлов в <code>items</code> или range-режиме.</td>
+</tr>
+<tr>
+<td><code>margin_m</code></td>
+<td>number</td>
+<td><code>tile.margin_m</code>, затем <code>32.0</code></td>
+<td><code>&gt; 0</code></td>
+<td>Общий margin тайлов в <code>items</code> или range-режиме.</td>
+</tr>
+</tbody>
+</table>
+<p>Правила:</p>
+<ul>
+<li>Нужно задать либо <code>items</code>, либо обе секции <code>x_range</code> и <code>y_range</code>.</li>
+<li>Если есть <code>items</code>, диапазоны не используются.</li>
+<li><code>x_range: [0, 2]</code> и <code>y_range: [0, 2]</code> создают четыре тайла: <code>(0,0)</code>, <code>(0,1)</code>, <code>(1,0)</code>, <code>(1,1)</code>.</li>
+<li>Для нескольких тайлов CLI пишет файлы вида <code>tile_X_Y.ply</code> и <code>tile_X_Y.metadata.json</code>.</li>
+<li>Если multi-tile конфигу передать <code>--out something.ply</code>, это ошибка: нужен путь к директории.</li>
+</ul>
+<h2 id="terrain"><code>terrain</code></h2>
+<p>Секция <code>terrain</code> описывает процедурную высоту поверхности.</p>
+<pre><code class="language-yaml">terrain:
+  base_height_m: 0
+  height_noise_m: 1.5
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Параметр</th>
+<th>Тип</th>
+<th>По умолчанию</th>
+<th>Возможные значения</th>
+<th>Действие</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>base_height_m</code></td>
+<td>number</td>
+<td><code>0.0</code></td>
+<td>любое число</td>
+<td>Базовая высота поверхности по оси Z. Поднимает или опускает весь рельеф.</td>
+</tr>
+<tr>
+<td><code>height_noise_m</code></td>
+<td>number</td>
+<td><code>1.5</code></td>
+<td>любое число; обычно <code>&gt;= 0</code></td>
+<td>Амплитуда процедурного шума высоты. <code>0</code> дает плоскую поверхность на <code>base_height_m</code>.</td>
+</tr>
+</tbody>
+</table>
+<p>Высота рельефа зависит от <code>seed</code>, координат <code>x/y</code> и настроек <code>terrain</code>. Она используется для точек земли, дорог, тротуаров и базовой высоты зданий.</p>
+<h2 id="urban_fields"><code>urban_fields</code></h2>
+<p>Секция <code>urban_fields</code> включает плавные городские поля и выбор биома в каждой точке мира.</p>
+<pre><code class="language-yaml">urban_fields:
+  enabled: true
+  center_x: 128
+  center_y: 128
+  city_radius_m: 460
+  noise_scale_m: 180
+  density_bias: 0.04
+  industrial_bias: 0.08
+  green_bias: 0.02
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Параметр</th>
+<th>Тип</th>
+<th>По умолчанию</th>
+<th>Возможные значения</th>
+<th>Действие</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>enabled</code></td>
+<td>boolean</td>
+<td><code>false</code></td>
+<td><code>true</code>, <code>false</code></td>
+<td>Включает urban fields. При <code>false</code> используется нейтральный режим, близкий к <code>residential</code>.</td>
+</tr>
+<tr>
+<td><code>center_x</code></td>
+<td>number</td>
+<td><code>0.0</code></td>
+<td>любое число</td>
+<td>X-координата городского центра. Влияет на <code>centrality</code>, биомы и центр radial/ring дорог при включенных fields.</td>
+</tr>
+<tr>
+<td><code>center_y</code></td>
+<td>number</td>
+<td><code>0.0</code></td>
+<td>любое число</td>
+<td>Y-координата городского центра.</td>
+</tr>
+<tr>
+<td><code>city_radius_m</code></td>
+<td>number</td>
+<td><code>1200.0</code></td>
+<td><code>&gt; 0</code></td>
+<td>Радиус влияния городского центра. Большое значение растягивает downtown/residential переходы.</td>
+</tr>
+<tr>
+<td><code>noise_scale_m</code></td>
+<td>number</td>
+<td><code>350.0</code></td>
+<td><code>&gt; 0</code></td>
+<td>Масштаб плавного шума. Больше значение дает более крупные и медленные изменения районов.</td>
+</tr>
+<tr>
+<td><code>density_bias</code></td>
+<td>number</td>
+<td><code>0.0</code></td>
+<td>любое число; практически полезно около <code>-1..1</code></td>
+<td>Смещает поле плотности. Положительное значение повышает шанс плотных и высотных районов. Итоговое поле clamp-ится в <code>0..1</code>.</td>
+</tr>
+<tr>
+<td><code>industrial_bias</code></td>
+<td>number</td>
+<td><code>0.0</code></td>
+<td>любое число; практически полезно около <code>-1..1</code></td>
+<td>Смещает поле промышленности. Положительное значение повышает вероятность industrial-биома.</td>
+</tr>
+<tr>
+<td><code>green_bias</code></td>
+<td>number</td>
+<td><code>0.0</code></td>
+<td>любое число; практически полезно около <code>-1..1</code></td>
+<td>Смещает green/open-space поле. Положительное значение повышает вероятность suburb-биома.</td>
+</tr>
+</tbody>
+</table>
+<p>Внутри считаются поля:</p>
+<table>
+<thead>
+<tr>
+<th>Поле</th>
+<th>Смысл</th>
+<th>Где используется</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>centrality</code></td>
+<td>близость к городскому центру</td>
+<td>выбор биома, потенциал высоты</td>
+</tr>
+<tr>
+<td><code>density</code></td>
+<td>плотность городской ткани</td>
+<td>выбор биома, вероятность зданий, высотность</td>
+</tr>
+<tr>
+<td><code>height_potential</code></td>
+<td>потенциал высотности</td>
+<td>множитель максимальной высоты зданий</td>
+</tr>
+<tr>
+<td><code>green_index</code></td>
+<td>зеленость или открытость района</td>
+<td>выбор suburb-биома</td>
+</tr>
+<tr>
+<td><code>industrialness</code></td>
+<td>промышленный характер района</td>
+<td>выбор industrial-биома</td>
+</tr>
+<tr>
+<td><code>orderliness</code></td>
+<td>регулярность планировки</td>
+<td>сейчас вычисляется, но напрямую дорогами не используется</td>
+</tr>
+</tbody>
+</table>
+<p>Поддерживаемые биомы:</p>
+<table>
+<thead>
+<tr>
+<th>Биом</th>
+<th>Когда выбирается</th>
+<th>Эффект на здания</th>
+<th>Предпочтительная модель дорог для <code>roads.model: mixed</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>downtown</code></td>
+<td>высокая centrality и высокая density</td>
+<td>больше шанс здания, выше высоты, чуть крупнее footprint, меньше setback</td>
+<td><code>radial_ring</code></td>
+</tr>
+<tr>
+<td><code>residential</code></td>
+<td>запасной вариант для обычной городской ткани</td>
+<td>средние параметры</td>
+<td><code>grid</code></td>
+</tr>
+<tr>
+<td><code>industrial</code></td>
+<td>высокая industrialness вне самого центра</td>
+<td>крупнее footprints, ниже высотность, умеренный setback</td>
+<td><code>linear</code></td>
+</tr>
+<tr>
+<td><code>suburb</code></td>
+<td>низкая density или высокая green_index вне центра</td>
+<td>реже здания, ниже высоты, меньше footprints, больше setback</td>
+<td><code>organic</code></td>
+</tr>
+</tbody>
+</table>
+<p>При <code>enabled: false</code> классификация всегда возвращает <code>residential</code>. Поэтому <code>roads.model: mixed</code> без включенных <code>urban_fields</code> фактически будет использовать поведение <code>grid</code> в каждой точке.</p>
+<h2 id="roads"><code>roads</code></h2>
+<p>Секция <code>roads</code> описывает осевые линии дорог, ширину проезжей части и тротуары.</p>
+<pre><code class="language-yaml">roads:
+  model: grid
+  spacing_m: 64
+  width_m: 10
+  sidewalk_width_m: 3
+  angle_degrees: 0
+  radial_count: 12
+  ring_spacing_m: 0
+  organic_wander_m: 0
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Параметр</th>
+<th>Тип</th>
+<th>По умолчанию</th>
+<th>Возможные значения</th>
+<th>Действие</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>model</code></td>
+<td>string</td>
+<td><code>grid</code></td>
+<td><code>grid</code>, <code>radial_ring</code>, <code>radial</code>, <code>linear</code>, <code>organic</code>, <code>mixed</code>, <code>free</code></td>
+<td>Выбирает алгоритм построения дорожной сети.</td>
+</tr>
+<tr>
+<td><code>spacing_m</code></td>
+<td>number</td>
+<td><code>64.0</code></td>
+<td><code>&gt; 0</code></td>
+<td>Основной шаг между дорогами или узлами сети. Чем меньше значение, тем плотнее дорожная сеть.</td>
+</tr>
+<tr>
+<td><code>width_m</code></td>
+<td>number</td>
+<td><code>10.0</code></td>
+<td><code>&gt; 0</code></td>
+<td>Полная ширина проезжей части. Точка считается <code>road</code>, если расстояние до оси дороги не больше <code>width_m / 2</code>.</td>
+</tr>
+<tr>
+<td><code>sidewalk_width_m</code></td>
+<td>number</td>
+<td><code>3.0</code></td>
+<td><code>&gt; 0</code></td>
+<td>Ширина тротуара с каждой стороны дороги. Точка считается <code>sidewalk</code>, если она за пределами дороги, но в пределах <code>width_m / 2 + sidewalk_width_m</code>.</td>
+</tr>
+<tr>
+<td><code>profiles</code></td>
+<td>mapping</td>
+<td>выключено</td>
+<td>mapping</td>
+<td>Опциональные road profiles с разной шириной проезжей части, тротуаров и центрального разделителя.</td>
+</tr>
+<tr>
+<td><code>angle_degrees</code></td>
+<td>number</td>
+<td><code>0.0</code></td>
+<td>любое число</td>
+<td>Поворот в градусах. Используется в <code>radial</code>, <code>radial_ring</code> и <code>linear</code>; в <code>mixed</code> влияет на соответствующие подмодели.</td>
+</tr>
+<tr>
+<td><code>radial_count</code></td>
+<td>integer</td>
+<td><code>12</code></td>
+<td><code>&gt;= 3</code></td>
+<td>Количество лучей в моделях <code>radial</code> и <code>radial_ring</code>.</td>
+</tr>
+<tr>
+<td><code>ring_spacing_m</code></td>
+<td>number</td>
+<td><code>0.0</code></td>
+<td><code>&gt;= 0</code></td>
+<td>Шаг кольцевых дорог для <code>radial_ring</code>. <code>0</code> означает использовать <code>spacing_m</code>.</td>
+</tr>
+<tr>
+<td><code>organic_wander_m</code></td>
+<td>number</td>
+<td><code>0.0</code></td>
+<td><code>&gt;= 0</code></td>
+<td>Амплитуда изгиба дорог модели <code>organic</code>. <code>0</code> включает авторасчет от <code>spacing_m</code> и <code>terrain.height_noise_m</code>.</td>
+</tr>
+</tbody>
+</table>
+<p>Валидатор требует:</p>
+<pre><code class="language-text">roads.width_m + 2 * roads.sidewalk_width_m &lt; roads.spacing_m
+</code></pre>
+<p>Если условие нарушено, дороги с тротуарами занимают весь квартал и конфиг считается ошибочным.</p>
+<h3 id="roadsmodel">Значения <code>roads.model</code></h3>
+<table>
+<thead>
+<tr>
+<th>Значение</th>
+<th>Что генерирует</th>
+<th>На что реагирует</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>grid</code></td>
+<td>Регулярную ортогональную сетку бесконечных линий по X и Y.</td>
+<td><code>spacing_m</code>, <code>width_m</code>, <code>sidewalk_width_m</code>. <code>angle_degrees</code> не используется.</td>
+</tr>
+<tr>
+<td><code>radial_ring</code></td>
+<td>Лучи из центра и концентрические кольца.</td>
+<td><code>radial_count</code>, <code>angle_degrees</code>, <code>spacing_m</code>, <code>ring_spacing_m</code>. Центр берется из <code>urban_fields.center_x/center_y</code>, если fields включены; иначе из центра рабочего bbox.</td>
+</tr>
+<tr>
+<td><code>radial</code></td>
+<td>Только лучи из центра, без колец.</td>
+<td><code>radial_count</code>, <code>angle_degrees</code>, <code>spacing_m</code>. Центр выбирается так же, как у <code>radial_ring</code>.</td>
+</tr>
+<tr>
+<td><code>linear</code></td>
+<td>Параллельные дороги вдоль главной оси и более редкие поперечные дороги.</td>
+<td><code>angle_degrees</code>, <code>spacing_m</code>. Поперечный шаг равен <code>spacing_m * 2.5</code>.</td>
+</tr>
+<tr>
+<td><code>organic</code></td>
+<td>Волнистые polyline-дороги в двух направлениях.</td>
+<td><code>spacing_m</code>, <code>organic_wander_m</code>, <code>terrain.height_noise_m</code>, <code>seed</code>.</td>
+</tr>
+<tr>
+<td><code>mixed</code></td>
+<td>Набор подмоделей <code>grid</code>, <code>radial_ring</code>, <code>linear</code>, <code>organic</code> и выбор модели по биому в каждой точке.</td>
+<td>Требует осмысленных <code>urban_fields</code> для разнообразия. Не выбирает <code>radial</code> и <code>free</code> как предпочтительные модели биомов.</td>
+</tr>
+<tr>
+<td><code>free</code></td>
+<td>Нерегулярную сеть сегментов между детерминированно смещенными локальными узлами.</td>
+<td><code>spacing_m</code>, <code>seed</code>. Создает более хаотичную сеть, чем <code>organic</code>.</td>
+</tr>
+</tbody>
+</table>
+<p>Surface-класс точки определяется по расстоянию до ближайшей дорожной primitive:</p>
+<pre><code class="language-text">distance &lt;= width_m / 2                         -&gt; road
+distance &lt;= width_m / 2 + sidewalk_width_m      -&gt; sidewalk
+иначе                                           -&gt; ground
+</code></pre>
+<h3 id="roadsprofiles"><code>roads.profiles</code></h3>
+<p>Если <code>roads.profiles.enabled: true</code>, каждая дорожная primitive получает детерминированно выбранный profile. Profile задает поперечное сечение дороги:</p>
+<pre><code class="language-yaml">roads:
+  profiles:
+    enabled: true
+    default: collector
+    definitions:
+      local:
+        carriageway_width_m: 7
+        sidewalk_width_m: 2
+        median_width_m: 0
+      collector:
+        carriageway_width_m: 10
+        sidewalk_width_m: 3
+        median_width_m: 0
+      arterial:
+        carriageway_width_m: 14
+        sidewalk_width_m: 4
+        median_width_m: 1.5
+      boulevard:
+        carriageway_width_m: 16
+        sidewalk_width_m: 4
+        median_width_m: 6
+    model_weights:
+      grid: {local: 0.45, collector: 0.40, arterial: 0.15}
+      radial_ring: {collector: 0.20, arterial: 0.45, boulevard: 0.35}
+      linear: {collector: 0.35, arterial: 0.50, boulevard: 0.15}
+      organic: {local: 0.80, collector: 0.20}
+    biome_weights:
+      downtown: {collector: 0.15, arterial: 0.45, boulevard: 0.40}
+      residential: {local: 0.55, collector: 0.35, arterial: 0.10}
+      industrial: {collector: 0.30, arterial: 0.55, boulevard: 0.15}
+      suburb: {local: 0.85, collector: 0.15}
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Параметр</th>
+<th>Тип</th>
+<th>Действие</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>enabled</code></td>
+<td>boolean</td>
+<td>Включает ширины из road profiles. При <code>false</code> используется совместимое поведение через <code>roads.width_m</code> и <code>roads.sidewalk_width_m</code>.</td>
+</tr>
+<tr>
+<td><code>default</code></td>
+<td>string</td>
+<td>Profile для запасного выбора; должен быть описан в <code>definitions</code>.</td>
+</tr>
+<tr>
+<td><code>definitions.*.carriageway_width_m</code></td>
+<td>number</td>
+<td>Суммарная ширина проезжей части без <code>road_median</code>.</td>
+</tr>
+<tr>
+<td><code>definitions.*.sidewalk_width_m</code></td>
+<td>number</td>
+<td>Ширина тротуара с каждой стороны.</td>
+</tr>
+<tr>
+<td><code>definitions.*.median_width_m</code></td>
+<td>number</td>
+<td>Ширина центрального разделителя; при <code>&gt; 0</code> генерирует class <code>road_median</code>.</td>
+</tr>
+<tr>
+<td><code>model_weights</code></td>
+<td>mapping</td>
+<td>Веса profiles по модели дорог.</td>
+</tr>
+<tr>
+<td><code>biome_weights</code></td>
+<td>mapping</td>
+<td>Веса profiles по биому anchor-точки дорожной primitive.</td>
+</tr>
+</tbody>
+</table>
+<p>Для profile с <code>road_median</code> классификация идет от оси дороги наружу: <code>road_median</code>, затем <code>road</code>, затем <code>sidewalk</code>, затем <code>ground</code>. На перекрытиях дорог <code>road</code> имеет приоритет над <code>road_median</code>, чтобы пересечения не превращались в сплошной разделитель.</p>
+<p>Валидатор требует положительные <code>carriageway_width_m</code>/<code>sidewalk_width_m</code>, <code>median_width_m &gt;= 0</code>, существующие имена profiles в weights, положительные суммы весов и:</p>
+<pre><code class="language-text">max(carriageway_width_m + median_width_m + 2 * sidewalk_width_m) &lt; roads.spacing_m
+</code></pre>
+<h2 id="buildings"><code>buildings</code></h2>
+<p>Секция <code>buildings</code> управляет генерацией зданий, формой footprint и геометрией крыши.</p>
+<pre><code class="language-yaml">buildings:
+  enabled: true
+  min_height_m: 8
+  max_height_m: 60
+  setback_m: 6
+  footprint_min_m: 12
+  footprint_max_m: 36
+  footprint:
+    model: mixed
+    weights:
+      rectangle: 0.30
+      square: 0.10
+      circle: 0.08
+      slab: 0.12
+      courtyard: 0.12
+      l_shape: 0.10
+      u_shape: 0.10
+      t_shape: 0.08
+    circle_segments: 24
+    courtyard_ratio: 0.45
+    wing_width_ratio: 0.35
+    min_part_width_m: 5
+    align_to_roads: true
+  roof:
+    model: mixed
+    weights:
+      flat: 0.22
+      shed: 0.10
+      gable: 0.16
+      hip: 0.14
+      half_hip: 0.08
+      pyramid: 0.08
+      mansard: 0.08
+      dome: 0.06
+      barrel: 0.04
+      cone: 0.04
+    pitch_degrees: 28
+    pitch_jitter_degrees: 8
+    flat_slope_degrees: 0
+    eave_overhang_m: 0
+    ridge_height_ratio: 0.35
+    mansard_break_ratio: 0.45
+    dome_segments: 16
+    align_to_long_axis: true
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Параметр</th>
+<th>Тип</th>
+<th>По умолчанию</th>
+<th>Возможные значения</th>
+<th>Действие</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>enabled</code></td>
+<td>boolean</td>
+<td><code>true</code></td>
+<td><code>true</code>, <code>false</code></td>
+<td>Включает или выключает генерацию зданий. При <code>false</code> остаются только точки <code>ground</code>/<code>road</code>/<code>sidewalk</code>.</td>
+</tr>
+<tr>
+<td><code>min_height_m</code></td>
+<td>number</td>
+<td><code>8.0</code></td>
+<td><code>&gt; 0</code>, <code>&lt;= max_height_m</code></td>
+<td>Базовая минимальная высота здания. Биомы могут умножать ее.</td>
+</tr>
+<tr>
+<td><code>max_height_m</code></td>
+<td>number</td>
+<td><code>60.0</code></td>
+<td><code>&gt; 0</code>, <code>&gt;= min_height_m</code></td>
+<td>Базовая максимальная высота здания. Биомы и <code>height_potential</code> могут умножать ее.</td>
+</tr>
+<tr>
+<td><code>setback_m</code></td>
+<td>number</td>
+<td><code>6.0</code></td>
+<td><code>&gt; 0</code></td>
+<td>Дополнительный отступ здания от защищенной зоны дороги и тротуара. Больше setback дает меньше зданий и больше свободного места у дорог.</td>
+</tr>
+<tr>
+<td><code>footprint_min_m</code></td>
+<td>number</td>
+<td><code>12.0</code></td>
+<td><code>&gt; 0</code>, <code>&lt;= footprint_max_m</code></td>
+<td>Минимальный размер footprint по ширине и глубине до biome-множителя.</td>
+</tr>
+<tr>
+<td><code>footprint_max_m</code></td>
+<td>number</td>
+<td><code>36.0</code></td>
+<td><code>&gt; 0</code>, <code>&gt;= footprint_min_m</code></td>
+<td>Максимальный размер footprint по ширине и глубине до biome-множителя.</td>
+</tr>
+<tr>
+<td><code>footprint</code></td>
+<td>mapping</td>
+<td>см. ниже</td>
+<td>mapping</td>
+<td>Настраивает тип контура здания на земле. Если отсутствует, используется <code>rectangle</code>.</td>
+</tr>
+<tr>
+<td><code>roof</code></td>
+<td>mapping</td>
+<td>см. ниже</td>
+<td>mapping</td>
+<td>Настраивает геометрию крыши. Если отсутствует, используется <code>flat</code>.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="buildingsfootprint"><code>buildings.footprint</code></h3>
+<p><code>buildings.footprint</code> описывает форму здания в плане.</p>
+<table>
+<thead>
+<tr>
+<th>Параметр</th>
+<th>Тип</th>
+<th>По умолчанию</th>
+<th>Возможные значения</th>
+<th>Действие</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>model</code></td>
+<td>string</td>
+<td><code>rectangle</code></td>
+<td><code>rectangle</code>, <code>square</code>, <code>circle</code>, <code>slab</code>, <code>courtyard</code>, <code>l_shape</code>, <code>u_shape</code>, <code>t_shape</code>, <code>mixed</code></td>
+<td>Выбирает тип footprint.</td>
+</tr>
+<tr>
+<td><code>weights</code></td>
+<td>mapping</td>
+<td><code>{}</code> для <code>rectangle</code>; стандартная смесь для <code>mixed</code> без weights</td>
+<td>ключи типов footprint, значения <code>&gt;= 0</code></td>
+<td>Веса выбора формы при <code>model: mixed</code>. Сумма должна быть положительной.</td>
+</tr>
+<tr>
+<td><code>circle_segments</code></td>
+<td>integer</td>
+<td><code>24</code></td>
+<td><code>&gt;= 8</code></td>
+<td>Количество сегментов для аппроксимации кругового фасада.</td>
+</tr>
+<tr>
+<td><code>courtyard_ratio</code></td>
+<td>number</td>
+<td><code>0.45</code></td>
+<td><code>0 &lt; value &lt; 0.8</code></td>
+<td>Доля внешнего размера, занимаемая внутренним двором у <code>courtyard</code>.</td>
+</tr>
+<tr>
+<td><code>wing_width_ratio</code></td>
+<td>number</td>
+<td><code>0.35</code></td>
+<td><code>0 &lt; value &lt; 0.8</code></td>
+<td>Базовая относительная ширина крыла для <code>l_shape</code>, <code>u_shape</code>, <code>t_shape</code>.</td>
+</tr>
+<tr>
+<td><code>min_part_width_m</code></td>
+<td>number</td>
+<td><code>5.0</code></td>
+<td><code>&gt; 0</code></td>
+<td>Минимальная ширина крыла или периметральной части. Если форма слишком мала, генератор детерминированно возвращается к <code>rectangle</code>.</td>
+</tr>
+<tr>
+<td><code>align_to_roads</code></td>
+<td>boolean</td>
+<td><code>true</code></td>
+<td><code>true</code>, <code>false</code></td>
+<td>Зарезервировано для будущей ориентации вытянутых форм по дорогам. В parcel mode orientation приходит от parcel geometry.</td>
+</tr>
+</tbody>
+</table>
+<p>Поддерживаемые канонические типы footprints:</p>
+<table>
+<thead>
+<tr>
+<th>Тип</th>
+<th>Действие</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>rectangle</code></td>
+<td>Базовый прямоугольник, совместимый со старым поведением.</td>
+</tr>
+<tr>
+<td><code>square</code></td>
+<td>Квадратный footprint с равными шириной и глубиной.</td>
+</tr>
+<tr>
+<td><code>circle</code></td>
+<td>Круговая/ротондная форма, фасад аппроксимируется <code>circle_segments</code>.</td>
+</tr>
+<tr>
+<td><code>slab</code></td>
+<td>Вытянутая полоса или пластина.</td>
+</tr>
+<tr>
+<td><code>courtyard</code></td>
+<td>Периметральный блок с пустым внутренним двором; roof points во двор не попадают.</td>
+</tr>
+<tr>
+<td><code>l_shape</code></td>
+<td>Г-образная форма из двух крыльев.</td>
+</tr>
+<tr>
+<td><code>u_shape</code></td>
+<td>П-образная форма с полузакрытым двором.</td>
+</tr>
+<tr>
+<td><code>t_shape</code></td>
+<td>Т-образная форма из пересекающихся крыльев.</td>
+</tr>
+<tr>
+<td><code>mixed</code></td>
+<td>Детерминированно выбирает один из конкретных типов по <code>weights</code>.</td>
+</tr>
+</tbody>
+</table>
+<p>Alias-значения в YAML нормализуются:</p>
+<table>
+<thead>
+<tr>
+<th>Alias</th>
+<th>Каноническое значение</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>rotunda</code></td>
+<td><code>circle</code></td>
+</tr>
+<tr>
+<td><code>perimeter</code></td>
+<td><code>courtyard</code></td>
+</tr>
+<tr>
+<td><code>strip</code></td>
+<td><code>slab</code></td>
+</tr>
+<tr>
+<td><code>plate</code></td>
+<td><code>slab</code></td>
+</tr>
+<tr>
+<td><code>g_shape</code></td>
+<td><code>l_shape</code></td>
+</tr>
+<tr>
+<td><code>p_shape</code></td>
+<td><code>u_shape</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="buildingsroof"><code>buildings.roof</code></h3>
+<p><code>buildings.roof</code> описывает форму крыши и функцию высоты для семплирования крыши.</p>
+<table>
+<thead>
+<tr>
+<th>Параметр</th>
+<th>Тип</th>
+<th>По умолчанию</th>
+<th>Возможные значения</th>
+<th>Действие</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>model</code></td>
+<td>string</td>
+<td><code>flat</code></td>
+<td><code>flat</code>, <code>shed</code>, <code>gable</code>, <code>hip</code>, <code>half_hip</code>, <code>pyramid</code>, <code>mansard</code>, <code>dome</code>, <code>barrel</code>, <code>cone</code>, <code>mixed</code></td>
+<td>Выбирает тип крыши.</td>
+</tr>
+<tr>
+<td><code>weights</code></td>
+<td>mapping</td>
+<td><code>{}</code> для <code>flat</code>; стандартная смесь для <code>mixed</code> без weights</td>
+<td>ключи типов roof, значения <code>&gt;= 0</code></td>
+<td>Веса выбора крыши при <code>model: mixed</code>. Сумма должна быть положительной.</td>
+</tr>
+<tr>
+<td><code>pitch_degrees</code></td>
+<td>number</td>
+<td><code>28.0</code></td>
+<td><code>0..75</code></td>
+<td>Базовый угол скатной крыши.</td>
+</tr>
+<tr>
+<td><code>pitch_jitter_degrees</code></td>
+<td>number</td>
+<td><code>8.0</code></td>
+<td><code>&gt;= 0</code></td>
+<td>Детерминированное случайное отклонение угла.</td>
+</tr>
+<tr>
+<td><code>flat_slope_degrees</code></td>
+<td>number</td>
+<td><code>0.0</code></td>
+<td><code>0..15</code></td>
+<td>Малый уклон для <code>flat</code>. <code>0</code> сохраняет старое плоское поведение.</td>
+</tr>
+<tr>
+<td><code>eave_overhang_m</code></td>
+<td>number</td>
+<td><code>0.0</code></td>
+<td><code>&gt;= 0</code></td>
+<td>Зарезервировано для будущего выноса карниза; текущий MVP не расширяет footprint.</td>
+</tr>
+<tr>
+<td><code>ridge_height_ratio</code></td>
+<td>number</td>
+<td><code>0.35</code></td>
+<td><code>0 &lt; value &lt;= 0.8</code></td>
+<td>Верхняя граница подъема крыши как доля высоты здания.</td>
+</tr>
+<tr>
+<td><code>mansard_break_ratio</code></td>
+<td>number</td>
+<td><code>0.45</code></td>
+<td><code>0.1..0.9</code></td>
+<td>Положение перелома мансардной крыши.</td>
+</tr>
+<tr>
+<td><code>dome_segments</code></td>
+<td>integer</td>
+<td><code>16</code></td>
+<td><code>&gt;= 8</code></td>
+<td>Зарезервировано для детализации криволинейных крыш и metadata; функция высоты аналитическая.</td>
+</tr>
+<tr>
+<td><code>align_to_long_axis</code></td>
+<td>boolean</td>
+<td><code>true</code></td>
+<td><code>true</code>, <code>false</code></td>
+<td>Ориентирует конек или арку относительно длинной оси локального bbox footprint.</td>
+</tr>
+</tbody>
+</table>
+<p>Поддерживаемые канонические типы roofs:</p>
+<table>
+<thead>
+<tr>
+<th>Тип</th>
+<th>Действие</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>flat</code></td>
+<td>Плоская крыша, дефолт обратной совместимости.</td>
+</tr>
+<tr>
+<td><code>shed</code></td>
+<td>Односкатная крыша с монотонным уклоном.</td>
+</tr>
+<tr>
+<td><code>gable</code></td>
+<td>Двускатная крыша с коньком вдоль длинной оси.</td>
+</tr>
+<tr>
+<td><code>hip</code></td>
+<td>Четырехскатная вальмовая крыша.</td>
+</tr>
+<tr>
+<td><code>half_hip</code></td>
+<td>Полувальмовая крыша, промежуточная между gable и hip.</td>
+</tr>
+<tr>
+<td><code>pyramid</code></td>
+<td>Шатровая крыша с максимумом в центре.</td>
+</tr>
+<tr>
+<td><code>mansard</code></td>
+<td>Ломаная мансардная крыша с переломом ската.</td>
+</tr>
+<tr>
+<td><code>dome</code></td>
+<td>Купольная крыша с плавным подъемом к центру.</td>
+</tr>
+<tr>
+<td><code>barrel</code></td>
+<td>Арочная/сводчатая крыша по одной оси.</td>
+</tr>
+<tr>
+<td><code>cone</code></td>
+<td>Коническая крыша с линейным снижением к краю.</td>
+</tr>
+<tr>
+<td><code>mixed</code></td>
+<td>Детерминированно выбирает один из конкретных типов по <code>weights</code>.</td>
+</tr>
+</tbody>
+</table>
+<p>Alias-значения <code>roof.model</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Alias</th>
+<th>Каноническое значение</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>single_slope</code></td>
+<td><code>shed</code></td>
+</tr>
+<tr>
+<td><code>mono_pitch</code></td>
+<td><code>shed</code></td>
+</tr>
+<tr>
+<td><code>dual_pitch</code></td>
+<td><code>gable</code></td>
+</tr>
+<tr>
+<td><code>pitched</code></td>
+<td><code>gable</code></td>
+</tr>
+<tr>
+<td><code>hipped</code></td>
+<td><code>hip</code></td>
+</tr>
+<tr>
+<td><code>half_hipped</code></td>
+<td><code>half_hip</code></td>
+</tr>
+<tr>
+<td><code>tent</code></td>
+<td><code>pyramid</code></td>
+</tr>
+<tr>
+<td><code>vault</code></td>
+<td><code>barrel</code></td>
+</tr>
+<tr>
+<td><code>arched</code></td>
+<td><code>barrel</code></td>
+</tr>
+<tr>
+<td><code>conical</code></td>
+<td><code>cone</code></td>
+</tr>
+</tbody>
+</table>
+<p>Даже если <code>enabled: false</code>, числовые поля секции все равно проходят валидацию.</p>
+<p>Как это влияет на сцену:</p>
+<ul>
+<li>Центры-кандидаты создаются детерминированно от <code>seed</code>; при <code>parcels.enabled: true</code> здания создаются из buildable parcels.</li>
+<li>Типы footprint/roof, размеры footprint и высоты выбираются детерминированным случайным выбором от <code>seed</code>.</li>
+<li>Здание отбрасывается, если его footprint слишком близко к дороге или тротуару.</li>
+<li>Здание отбрасывается, если пересекается с уже принятым зданием.</li>
+<li><code>base_z</code> здания берется из высоты рельефа в центре footprint.</li>
+<li>В облако точек попадают roof-точки с высотой по <code>roof.model</code> и facade-точки по реальной границе footprint до линии карниза.</li>
+</ul>
+<p>Clearance от дорог считается так:</p>
+<pre><code class="language-text">roads.width_m / 2 + roads.sidewalk_width_m + effective_setback
+</code></pre>
+<p>Где <code>effective_setback</code> может быть изменен биомом.</p>
+<p>Если здания почти не появляются, обычно нужно увеличить <code>roads.spacing_m</code> или уменьшить <code>roads.width_m</code>, <code>roads.sidewalk_width_m</code>, <code>buildings.setback_m</code>, <code>buildings.footprint_min_m</code>.</p>
+<h2 id="parcels"><code>parcels</code></h2>
+<p>Секция <code>parcels</code> включает явный слой прямоугольных кварталов и земельных участков. При <code>enabled: false</code> генератор использует прежнее размещение зданий по центрам-кандидатам.</p>
+<pre><code class="language-yaml">parcels:
+  enabled: true
+  block_size_m: 96
+  block_jitter_m: 8
+  min_block_size_m: 32
+  min_parcel_width_m: 14
+  max_parcel_width_m: 42
+  min_parcel_depth_m: 18
+  max_parcel_depth_m: 56
+  parcel_setback_m: 2
+  split_jitter_ratio: 0.18
+  max_subdivision_depth: 3
+  building_alignment: parcel
+  orientation_jitter_degrees: 0
+  max_building_coverage: 0.72
+  require_building_inside_buildable_area: true
+  oriented_blocks: false
+  block_orientation_source: road_model
+  block_orientation_jitter_degrees: 0
+  organic_orientation_jitter_degrees: 10
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Параметр</th>
+<th>Тип</th>
+<th>По умолчанию</th>
+<th>Возможные значения</th>
+<th>Действие</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>enabled</code></td>
+<td>boolean</td>
+<td><code>false</code></td>
+<td><code>true</code>, <code>false</code></td>
+<td>Включает размещение зданий через parcels.</td>
+</tr>
+<tr>
+<td><code>block_size_m</code></td>
+<td>number</td>
+<td><code>96.0</code></td>
+<td><code>&gt; 0</code>, <code>&gt;= min_block_size_m</code></td>
+<td>Шаг прямоугольной сетки candidate blocks в рабочем bbox.</td>
+</tr>
+<tr>
+<td><code>block_jitter_m</code></td>
+<td>number</td>
+<td><code>8.0</code></td>
+<td><code>&gt;= 0</code></td>
+<td>Детерминированный inset краев block, чтобы участки не выглядели идеально одинаковыми.</td>
+</tr>
+<tr>
+<td><code>min_block_size_m</code></td>
+<td>number</td>
+<td><code>32.0</code></td>
+<td><code>&gt; 0</code></td>
+<td>Минимальная ширина и глубина block после обрезки по рабочему bbox.</td>
+</tr>
+<tr>
+<td><code>min_parcel_width_m</code></td>
+<td>number</td>
+<td><code>14.0</code></td>
+<td><code>&gt; 0</code>, <code>&lt;= max_parcel_width_m</code></td>
+<td>Минимальная ширина parcel.</td>
+</tr>
+<tr>
+<td><code>max_parcel_width_m</code></td>
+<td>number</td>
+<td><code>42.0</code></td>
+<td><code>&gt; 0</code>, <code>&gt;= min_parcel_width_m</code></td>
+<td>Целевая максимальная ширина parcel до остановки subdivision.</td>
+</tr>
+<tr>
+<td><code>min_parcel_depth_m</code></td>
+<td>number</td>
+<td><code>18.0</code></td>
+<td><code>&gt; 0</code>, <code>&lt;= max_parcel_depth_m</code></td>
+<td>Минимальная глубина parcel.</td>
+</tr>
+<tr>
+<td><code>max_parcel_depth_m</code></td>
+<td>number</td>
+<td><code>56.0</code></td>
+<td><code>&gt; 0</code>, <code>&gt;= min_parcel_depth_m</code></td>
+<td>Целевая максимальная глубина parcel до остановки subdivision.</td>
+</tr>
+<tr>
+<td><code>parcel_setback_m</code></td>
+<td>number</td>
+<td><code>2.0</code></td>
+<td><code>&gt;= 0</code></td>
+<td>Внутренний отступ parcel для получения <code>parcel.inner</code>.</td>
+</tr>
+<tr>
+<td><code>split_jitter_ratio</code></td>
+<td>number</td>
+<td><code>0.18</code></td>
+<td><code>0..0.45</code></td>
+<td>Детерминированный jitter позиции split как доля текущего размера.</td>
+</tr>
+<tr>
+<td><code>max_subdivision_depth</code></td>
+<td>integer</td>
+<td><code>3</code></td>
+<td><code>&gt;= 0</code></td>
+<td>Максимальная глубина рекурсивного деления block.</td>
+</tr>
+<tr>
+<td><code>building_alignment</code></td>
+<td>string</td>
+<td><code>parcel</code></td>
+<td><code>parcel</code>, <code>global</code></td>
+<td>При <code>parcel</code> footprint здания выравнивается по локальным осям участка; <code>global</code> оставляет глобальные оси.</td>
+</tr>
+<tr>
+<td><code>orientation_jitter_degrees</code></td>
+<td>number</td>
+<td><code>0.0</code></td>
+<td><code>&gt;= 0</code></td>
+<td>Детерминированное отклонение orientation здания от parcel orientation.</td>
+</tr>
+<tr>
+<td><code>max_building_coverage</code></td>
+<td>number</td>
+<td><code>0.72</code></td>
+<td><code>&gt; 0</code>, <code>&lt;= 1</code></td>
+<td>Максимальная доля buildable area, которую может занять footprint.</td>
+</tr>
+<tr>
+<td><code>require_building_inside_buildable_area</code></td>
+<td>boolean</td>
+<td><code>true</code></td>
+<td><code>true</code>, <code>false</code></td>
+<td>Требует, чтобы representative points footprint лежали внутри buildable area parcel.</td>
+</tr>
+<tr>
+<td><code>oriented_blocks</code></td>
+<td>boolean</td>
+<td><code>false</code></td>
+<td><code>true</code>, <code>false</code></td>
+<td>Включает local-space subdivision повернутых blocks.</td>
+</tr>
+<tr>
+<td><code>block_orientation_source</code></td>
+<td>string</td>
+<td><code>road_model</code></td>
+<td><code>road_model</code>, <code>config</code>, <code>none</code></td>
+<td>Источник orientation для blocks.</td>
+</tr>
+<tr>
+<td><code>block_orientation_jitter_degrees</code></td>
+<td>number</td>
+<td><code>0.0</code></td>
+<td><code>&gt;= 0</code></td>
+<td>Детерминированный jitter orientation block.</td>
+</tr>
+<tr>
+<td><code>organic_orientation_jitter_degrees</code></td>
+<td>number</td>
+<td><code>10.0</code></td>
+<td><code>&gt;= 0</code></td>
+<td>Минимальный jitter для organic blocks при источнике <code>road_model</code>.</td>
+</tr>
+</tbody>
+</table>
+<p>MVP не строит полноценные GIS-полигоны кварталов из дорожного графа. Вместо этого он создает road-aware прямоугольные blocks/parcels, отбрасывает участки без достаточного clearance от <code>road</code>/<code>sidewalk</code> и размещает здания только внутри buildable area parcel. При <code>oriented_blocks: true</code> subdivision идет в local-space block, а <code>bbox</code> остается только axis-aligned envelope для broad phase. Для <code>block_orientation_source: road_model</code> модели <code>grid</code>, <code>linear</code>, <code>free</code> и <code>organic</code> используют <code>roads.angle_degrees</code> как базовую orientation; <code>radial</code> и <code>radial_ring</code> вычисляют направление от центра.</p>
+<p>Metadata получает агрегированные секции <code>parcel_counts</code>, <code>parcel_building_alignment</code>, <code>building_orientations</code>, <code>block_geometry</code> и <code>parcel_geometry</code>: количество blocks/parcels, buildable и occupied parcels, распределение parcels по биомам, число зданий с <code>parcel_id</code>, режим alignment и сводку orientation.</p>
+<p>Подробный архитектурный справочник по этому слою находится в <code>doc/parcels.md</code>.</p>
+<h2 id="sampling"><code>sampling</code></h2>
+<p>Секция <code>sampling</code> управляет плотностью точек и случайным смещением samples.</p>
+<pre><code class="language-yaml">sampling:
+  mode: surface
+  ground_spacing_m: 2
+  road_spacing_m: 1.5
+  building_spacing_m: 2
+  jitter_ratio: 0.18
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Параметр</th>
+<th>Тип</th>
+<th>По умолчанию</th>
+<th>Возможные значения</th>
+<th>Действие</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>mode</code></td>
+<td>string</td>
+<td><code>surface</code></td>
+<td>только <code>surface</code></td>
+<td>Режим семплирования. В текущем MVP другие значения запрещены.</td>
+</tr>
+<tr>
+<td><code>ground_spacing_m</code></td>
+<td>number</td>
+<td><code>2.0</code></td>
+<td><code>&gt; 0</code></td>
+<td>Примерный шаг точек земли. Больше значение дает меньше ground-точек.</td>
+</tr>
+<tr>
+<td><code>road_spacing_m</code></td>
+<td>number</td>
+<td><code>1.5</code></td>
+<td><code>&gt; 0</code></td>
+<td>Примерный шаг точек дорог и тротуаров. Больше значение дает меньше road/sidewalk-точек.</td>
+</tr>
+<tr>
+<td><code>building_spacing_m</code></td>
+<td>number</td>
+<td><code>2.0</code></td>
+<td><code>&gt; 0</code></td>
+<td>Шаг точек крыш и фасадов. Больше значение дает меньше building-точек.</td>
+</tr>
+<tr>
+<td><code>jitter_ratio</code></td>
+<td>number</td>
+<td><code>0.18</code></td>
+<td><code>0 &lt;= value &lt;= 0.45</code></td>
+<td>Случайное смещение точки как доля текущего spacing. <code>0</code> дает регулярную сетку.</td>
+</tr>
+</tbody>
+</table>
+<p>Практические эффекты:</p>
+<ul>
+<li>Уменьшение spacing увеличивает плотность и размер PLY.</li>
+<li>Увеличение spacing ускоряет предварительный просмотр и уменьшает файлы.</li>
+<li>Для ground/road/road_median/sidewalk сначала берется минимальный шаг из <code>ground_spacing_m</code> и <code>road_spacing_m</code>, затем лишние точки прореживаются под нужный класс.</li>
+<li><code>building_spacing_m</code> отдельно применяется к крышам и фасадам.</li>
+<li>Jitter детерминирован от <code>seed</code>, поэтому не ломает воспроизводимость.</li>
+</ul>
+<h2 id="output"><code>output</code></h2>
+<p>Секция <code>output</code> управляет форматом PLY.</p>
+<pre><code class="language-yaml">output:
+  format: ply
+  include_rgb: true
+  include_class: true
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Параметр</th>
+<th>Тип</th>
+<th>По умолчанию</th>
+<th>Возможные значения</th>
+<th>Действие</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>format</code></td>
+<td>string</td>
+<td><code>ply</code></td>
+<td>только <code>ply</code></td>
+<td>Формат вывода. Сейчас поддерживается только ASCII PLY.</td>
+</tr>
+<tr>
+<td><code>include_rgb</code></td>
+<td>boolean</td>
+<td><code>true</code></td>
+<td><code>true</code>, <code>false</code></td>
+<td>Добавляет в PLY vertex-поля <code>red</code>, <code>green</code>, <code>blue</code>.</td>
+</tr>
+<tr>
+<td><code>include_class</code></td>
+<td>boolean</td>
+<td><code>true</code></td>
+<td><code>true</code>, <code>false</code></td>
+<td>Добавляет в PLY vertex-поле <code>class</code>.</td>
+</tr>
+</tbody>
+</table>
+<p>При <code>include_rgb: true</code> и <code>include_class: true</code> каждая строка vertex содержит:</p>
+<pre><code class="language-text">x y z red green blue class
+</code></pre>
+<p>При <code>include_rgb: false</code> и <code>include_class: false</code> каждая строка содержит только:</p>
+<pre><code class="language-text">x y z
+</code></pre>
+<p>Классы точек:</p>
+<table>
+<thead>
+<tr>
+<th>Class id</th>
+<th>Имя</th>
+<th>RGB</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>1</code></td>
+<td><code>ground</code></td>
+<td><code>107, 132, 85</code></td>
+</tr>
+<tr>
+<td><code>2</code></td>
+<td><code>road</code></td>
+<td><code>47, 50, 54</code></td>
+</tr>
+<tr>
+<td><code>3</code></td>
+<td><code>sidewalk</code></td>
+<td><code>174, 174, 166</code></td>
+</tr>
+<tr>
+<td><code>4</code></td>
+<td><code>building_facade</code></td>
+<td><code>176, 164, 148</code></td>
+</tr>
+<tr>
+<td><code>5</code></td>
+<td><code>building_roof</code></td>
+<td><code>112, 116, 122</code></td>
+</tr>
+<tr>
+<td><code>6</code></td>
+<td><code>road_median</code></td>
+<td><code>118, 128, 84</code></td>
+</tr>
+</tbody>
+</table>
+<p>Для каждого PLY также пишется metadata-файл рядом с ним:</p>
+<pre><code class="language-text">outputs/example.ply
+outputs/example.metadata.json
+</code></pre>
+<p>Metadata содержит <code>seed</code>, bbox тайла, количество точек, распределение классов, mapping классов, использованные модели дорог, <code>road_profile_counts</code>, <code>road_profile_counts_by_biome</code>, <code>road_widths</code>, <code>road_median</code>, counts по биомам, <code>building_counts</code>, <code>parcel_counts</code>, <code>parcel_building_alignment</code>, <code>building_orientations</code>, <code>block_geometry</code>, <code>parcel_geometry</code>, списки поддержанных типов footprint/roof и полный конфиг после применения значений по умолчанию.</p>
+<h2 id="worldgen"><code>worldgen</code></h2>
+<p>Секция <code>worldgen</code> опциональна и управляет флагами валидации catalogs/worldgen. Она не меняет runtime-распределение сцены.</p>
+<pre><code class="language-yaml">worldgen:
+  catalog_docs: true
+  strict_catalog_validation: true
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Параметр</th>
+<th>Тип</th>
+<th>По умолчанию</th>
+<th>Действие</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>catalog_docs</code></td>
+<td>boolean</td>
+<td><code>true</code></td>
+<td>Документирует намерение держать docs, основанные на catalogs, включенными; сейчас используется как флаг resolved config.</td>
+</tr>
+<tr>
+<td><code>strict_catalog_validation</code></td>
+<td>boolean</td>
+<td><code>true</code></td>
+<td>При загрузке конфига проверяет встроенные catalogs на неизвестные ids, некорректные weights и битые ссылки.</td>
+</tr>
+</tbody>
+</table>
+<p>Слой дорог подробно описан в <code>doc/roads.md</code>. Архитектура catalogs описана в <code>doc/worldgen_catalogs.md</code>, а список feature ids генерируемых объектов — в <code>doc/generated_objects.md</code>.</p>
+<h2 id="_3">Ограничения валидатора</h2>
+<p>Конфиг считается ошибочным, если нарушено любое из условий:</p>
+<table>
+<thead>
+<tr>
+<th>Условие</th>
+<th>Сообщение или смысл</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Нет <code>seed</code></td>
+<td><code>Missing required field: seed</code></td>
+</tr>
+<tr>
+<td>Корневой YAML не mapping</td>
+<td>конфиг должен быть YAML mapping</td>
+</tr>
+<tr>
+<td>Секция вроде <code>tile</code>, <code>roads</code>, <code>sampling</code> не mapping</td>
+<td>секция должна быть mapping</td>
+</tr>
+<tr>
+<td><code>tile.size_m &lt;= 0</code></td>
+<td>размер тайла должен быть положительным</td>
+</tr>
+<tr>
+<td><code>tile.margin_m &lt;= 0</code></td>
+<td>margin должен быть положительным</td>
+</tr>
+<tr>
+<td><code>tiles</code> не mapping</td>
+<td>секция <code>tiles</code> должна быть mapping</td>
+</tr>
+<tr>
+<td><code>tiles.items</code> не list</td>
+<td>список тайлов должен быть list</td>
+</tr>
+<tr>
+<td><code>tiles.items</code> пустой</td>
+<td>должен быть хотя бы один тайл</td>
+</tr>
+<tr>
+<td><code>tiles.x_range</code> или <code>tiles.y_range</code> не <code>[int, int]</code></td>
+<td>диапазон должен быть списком из двух целых</td>
+</tr>
+<tr>
+<td><code>range.stop &lt;= range.start</code></td>
+<td>конец диапазона должен быть больше начала</td>
+</tr>
+<tr>
+<td><code>roads.model</code> не из списка поддерживаемых</td>
+<td>поддерживаются <code>free</code>, <code>grid</code>, <code>linear</code>, <code>mixed</code>, <code>organic</code>, <code>radial</code>, <code>radial_ring</code></td>
+</tr>
+<tr>
+<td><code>roads.radial_count &lt; 3</code></td>
+<td>нужно хотя бы три луча</td>
+</tr>
+<tr>
+<td><code>roads.ring_spacing_m &lt; 0</code></td>
+<td>ring spacing не может быть отрицательным</td>
+</tr>
+<tr>
+<td><code>roads.organic_wander_m &lt; 0</code></td>
+<td>organic wander не может быть отрицательным</td>
+</tr>
+<tr>
+<td><code>roads.width_m + 2 * roads.sidewalk_width_m &gt;= roads.spacing_m</code></td>
+<td>дорога с тротуарами должна быть уже квартального шага</td>
+</tr>
+<tr>
+<td><code>roads.profiles.default</code> не описан в <code>definitions</code></td>
+<td>default profile должен существовать</td>
+</tr>
+<tr>
+<td><code>roads.profiles.*_weights</code> содержит неизвестную модель дорог, biome или profile</td>
+<td>веса должны ссылаться на поддержанные сущности</td>
+</tr>
+<tr>
+<td><code>roads.profiles.*_weights</code> имеет сумму <code>&lt;= 0</code></td>
+<td>для выбора profile нужна положительная сумма весов</td>
+</tr>
+<tr>
+<td><code>max(profile corridor width) &gt;= roads.spacing_m</code></td>
+<td>самый широкий road profile должен помещаться в квартальный шаг</td>
+</tr>
+<tr>
+<td>Любой обязательный positive spacing/size/height <code>&lt;= 0</code></td>
+<td>значение должно быть положительным</td>
+</tr>
+<tr>
+<td><code>buildings.max_height_m &lt; buildings.min_height_m</code></td>
+<td>максимум высоты должен быть не меньше минимума</td>
+</tr>
+<tr>
+<td><code>buildings.footprint_max_m &lt; buildings.footprint_min_m</code></td>
+<td>максимум footprint должен быть не меньше минимума</td>
+</tr>
+<tr>
+<td><code>buildings.footprint.model</code> не из списка поддерживаемых</td>
+<td>поддерживаются <code>rectangle</code>, <code>square</code>, <code>circle</code>, <code>slab</code>, <code>courtyard</code>, <code>l_shape</code>, <code>u_shape</code>, <code>t_shape</code>, <code>mixed</code></td>
+</tr>
+<tr>
+<td><code>buildings.footprint.weights</code> содержит неизвестный ключ</td>
+<td>ключи должны быть конкретными footprint types, без <code>mixed</code></td>
+</tr>
+<tr>
+<td><code>buildings.footprint.weights.* &lt; 0</code></td>
+<td>веса не могут быть отрицательными</td>
+</tr>
+<tr>
+<td><code>buildings.footprint.model: mixed</code> и сумма weights <code>&lt;= 0</code></td>
+<td>для mixed нужна положительная сумма весов</td>
+</tr>
+<tr>
+<td><code>buildings.footprint.circle_segments &lt; 8</code></td>
+<td>круг должен иметь хотя бы 8 сегментов</td>
+</tr>
+<tr>
+<td><code>buildings.footprint.courtyard_ratio</code> вне <code>0..0.8</code></td>
+<td>доля двора должна быть в допустимом диапазоне</td>
+</tr>
+<tr>
+<td><code>buildings.footprint.wing_width_ratio</code> вне <code>0..0.8</code></td>
+<td>доля крыла должна быть в допустимом диапазоне</td>
+</tr>
+<tr>
+<td><code>buildings.roof.model</code> не из списка поддерживаемых</td>
+<td>поддерживаются <code>flat</code>, <code>shed</code>, <code>gable</code>, <code>hip</code>, <code>half_hip</code>, <code>pyramid</code>, <code>mansard</code>, <code>dome</code>, <code>barrel</code>, <code>cone</code>, <code>mixed</code></td>
+</tr>
+<tr>
+<td><code>buildings.roof.weights</code> содержит неизвестный ключ</td>
+<td>ключи должны быть конкретными roof types, без <code>mixed</code></td>
+</tr>
+<tr>
+<td><code>buildings.roof.weights.* &lt; 0</code></td>
+<td>веса не могут быть отрицательными</td>
+</tr>
+<tr>
+<td><code>buildings.roof.model: mixed</code> и сумма weights <code>&lt;= 0</code></td>
+<td>для mixed нужна положительная сумма весов</td>
+</tr>
+<tr>
+<td><code>buildings.roof.pitch_degrees</code> вне <code>0..75</code></td>
+<td>базовый угол ската должен быть в допустимом диапазоне</td>
+</tr>
+<tr>
+<td><code>buildings.roof.pitch_jitter_degrees &lt; 0</code></td>
+<td>jitter угла не может быть отрицательным</td>
+</tr>
+<tr>
+<td><code>buildings.roof.flat_slope_degrees</code> вне <code>0..15</code></td>
+<td>уклон плоской крыши должен быть малым</td>
+</tr>
+<tr>
+<td><code>buildings.roof.eave_overhang_m &lt; 0</code></td>
+<td>вынос карниза не может быть отрицательным</td>
+</tr>
+<tr>
+<td><code>buildings.roof.ridge_height_ratio</code> вне <code>0..0.8</code></td>
+<td>rise крыши должен быть ограничен</td>
+</tr>
+<tr>
+<td><code>buildings.roof.mansard_break_ratio</code> вне <code>0.1..0.9</code></td>
+<td>перелом мансарды должен быть внутри ската</td>
+</tr>
+<tr>
+<td><code>buildings.roof.dome_segments &lt; 8</code></td>
+<td>купольная детализация должна иметь хотя бы 8 сегментов</td>
+</tr>
+<tr>
+<td>Неизвестный ключ в <code>parcels</code></td>
+<td>имена параметров <code>parcels</code> валидируются строго</td>
+</tr>
+<tr>
+<td><code>parcels.block_jitter_m &lt; 0</code></td>
+<td>jitter block не может быть отрицательным</td>
+</tr>
+<tr>
+<td><code>parcels.parcel_setback_m &lt; 0</code></td>
+<td>parcel setback не может быть отрицательным</td>
+</tr>
+<tr>
+<td><code>parcels.building_alignment</code> неизвестен</td>
+<td>поддерживаются <code>parcel</code> и <code>global</code></td>
+</tr>
+<tr>
+<td><code>parcels.orientation_jitter_degrees &lt; 0</code></td>
+<td>orientation jitter не может быть отрицательным</td>
+</tr>
+<tr>
+<td><code>parcels.max_building_coverage</code> вне <code>0..1</code></td>
+<td>coverage должен быть положительным и не больше <code>1</code></td>
+</tr>
+<tr>
+<td><code>parcels.block_orientation_source</code> неизвестен</td>
+<td>поддерживаются <code>road_model</code>, <code>config</code>, <code>none</code></td>
+</tr>
+<tr>
+<td><code>parcels.block_orientation_jitter_degrees &lt; 0</code></td>
+<td>block orientation jitter не может быть отрицательным</td>
+</tr>
+<tr>
+<td><code>parcels.organic_orientation_jitter_degrees &lt; 0</code></td>
+<td>organic orientation jitter не может быть отрицательным</td>
+</tr>
+<tr>
+<td><code>parcels.split_jitter_ratio</code> вне <code>0..0.45</code></td>
+<td>split jitter должен быть в допустимом диапазоне</td>
+</tr>
+<tr>
+<td><code>parcels.max_subdivision_depth &lt; 0</code></td>
+<td>глубина subdivision не может быть отрицательной</td>
+</tr>
+<tr>
+<td><code>parcels.max_parcel_width_m &lt; parcels.min_parcel_width_m</code></td>
+<td>максимум ширины parcel должен быть не меньше минимума</td>
+</tr>
+<tr>
+<td><code>parcels.max_parcel_depth_m &lt; parcels.min_parcel_depth_m</code></td>
+<td>максимум глубины parcel должен быть не меньше минимума</td>
+</tr>
+<tr>
+<td><code>parcels.block_size_m &lt; parcels.min_block_size_m</code></td>
+<td>размер block должен быть не меньше минимального block</td>
+</tr>
+<tr>
+<td><code>sampling.mode != surface</code></td>
+<td>поддерживается только <code>surface</code></td>
+</tr>
+<tr>
+<td><code>sampling.jitter_ratio</code> вне <code>0..0.45</code></td>
+<td>jitter должен быть в допустимом диапазоне</td>
+</tr>
+<tr>
+<td><code>output.format != ply</code></td>
+<td>поддерживается только <code>ply</code></td>
+</tr>
+<tr>
+<td>Неизвестный ключ в <code>worldgen</code></td>
+<td>поддерживаются <code>catalog_docs</code>, <code>strict_catalog_validation</code></td>
+</tr>
+<tr>
+<td>встроенные catalogs не проходят строгую валидацию</td>
+<td>определения catalogs должны ссылаться только на известные ids и иметь валидные weights</td>
+</tr>
+</tbody>
+</table>
+<h2 id="_4">Примеры конфигов</h2>
+<table>
+<thead>
+<tr>
+<th>Файл</th>
+<th>Что демонстрирует</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>configs/mvp.yaml</code></td>
+<td>Базовый MVP: дороги <code>grid</code>, sidewalks, terrain, buildings, RGB и class labels.</td>
+</tr>
+<tr>
+<td><code>configs/demo_road_profiles.yaml</code></td>
+<td><code>roads.model: mixed</code>, road profiles, <code>road_median</code>, веса profiles по биомам; здания выключены.</td>
+</tr>
+<tr>
+<td><code>configs/demo_parcels.yaml</code></td>
+<td>Parcel subdivision и здания, привязанные к parcels, на легком тайле.</td>
+</tr>
+<tr>
+<td><code>configs/demo_parcel_alignment.yaml</code></td>
+<td>Выравнивание зданий по parcels, mixed roads, profiles, footprints и roofs.</td>
+</tr>
+<tr>
+<td><code>configs/demo_oriented_parcels.yaml</code></td>
+<td>Oriented block/parcel subdivision, orientation context от road model и выровненные здания.</td>
+</tr>
+<tr>
+<td><code>configs/demo_universal_showcase.yaml</code></td>
+<td>Большой интеграционный демонстрационный сценарий: mixed roads, profiles, биомы, parcels, mixed footprints, mixed roofs. См. <code>doc/universal_showcase.md</code>.</td>
+</tr>
+</tbody>
+</table>
+<p>Список намеренно отражает только YAML-файлы, которые реально есть в текущем <code>configs/</code>. Тематические документы выше описывают возможности шире, чем отдельные demos.</p></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="js/bootstrap.bundle.min.js"></script>
+        <script>
+            var base_url = ".",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="js/base.js"></script>
+        <script src="search/main.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>

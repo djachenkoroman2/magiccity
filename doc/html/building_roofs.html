@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="ru" data-bs-theme="light">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        
+        
+        <link rel="shortcut icon" href="img/favicon.ico">
+        <title>Крыши зданий - Документация MagicCity</title>
+        <link href="css/bootstrap.min.css" rel="stylesheet">
+        <link href="css/fontawesome.min.css" rel="stylesheet">
+        <link href="css/brands.min.css" rel="stylesheet">
+        <link href="css/solid.min.css" rel="stylesheet">
+        <link href="css/v4-font-face.min.css" rel="stylesheet">
+        <link href="css/base.css" rel="stylesheet">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="index.html">Документация MagicCity</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#navbar-collapse" aria-controls="navbar-collapse" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="nav-item">
+                                <a href="index.html" class="nav-link">Главная</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="configuration_reference.html" class="nav-link">Конфигурация</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="roads.html" class="nav-link">Дороги</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="biomes.html" class="nav-link">Биомы</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="parcels.html" class="nav-link">Parcels</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="building_footprints.html" class="nav-link">Footprints зданий</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="building_roofs.html" class="nav-link active" aria-current="page">Крыши зданий</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="generated_objects.html" class="nav-link">Генерируемые объекты</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="worldgen_catalogs.html" class="nav-link">Worldgen catalogs</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="universal_showcase.html" class="nav-link">Universal showcase</a>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ms-md-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a rel="prev" href="building_footprints.html" class="nav-link">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" href="generated_objects.html" class="nav-link">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#_1" class="nav-link">Справочник по крышам зданий</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#yaml" class="nav-link">YAML</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#_2" class="nav-link">Поддерживаемые типы</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#_3" class="nav-link">Высота</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#_4" class="nav-link">Типы крыш</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#footprints" class="nav-link">Совместимость с footprints</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#_5" class="nav-link">Метаданные</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#_6" class="nav-link">Демо</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="_1">Справочник по крышам зданий</h1>
+<p>Крыша здания (<code>building roof</code>) — это процедурная форма верхней поверхности здания. В <code>citygen</code> крыша определяет:</p>
+<ul>
+<li>высоту <code>building_roof</code> точек;</li>
+<li>верхнюю границу фасада, или линию карниза;</li>
+<li>распределение типов roofs в metadata;</li>
+<li>визуальный характер здания без перехода к полноценному mesh/CAD.</li>
+</ul>
+<p>Footprint по-прежнему задает область на земле. Семплирование крыши никогда не должно выходить за footprint и не должно попадать во внутренний двор <code>courtyard</code>. Если footprint получил parcel orientation, высота крыши вычисляется в local-space footprint, а точки остаются в world-space <code>x/y/z</code>. Значения YAML по умолчанию описаны в <code>doc/configuration_reference.md</code>, ориентированные parcels — в <code>doc/parcels.md</code>, а геометрия footprint — в <code>doc/building_footprints.md</code>.</p>
+<h2 id="yaml">YAML</h2>
+<p>Секция находится внутри <code>buildings</code>:</p>
+<pre><code class="language-yaml">buildings:
+  roof:
+    model: mixed
+    weights:
+      flat: 0.22
+      shed: 0.10
+      gable: 0.16
+      hip: 0.14
+      half_hip: 0.08
+      pyramid: 0.08
+      mansard: 0.08
+      dome: 0.06
+      barrel: 0.04
+      cone: 0.04
+    pitch_degrees: 28
+    pitch_jitter_degrees: 8
+    flat_slope_degrees: 0
+    eave_overhang_m: 0
+    ridge_height_ratio: 0.35
+    mansard_break_ratio: 0.45
+    dome_segments: 16
+    align_to_long_axis: true
+</code></pre>
+<p>Если <code>buildings.roof</code> отсутствует, используется <code>model: flat</code>. При <code>flat_slope_degrees: 0</code> поведение совпадает со старой плоской крышей.</p>
+<table>
+<thead>
+<tr>
+<th>Параметр</th>
+<th>По умолчанию</th>
+<th>Описание</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>model</code></td>
+<td><code>flat</code></td>
+<td>Тип крыши или <code>mixed</code>.</td>
+</tr>
+<tr>
+<td><code>weights</code></td>
+<td><code>{}</code> или стандартная смесь для <code>mixed</code></td>
+<td>Веса выбора конкретного типа roof.</td>
+</tr>
+<tr>
+<td><code>pitch_degrees</code></td>
+<td><code>28.0</code></td>
+<td>Базовый угол ската.</td>
+</tr>
+<tr>
+<td><code>pitch_jitter_degrees</code></td>
+<td><code>8.0</code></td>
+<td>Детерминированное отклонение угла по зданию.</td>
+</tr>
+<tr>
+<td><code>flat_slope_degrees</code></td>
+<td><code>0.0</code></td>
+<td>Малый уклон плоской крыши.</td>
+</tr>
+<tr>
+<td><code>eave_overhang_m</code></td>
+<td><code>0.0</code></td>
+<td>Зарезервировано для будущего выноса карниза.</td>
+</tr>
+<tr>
+<td><code>ridge_height_ratio</code></td>
+<td><code>0.35</code></td>
+<td>Максимальный подъем крыши как доля высоты здания.</td>
+</tr>
+<tr>
+<td><code>mansard_break_ratio</code></td>
+<td><code>0.45</code></td>
+<td>Положение перелома мансардной крыши.</td>
+</tr>
+<tr>
+<td><code>dome_segments</code></td>
+<td><code>16</code></td>
+<td>Зарезервировано для детализации криволинейных roofs.</td>
+</tr>
+<tr>
+<td><code>align_to_long_axis</code></td>
+<td><code>true</code></td>
+<td>Ориентация конька или арки относительно длинной оси footprint в local-space.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="_2">Поддерживаемые типы</h2>
+<table>
+<thead>
+<tr>
+<th>Тип</th>
+<th>Характер</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>flat</code></td>
+<td>Плоская крыша.</td>
+</tr>
+<tr>
+<td><code>shed</code></td>
+<td>Односкатная крыша.</td>
+</tr>
+<tr>
+<td><code>gable</code></td>
+<td>Двускатная крыша с коньком.</td>
+</tr>
+<tr>
+<td><code>hip</code></td>
+<td>Четырехскатная вальмовая крыша.</td>
+</tr>
+<tr>
+<td><code>half_hip</code></td>
+<td>Полувальмовая крыша.</td>
+</tr>
+<tr>
+<td><code>pyramid</code></td>
+<td>Шатровая крыша с вершиной в центре.</td>
+</tr>
+<tr>
+<td><code>mansard</code></td>
+<td>Ломаная мансардная крыша.</td>
+</tr>
+<tr>
+<td><code>dome</code></td>
+<td>Купольная крыша.</td>
+</tr>
+<tr>
+<td><code>barrel</code></td>
+<td>Арочная или сводчатая крыша.</td>
+</tr>
+<tr>
+<td><code>cone</code></td>
+<td>Коническая крыша.</td>
+</tr>
+<tr>
+<td><code>mixed</code></td>
+<td>Выбор типа roof по <code>weights</code>.</td>
+</tr>
+</tbody>
+</table>
+<p>Alias-значения:</p>
+<table>
+<thead>
+<tr>
+<th>Alias</th>
+<th>Каноническое значение</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>single_slope</code></td>
+<td><code>shed</code></td>
+</tr>
+<tr>
+<td><code>mono_pitch</code></td>
+<td><code>shed</code></td>
+</tr>
+<tr>
+<td><code>dual_pitch</code></td>
+<td><code>gable</code></td>
+</tr>
+<tr>
+<td><code>pitched</code></td>
+<td><code>gable</code></td>
+</tr>
+<tr>
+<td><code>hipped</code></td>
+<td><code>hip</code></td>
+</tr>
+<tr>
+<td><code>half_hipped</code></td>
+<td><code>half_hip</code></td>
+</tr>
+<tr>
+<td><code>tent</code></td>
+<td><code>pyramid</code></td>
+</tr>
+<tr>
+<td><code>vault</code></td>
+<td><code>barrel</code></td>
+</tr>
+<tr>
+<td><code>arched</code></td>
+<td><code>barrel</code></td>
+</tr>
+<tr>
+<td><code>conical</code></td>
+<td><code>cone</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="_3">Высота</h2>
+<p><code>Building.height_m</code> остается общей высотой до максимальной точки крыши:</p>
+<pre><code class="language-text">base_z + height_m = max_roof_z
+</code></pre>
+<p>Для скатных и криволинейных roofs вычисляется <code>eave_z</code>:</p>
+<pre><code class="language-text">eave_z = max_roof_z - roof_rise_m
+</code></pre>
+<p>Фасады семплируются до <code>eave_z</code>, крыша семплируется отдельно. Для <code>flat</code> без уклона <code>eave_z == max_roof_z</code>.</p>
+<h2 id="_4">Типы крыш</h2>
+<h3 id="flat"><code>flat</code></h3>
+<p>Плоская крыша. При <code>flat_slope_degrees: 0</code> все roof-точки лежат на <code>max_roof_z</code>. Если задать небольшой уклон, высота будет плавно меняться вдоль одной оси.</p>
+<h3 id="shed"><code>shed</code></h3>
+<p>Односкатная крыша. Высота монотонно растет от одной стороны local bbox footprint к другой. Подходит для <code>industrial</code> и современных зданий.</p>
+<h3 id="gable"><code>gable</code></h3>
+<p>Двускатная крыша. Высота максимальна вдоль конька и снижается к двум противоположным сторонам. Конек ориентируется по длинной оси local bbox footprint.</p>
+<h3 id="hip"><code>hip</code></h3>
+<p>Вальмовая крыша. Все стороны наклонены, максимум находится около центра или короткого конька. Для квадратов приближается к <code>pyramid</code>.</p>
+<h3 id="half_hip"><code>half_hip</code></h3>
+<p>Полувальмовая крыша. Похожа на <code>gable</code>, но высота дополнительно снижается у концов конька.</p>
+<h3 id="pyramid"><code>pyramid</code></h3>
+<p>Шатровая крыша с максимумом в центре local bbox footprint и снижением к краям.</p>
+<h3 id="mansard"><code>mansard</code></h3>
+<p>Ломаная мансардная крыша. Нижняя часть ската круче, верхняя мягче. <code>mansard_break_ratio</code> задает положение перелома.</p>
+<h3 id="dome"><code>dome</code></h3>
+<p>Купольная крыша. Высота плавно поднимается к центру и снижается к краю. Хорошо смотрится на <code>circle</code>, <code>square</code> и компактных footprints.</p>
+<h3 id="barrel"><code>barrel</code></h3>
+<p>Арочная или сводчатая крыша. Высота меняется по дуге в одном направлении и вытянута вдоль другой оси. Хорошо подходит для <code>slab</code>.</p>
+<h3 id="cone"><code>cone</code></h3>
+<p>Коническая крыша. Высота максимальна в центре и линейно снижается к краю. Хорошо подходит для круговых footprints и ротонд.</p>
+<h2 id="footprints">Совместимость с footprints</h2>
+<p>Все типы roofs работают со всеми типами footprints, потому что функция высоты крыши применяется только к точкам, которые уже прошли <code>footprint.contains_xy</code>.</p>
+<p>Практически удачные сочетания:</p>
+<table>
+<thead>
+<tr>
+<th>Footprint</th>
+<th>Подходящие roofs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>rectangle</code></td>
+<td><code>flat</code>, <code>shed</code>, <code>gable</code>, <code>hip</code>, <code>half_hip</code>, <code>mansard</code></td>
+</tr>
+<tr>
+<td><code>square</code></td>
+<td><code>flat</code>, <code>hip</code>, <code>pyramid</code>, <code>dome</code></td>
+</tr>
+<tr>
+<td><code>circle</code></td>
+<td><code>flat</code>, <code>dome</code>, <code>cone</code></td>
+</tr>
+<tr>
+<td><code>slab</code></td>
+<td><code>flat</code>, <code>shed</code>, <code>gable</code>, <code>barrel</code></td>
+</tr>
+<tr>
+<td><code>courtyard</code></td>
+<td><code>flat</code>, <code>gable</code>, <code>hip</code>, <code>mansard</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="_5">Метаданные</h2>
+<p>Metadata содержит агрегаты по roofs:</p>
+<pre><code class="language-json">{
+  &quot;building_counts&quot;: {
+    &quot;by_roof&quot;: {
+      &quot;flat&quot;: 5,
+      &quot;gable&quot;: 2,
+      &quot;dome&quot;: 4
+    },
+    &quot;by_roof_and_footprint&quot;: {
+      &quot;dome&quot;: {
+        &quot;circle&quot;: 2,
+        &quot;square&quot;: 2
+      }
+    },
+    &quot;by_roof_and_biome&quot;: {
+      &quot;gable&quot;: {
+        &quot;residential&quot;: 2
+      }
+    }
+  },
+  &quot;supported_roof_types&quot;: [
+    &quot;flat&quot;,
+    &quot;shed&quot;,
+    &quot;gable&quot;,
+    &quot;hip&quot;,
+    &quot;half_hip&quot;,
+    &quot;pyramid&quot;,
+    &quot;mansard&quot;,
+    &quot;dome&quot;,
+    &quot;barrel&quot;,
+    &quot;cone&quot;
+  ]
+}
+</code></pre>
+<h2 id="_6">Демо</h2>
+<p>Все типы roofs вместе с mixed footprints и parcels:</p>
+<pre><code class="language-bash">uv run citygen --config configs/demo_universal_showcase.yaml --out outputs/demo_universal_showcase.ply
+</code></pre>
+<p>Roof types на oriented parcels:</p>
+<pre><code class="language-bash">uv run citygen --config configs/demo_oriented_parcels.yaml --out outputs/demo_oriented_parcels.ply
+</code></pre>
+<p>Parcel-aware выравнивание roof/footprint:</p>
+<pre><code class="language-bash">uv run citygen --config configs/demo_parcel_alignment.yaml --out outputs/demo_parcel_alignment.ply
+</code></pre></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="js/bootstrap.bundle.min.js"></script>
+        <script>
+            var base_url = ".",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="js/base.js"></script>
+        <script src="search/main.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>

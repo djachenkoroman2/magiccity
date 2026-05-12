@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="ru" data-bs-theme="light">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        
+        
+        <link rel="shortcut icon" href="img/favicon.ico">
+        <title>Universal showcase - Документация MagicCity</title>
+        <link href="css/bootstrap.min.css" rel="stylesheet">
+        <link href="css/fontawesome.min.css" rel="stylesheet">
+        <link href="css/brands.min.css" rel="stylesheet">
+        <link href="css/solid.min.css" rel="stylesheet">
+        <link href="css/v4-font-face.min.css" rel="stylesheet">
+        <link href="css/base.css" rel="stylesheet">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="index.html">Документация MagicCity</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#navbar-collapse" aria-controls="navbar-collapse" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="nav-item">
+                                <a href="index.html" class="nav-link">Главная</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="configuration_reference.html" class="nav-link">Конфигурация</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="roads.html" class="nav-link">Дороги</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="biomes.html" class="nav-link">Биомы</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="parcels.html" class="nav-link">Parcels</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="building_footprints.html" class="nav-link">Footprints зданий</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="building_roofs.html" class="nav-link">Крыши зданий</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="generated_objects.html" class="nav-link">Генерируемые объекты</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="worldgen_catalogs.html" class="nav-link">Worldgen catalogs</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="universal_showcase.html" class="nav-link active" aria-current="page">Universal showcase</a>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ms-md-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a rel="prev" href="worldgen_catalogs.html" class="nav-link">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" class="nav-link disabled">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#universal-showcase" class="nav-link">Справочник по Universal Showcase</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#_1" class="nav-link">Что демонстрирует</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#_2" class="nav-link">Запуск</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#_3" class="nav-link">Быстрая проверка метаданных</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#_4" class="nav-link">Что означают важные секции</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#_5" class="nav-link">Ограничения</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#_6" class="nav-link">Полезные команды</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="universal-showcase">Справочник по Universal Showcase</h1>
+<p><code>configs/demo_universal_showcase.yaml</code> — большой интеграционный showcase для проверки основных возможностей <code>citygen</code> одним запуском. Этот документ описывает не схему YAML, а то, какие участки runtime-кода и диагностические поля metadata удобно проверять этим конфигом.</p>
+<p>Полная схема YAML описана в <code>doc/configuration_reference.md</code>; отдельные подсистемы — в <code>doc/roads.md</code>, <code>doc/biomes.md</code>, <code>doc/parcels.md</code>, <code>doc/building_footprints.md</code> и <code>doc/building_roofs.md</code>.</p>
+<p>Он полезен после изменений в следующих подсистемах:</p>
+<ul>
+<li>модели дорог и <code>roads.model: mixed</code>;</li>
+<li>urban fields и выбор биома;</li>
+<li>генерация footprints зданий;</li>
+<li>геометрия крыш;</li>
+<li>разбиение parcels;</li>
+<li>семплирование поверхностей;</li>
+<li>экспорт PLY и metadata.</li>
+</ul>
+<h2 id="_1">Что демонстрирует</h2>
+<p>Конфиг включает:</p>
+<ul>
+<li>большой тайл <code>tile.size_m: 2000</code>;</li>
+<li>заметный, но умеренный рельеф через <code>terrain.height_noise_m</code>;</li>
+<li><code>urban_fields.enabled: true</code>;</li>
+<li><code>roads.model: mixed</code>;</li>
+<li><code>roads.profiles.enabled: true</code> с <code>local</code>, <code>collector</code>, <code>arterial</code>, <code>boulevard</code>;</li>
+<li>широкий <code>road_median</code> через <code>arterial</code>/<code>boulevard</code> и semantic class <code>road_median</code>;</li>
+<li><code>buildings.footprint.model: mixed</code> со всеми поддержанными весами footprints;</li>
+<li><code>buildings.roof.model: mixed</code> со всеми поддержанными весами roofs;</li>
+<li><code>parcels.enabled: true</code> с размещением зданий внутри parcels;</li>
+<li>сводки <code>worldgen</code>/catalogs в metadata;</li>
+<li>RGB и поля semantic class в PLY.</li>
+</ul>
+<p>Горизонтальная плоскость остается <code>x/y</code>, высота остается <code>z</code>.</p>
+<h2 id="_2">Запуск</h2>
+<p>Из корня репозитория:</p>
+<pre><code class="language-bash">uv run citygen --config configs/demo_universal_showcase.yaml --out outputs/demo_universal_showcase.ply
+</code></pre>
+<p>Рядом будет создан metadata-файл:</p>
+<pre><code class="language-text">outputs/demo_universal_showcase.metadata.json
+</code></pre>
+<p>Если нужен быстрый эксперимент с параметрами, временно уменьши <code>tile.size_m</code> или увеличь <code>sampling.*_spacing_m</code>. Для финального showcase лучше возвращать большой тайл, потому что он дает больше шансов увидеть разные биомы, модели дорог, footprints, roofs и parcels.</p>
+<h2 id="_3">Быстрая проверка метаданных</h2>
+<pre><code class="language-bash">jq '{
+  point_count,
+  class_counts,
+  road_models,
+  road_profile_counts,
+  road_widths,
+  road_median,
+  biome_counts,
+  object_feature_counts,
+  building_counts: {
+    total: .building_counts.total,
+    by_footprint: .building_counts.by_footprint,
+    by_roof: .building_counts.by_roof,
+    by_parcel_biome: .building_counts.by_parcel_biome
+  },
+  parcel_counts
+}' outputs/demo_universal_showcase.metadata.json
+</code></pre>
+<p>Хороший результат для этого конфига:</p>
+<ul>
+<li><code>point_count &gt; 0</code>;</li>
+<li><code>point_count</code> достаточно большой для showcase, ориентировочно <code>&gt; 100000</code>;</li>
+<li><code>class_counts</code> содержит <code>ground</code>, <code>road</code>, <code>road_median</code>, <code>sidewalk</code>, <code>building_facade</code>, <code>building_roof</code>;</li>
+<li><code>road_models</code> содержит несколько effective models для <code>mixed</code>;</li>
+<li><code>road_profile_counts</code> содержит <code>local</code>, <code>collector</code>, <code>arterial</code>, <code>boulevard</code>;</li>
+<li><code>road_widths.max_median_width_m &gt; 0</code>;</li>
+<li><code>biome_counts</code> содержит несколько биомов, желательно все четыре;</li>
+<li><code>object_feature_counts</code> содержит terrain, roads, parcels и buildings;</li>
+<li><code>building_counts.total &gt; 0</code>;</li>
+<li><code>building_counts.by_footprint</code> содержит разные типы footprints;</li>
+<li><code>building_counts.by_roof</code> содержит разные типы roofs;</li>
+<li><code>parcel_counts.blocks &gt; 0</code>;</li>
+<li><code>parcel_counts.parcels &gt; 0</code>;</li>
+<li><code>parcel_counts.buildable_parcels &gt; 0</code>;</li>
+<li><code>parcel_counts.occupied_parcels &gt; 0</code>;</li>
+<li><code>parcel_counts.buildings_with_parcel_id == building_counts.total</code>.</li>
+</ul>
+<h2 id="_4">Что означают важные секции</h2>
+<p><code>urban_fields</code> задает плавные поля города. В этом showcase центр смещен относительно тайла, чтобы получить неоднородную карту биомов.</p>
+<p><code>roads.model: mixed</code> выбирает effective road network по биому. Текущий mixed-режим строит подсети <code>grid</code>, <code>radial_ring</code>, <code>linear</code> и <code>organic</code>; <code>radial</code> и <code>free</code> остаются поддержанными моделями дорог, но не входят в набор предпочтительных моделей для биомов.</p>
+<p><code>roads.profiles.enabled: true</code> назначает road primitives разные поперечные профили. В showcase включены узкие локальные улицы, collector roads, arterial roads и boulevards с широким median.</p>
+<p><code>buildings.footprint.model: mixed</code> выбирает форму здания по weights. Конфиг задает положительные веса для всех поддержанных типов footprints.</p>
+<p><code>buildings.roof.model: mixed</code> выбирает геометрию крыши по weights. Конфиг задает положительные веса для всех поддержанных типов roofs.</p>
+<p><code>parcels.enabled: true</code> включает block/parcel subdivision. Этот showcase проверяет размещение с учетом parcels, <code>parcel_id</code>, проверки buildable area и <code>parcel_counts</code>. Для визуально повернутых blocks/parcels используй <code>configs/demo_oriented_parcels.yaml</code>; в showcase <code>oriented_blocks</code> не включен, чтобы сохранить более предсказуемую базовую плотность на большом тайле.</p>
+<p><code>worldgen</code> оставлен явно включенным, чтобы metadata показывала сводки catalogs/worldgen: <code>worldgen</code>, <code>catalogs</code>, <code>biome_catalog</code> и <code>object_feature_counts</code>.</p>
+<h2 id="_5">Ограничения</h2>
+<p>Showcase не добавляет сущности, которых нет в текущем генераторе: машины, деревья, фонари, материалы, LAS/LAZ или настоящий LiDAR.</p>
+<p>Parcel subdivision в текущем MVP — прямоугольная road-aware аппроксимация поверх road primitives. Это не полноценная GIS-полигонализация кварталов из дорожного графа.</p>
+<p>Showcase тяжелее обычных проверочных конфигов. Для быстрых итераций уменьши <code>tile.size_m</code> или увеличь <code>sampling.ground_spacing_m</code>, <code>sampling.road_spacing_m</code>, <code>sampling.building_spacing_m</code>.</p>
+<p>Mixed footprints и roofs выбираются детерминированно, но все равно через weighted sampling. Если после изменений генератора какой-то тип исчез из metadata, сначала проверь <code>seed</code>, размеры тайла, размеры parcels, <code>footprint_min_m</code>, <code>footprint_max_m</code> и weights.</p>
+<h2 id="_6">Полезные команды</h2>
+<p>Проверить заголовок PLY:</p>
+<pre><code class="language-bash">head -n 20 outputs/demo_universal_showcase.ply
+</code></pre>
+<p>Посмотреть только статистику parcels:</p>
+<pre><code class="language-bash">jq '.parcel_counts' outputs/demo_universal_showcase.metadata.json
+</code></pre>
+<p>Посмотреть разнообразие зданий:</p>
+<pre><code class="language-bash">jq '.building_counts | {total, by_footprint, by_roof, by_parcel_biome}' outputs/demo_universal_showcase.metadata.json
+</code></pre>
+<p>Запустить полный набор тестов перед сравнением showcase-вывода:</p>
+<pre><code class="language-bash">uv run python -m unittest discover -s tests
+</code></pre></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="js/bootstrap.bundle.min.js"></script>
+        <script>
+            var base_url = ".",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="js/base.js"></script>
+        <script src="search/main.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>

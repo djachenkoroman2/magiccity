@@ -1,0 +1,26 @@
+site_name: Документация MagicCity
+site_url: ""
+docs_dir: doc
+site_dir: .mkdocs_html
+
+use_directory_urls: false
+exclude_docs: |
+  html/**
+hooks:
+  - scripts/mkdocs_export_doc_html.py
+
+nav:
+  - Главная: index.md
+  - Конфигурация: configuration_reference.md
+  - Дороги: roads.md
+  - Биомы: biomes.md
+  - Parcels: parcels.md
+  - Footprints зданий: building_footprints.md
+  - Крыши зданий: building_roofs.md
+  - Генерируемые объекты: generated_objects.md
+  - Worldgen catalogs: worldgen_catalogs.md
+  - Universal showcase: universal_showcase.md
+
+theme:
+  name: mkdocs
+  locale: ru
