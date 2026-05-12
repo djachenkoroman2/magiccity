@@ -245,7 +245,7 @@ def _orientation_for_road_model(
     bbox: BBox,
 ) -> float:
     if model == "grid":
-        return 0.0
+        return config.roads.angle_degrees
     if model in {"linear", "free", "organic"}:
         return config.roads.angle_degrees
     if model in {"radial", "radial_ring"}:

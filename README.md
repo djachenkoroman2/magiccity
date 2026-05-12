@@ -67,7 +67,7 @@ MagicCity — MVP CLI-генератора синтетической город
 - CRS/georeferencing metadata;
 - текстуры и mesh-геометрия.
 
-Подробнее об архитектурном catalog layer см. `doc/worldgen_catalogs.md`, а полный список generated object features — в `doc/generated_objects.md`.
+Подробнее о дорожном слое см. `doc/roads.md`, об архитектурном catalog layer — `doc/worldgen_catalogs.md`, а полный список generated object features — в `doc/generated_objects.md`.
 
 ## Структура Проекта
 
@@ -93,6 +93,9 @@ citygen/
 configs/
   mvp.yaml
   demo_*.yaml       # демонстрационные конфиги
+doc/
+  roads.md          # road models, profiles, surface classes и metadata
+  parcels.md        # blocks/parcels и parcel-aware placement
 outputs/
   .gitkeep          # директория вывода по умолчанию
 tests/

@@ -612,7 +612,7 @@ parcels:
 | `block_orientation_jitter_degrees` | number | `0.0` | `>= 0` | Детерминированный jitter orientation block. |
 | `organic_orientation_jitter_degrees` | number | `10.0` | `>= 0` | Минимальный jitter для organic blocks при source `road_model`. |
 
-MVP не строит полноценные GIS-полигоны кварталов из дорожного графа. Вместо этого он создает road-aware прямоугольные blocks/parcels, отбрасывает участки без достаточного road/sidewalk clearance и размещает здания только внутри buildable area parcel. При `oriented_blocks: true` subdivision идет в local-space block, а `bbox` остается только broad phase axis-aligned envelope.
+MVP не строит полноценные GIS-полигоны кварталов из дорожного графа. Вместо этого он создает road-aware прямоугольные blocks/parcels, отбрасывает участки без достаточного road/sidewalk clearance и размещает здания только внутри buildable area parcel. При `oriented_blocks: true` subdivision идет в local-space block, а `bbox` остается только broad phase axis-aligned envelope. Для `block_orientation_source: road_model` модели `grid`, `linear`, `free` и `organic` используют `roads.angle_degrees` как base orientation; `radial` и `radial_ring` вычисляют направление от центра.
 
 Metadata получает агрегированные секции `parcel_counts`, `parcel_building_alignment`, `building_orientations`, `block_geometry` и `parcel_geometry`: количество blocks/parcels, buildable и occupied parcels, распределение parcels по биомам, число зданий с `parcel_id`, alignment mode и orientation summary.
 
@@ -711,7 +711,7 @@ worldgen:
 | `catalog_docs` | boolean | `true` | Документирует намерение держать catalog-backed docs включенными; сейчас используется как resolved config flag. |
 | `strict_catalog_validation` | boolean | `true` | При загрузке config проверяет встроенные catalogs на неизвестные ids, некорректные weights и битые ссылки. |
 
-Catalog architecture описана в `doc/worldgen_catalogs.md`, а список generated object features — в `doc/generated_objects.md`.
+Road layer подробно описан в `doc/roads.md`. Catalog architecture описана в `doc/worldgen_catalogs.md`, а список generated object features — в `doc/generated_objects.md`.
 
 ## Ограничения валидатора
 

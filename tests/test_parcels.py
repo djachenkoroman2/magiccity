@@ -125,6 +125,41 @@ parcels:
             self.assertAlmostEqual(round_trip[0], x, places=6)
             self.assertAlmostEqual(round_trip[1], y, places=6)
 
+    def test_grid_block_orientation_uses_configured_road_angle(self) -> None:
+        config = _config_from_text(
+            """
+seed: 23
+tile:
+  size_m: 128
+  margin_m: 24
+roads:
+  model: grid
+  spacing_m: 80
+  width_m: 6
+  sidewalk_width_m: 2
+  angle_degrees: 33
+buildings:
+  enabled: false
+parcels:
+  enabled: true
+  oriented_blocks: true
+  block_orientation_source: road_model
+  block_orientation_jitter_degrees: 0
+  block_size_m: 72
+  block_jitter_m: 0
+  min_block_size_m: 24
+  min_parcel_width_m: 12
+  max_parcel_width_m: 36
+  min_parcel_depth_m: 12
+  max_parcel_depth_m: 36
+"""
+        )
+        scene = generate_scene(config)
+
+        self.assertGreater(len(scene.blocks), 0)
+        self.assertTrue(all(abs(block.orientation_degrees - 33.0) < 1e-6 for block in scene.blocks))
+        self.assertTrue(all(abs(parcel.orientation_degrees - 33.0) < 1e-6 for parcel in scene.parcels))
+
     def test_buildings_align_to_oriented_parcels_and_avoid_hardscape(self) -> None:
         config = load_config("configs/demo_oriented_parcels.yaml")
         scene = generate_scene(config)

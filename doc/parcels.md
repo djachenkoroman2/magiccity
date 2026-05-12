@@ -73,7 +73,7 @@ parcels:
 
 Это сознательная MVP-аппроксимация. Текущие дороги представлены primitives и distance-based классификацией, а не полноценным топологическим графом, поэтому `parcels` не обещают идеальную GIS-полигонализацию кварталов для `organic`, `free`, `radial` или `mixed` roads.
 
-Для `mixed` road model orientation выбирается практично: residential/grid обычно дает `0`, industrial/linear следует `roads.angle_degrees`, downtown/radial_ring использует tangent вокруг city center, suburb/organic получает base angle с deterministic jitter. Это не road-tangent solver, а lightweight MVP-связь parcels с road context.
+Для `mixed` road model orientation выбирается практично: residential/grid использует `roads.angle_degrees` (по умолчанию `0`), industrial/linear следует `roads.angle_degrees`, downtown/radial_ring использует tangent вокруг city center, suburb/organic получает base angle с deterministic jitter. Это не road-tangent solver, а lightweight MVP-связь parcels с road context.
 
 ## Placement Зданий
 
