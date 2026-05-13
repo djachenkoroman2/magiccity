@@ -143,6 +143,25 @@ parcels:
   parcel_setback_m: 0.5
   split_jitter_ratio: 0.12
   max_subdivision_depth: 6
+mobile_lidar:
+  enabled: true
+  output_mode: additive
+  trajectory: road
+  sensor_height_m: 2.4
+  position_step_m: 24
+  min_range_m: 1.2
+  max_range_m: 110
+  horizontal_fov_degrees: 200
+  horizontal_step_degrees: 10
+  vertical_fov_degrees: 42
+  vertical_center_degrees: -9
+  vertical_channels: 8
+  angle_jitter_degrees: 0.2
+  range_noise_m: 0.03
+  drop_probability: 0.03
+  distance_attenuation: 0.18
+  occlusions_enabled: true
+  ray_step_m: 0.75
 sampling:
   mode: surface
   ground_spacing_m: 8
