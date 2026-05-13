@@ -11,6 +11,7 @@ MagicCity — процедурный генератор городских point
 - [Биомы](biomes.md) — `urban_fields`, классификация районов и влияние биомов на дороги/здания.
 - [Parcels](parcels.md) — blocks/parcels, oriented subdivision, buildable areas и placement зданий.
 - [Ограждения](fences.md) — заборы по границам parcels, типы материалов, высота, ворота и фундаменты.
+- [Sampling pipeline](sampling.md) — стадии surface sampling, mobile LiDAR, настройки плотности, semantic class/RGB и metadata.
 - [Footprints зданий](building_footprints.md) — поддержанные footprint types, aliases, геометрия и clearance.
 - [Крыши зданий](building_roofs.md) — roof types, aliases, функции высоты и sampling.
 - [Генерируемые объекты](generated_objects.md) — object feature ids, semantic classes и metadata counts.

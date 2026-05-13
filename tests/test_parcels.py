@@ -240,7 +240,7 @@ parcels:
     def test_cli_smoke_writes_demo_parcels(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             out_path = Path(tmp) / "demo_parcels.ply"
-            exit_code = main(["--config", "configs/demo_parcels.yaml", "--out", str(out_path)])
+            exit_code = main(["--config", "configs/demo_parcels.yaml", "--out", str(out_path), "--quiet"])
             metadata_path = out_path.with_suffix(".metadata.json")
             metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
 
@@ -252,7 +252,9 @@ parcels:
     def test_cli_smoke_writes_demo_parcel_alignment(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             out_path = Path(tmp) / "demo_parcel_alignment.ply"
-            exit_code = main(["--config", "configs/demo_parcel_alignment.yaml", "--out", str(out_path)])
+            exit_code = main(
+                ["--config", "configs/demo_parcel_alignment.yaml", "--out", str(out_path), "--quiet"]
+            )
             metadata_path = out_path.with_suffix(".metadata.json")
             metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
 
@@ -268,7 +270,9 @@ parcels:
     def test_cli_smoke_writes_demo_oriented_parcels(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             out_path = Path(tmp) / "demo_oriented_parcels.ply"
-            exit_code = main(["--config", "configs/demo_oriented_parcels.yaml", "--out", str(out_path)])
+            exit_code = main(
+                ["--config", "configs/demo_oriented_parcels.yaml", "--out", str(out_path), "--quiet"]
+            )
             metadata_path = out_path.with_suffix(".metadata.json")
             metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
 

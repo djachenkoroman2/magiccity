@@ -96,6 +96,7 @@ class CatalogTests(unittest.TestCase):
             "biomes.md",
             "parcels.md",
             "fences.md",
+            "sampling.md",
             "building_footprints.md",
             "building_roofs.md",
             "generated_objects.md",
@@ -146,7 +147,7 @@ sampling:
     def test_mvp_cli_smoke_with_catalog_metadata(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             out_path = Path(tmp) / "mvp_catalogs_check.ply"
-            exit_code = main(["--config", "configs/mvp.yaml", "--out", str(out_path)])
+            exit_code = main(["--config", "configs/mvp.yaml", "--out", str(out_path), "--quiet"])
             metadata = json.loads(out_path.with_suffix(".metadata.json").read_text(encoding="utf-8"))
 
         self.assertEqual(exit_code, 0)

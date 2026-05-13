@@ -10,6 +10,7 @@
 - `doc/configuration_reference.md` — YAML-схема конфигов, значения по умолчанию и правила валидации;
 - `doc/parcels.md` — block/parcel subdivision и oriented parcels;
 - `doc/fences.md` — fence catalog ids, генерация ограждений, ворота, фундаменты и metadata;
+- `doc/sampling.md` — detailed sampling pipeline, surface sampling, mobile LiDAR и metadata diagnostics;
 - `doc/generated_objects.md` — object feature ids и counts в metadata;
 - `doc/building_footprints.md` и `doc/building_roofs.md` — каталоги геометрии зданий.
 

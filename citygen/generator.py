@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import math
+from typing import Any, Callable
 
 from .biomes import biome_params, classify_biome, sample_biome_counts
 from .config import CityGenConfig
@@ -13,6 +14,9 @@ from .parcels import Block, Parcel, build_blocks_and_parcels, parcel_counts
 from .roads import RoadNetworkLike, build_road_network
 from .roofs import build_roof, select_roof_kind
 from .worldgen import WorldgenContext, create_worldgen_context, pipeline_stage_ids
+
+
+ProgressCallback = Callable[[str, str, dict[str, Any] | None], None]
 
 
 @dataclass(frozen=True)
@@ -32,18 +36,78 @@ class Scene:
     worldgen_stages: tuple[str, ...]
 
 
-def generate_scene(config: CityGenConfig) -> Scene:
+def generate_scene(config: CityGenConfig, progress: ProgressCallback | None = None) -> Scene:
+    _emit_progress(progress, "worldgen_context", "started")
     context = create_worldgen_context(config)
     bbox = context.bbox
     work_bbox = context.work_bbox
+    _emit_progress(
+        progress,
+        "worldgen_context",
+        "done",
+        {
+            "tile": f"{config.tile.x},{config.tile.y}",
+            "bbox": f"{bbox.min_x:.1f},{bbox.min_y:.1f},{bbox.max_x:.1f},{bbox.max_y:.1f}",
+            "margin_m": config.tile.margin_m,
+        },
+    )
+
+    _emit_progress(progress, "roads", "started")
     road_network = build_road_network(config, work_bbox)
+    _emit_progress(
+        progress,
+        "roads",
+        "done",
+        {
+            "road_primitives": len(road_network.primitives),
+            "road_models": ",".join(road_network.effective_models),
+        },
+    )
+
+    _emit_progress(progress, "parcels", "started")
     blocks, parcels = (
         build_blocks_and_parcels(config, work_bbox, road_network)
         if config.parcels.enabled
         else ((), ())
     )
+    _emit_progress(
+        progress,
+        "parcels",
+        "done",
+        {
+            "blocks": len(blocks),
+            "parcels": len(parcels),
+            "enabled": config.parcels.enabled,
+        },
+    )
+
+    _emit_progress(progress, "objects", "started")
     buildings = _build_scene_buildings(config, work_bbox, road_network, parcels)
+    _emit_progress(
+        progress,
+        "objects",
+        "done",
+        {
+            "buildings": len(buildings),
+            "enabled": config.buildings.enabled,
+        },
+    )
+
+    _emit_progress(progress, "fences", "started")
     fences = build_fences(config, parcels, buildings, road_network)
+    fence_summary = fence_counts(fences)
+    _emit_progress(
+        progress,
+        "fences",
+        "done",
+        {
+            "fence_segments": fence_summary["segments"],
+            "foundation_segments": fence_summary["foundation_segments"],
+            "gate_openings": fence_summary["gate_openings"],
+            "enabled": config.fences.enabled,
+        },
+    )
+
     biome_step = max(32.0, config.tile.size_m / 8.0)
     biome_counts = sample_biome_counts(config.seed, config.urban_fields, bbox, biome_step)
     return Scene(
@@ -57,7 +121,7 @@ def generate_scene(config: CityGenConfig) -> Scene:
         parcels=parcels,
         parcel_counts=parcel_counts(blocks, parcels, buildings),
         fences=fences,
-        fence_counts=fence_counts(fences),
+        fence_counts=fence_summary,
         context=context,
         worldgen_stages=pipeline_stage_ids(),
     )
@@ -331,3 +395,13 @@ def _rects_overlap(a: Rect, b: Rect) -> bool:
         or a.max_y < b.min_y
         or a.min_y > b.max_y
     )
+
+
+def _emit_progress(
+    progress: ProgressCallback | None,
+    stage: str,
+    status: str,
+    details: dict[str, Any] | None = None,
+) -> None:
+    if progress is not None:
+        progress(stage, status, details)

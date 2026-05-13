@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections import Counter
 from dataclasses import dataclass
 import math
-from typing import Any
+from typing import Any, Callable
 
 from .classes import POINT_CLASSES
 from .config import CityGenConfig
@@ -28,7 +28,14 @@ class MobileLidarResult:
     metadata: dict[str, Any]
 
 
-def sample_mobile_lidar(config: CityGenConfig, scene) -> MobileLidarResult:
+ProgressCallback = Callable[[str, str, dict[str, Any] | None], None]
+
+
+def sample_mobile_lidar(
+    config: CityGenConfig,
+    scene,
+    progress: ProgressCallback | None = None,
+) -> MobileLidarResult:
     lidar = config.mobile_lidar
     if not lidar.enabled:
         return MobileLidarResult(points=[], metadata=_disabled_metadata(config))
@@ -36,6 +43,7 @@ def sample_mobile_lidar(config: CityGenConfig, scene) -> MobileLidarResult:
     positions = _trajectory_positions(config, scene)
     horizontal_offsets = _horizontal_offsets(lidar.horizontal_fov_degrees, lidar.horizontal_step_degrees)
     vertical_angles = _vertical_angles(lidar.vertical_center_degrees, lidar.vertical_fov_degrees, lidar.vertical_channels)
+    total_rays = len(positions) * len(horizontal_offsets) * len(vertical_angles)
 
     emitted = 0
     dropped = 0
@@ -43,6 +51,20 @@ def sample_mobile_lidar(config: CityGenConfig, scene) -> MobileLidarResult:
     attenuated = 0
     points: list[Point] = []
     hit_counts: Counter[str] = Counter()
+    milestone_interval = _progress_interval(len(positions))
+
+    if progress is not None:
+        _emit_mobile_lidar_progress(
+            progress,
+            "rays",
+            "started",
+            {
+                "sensor_positions": len(positions),
+                "horizontal_angles": len(horizontal_offsets),
+                "vertical_channels": len(vertical_angles),
+                "total_rays": total_rays,
+            },
+        )
 
     for position_index, (sensor_x, sensor_y, yaw_degrees) in enumerate(positions):
         sensor_z = terrain_height(config.seed, config.terrain, sensor_x, sensor_y) + lidar.sensor_height_m
@@ -92,10 +114,61 @@ def sample_mobile_lidar(config: CityGenConfig, scene) -> MobileLidarResult:
                 points.append(Point(x, y, z, *cls.color, cls.id))
                 hit_counts[hit.class_name] += 1
 
-    return MobileLidarResult(
-        points=points,
-        metadata=_metadata(config, positions, emitted, dropped, missed, attenuated, hit_counts),
-    )
+        if progress is not None:
+            _emit_mobile_lidar_progress(
+                progress,
+                "rays",
+                "item_done",
+                _ray_progress_details(
+                    position_index + 1,
+                    len(positions),
+                    emitted,
+                    total_rays,
+                    dropped,
+                    missed,
+                    attenuated,
+                    points,
+                    hit_counts,
+                ),
+            )
+            if position_index + 1 == len(positions) or (position_index + 1) % milestone_interval == 0:
+                _emit_mobile_lidar_progress(
+                    progress,
+                    "rays",
+                    "progress",
+                    _ray_progress_details(
+                        position_index + 1,
+                        len(positions),
+                        emitted,
+                        total_rays,
+                        dropped,
+                        missed,
+                        attenuated,
+                        points,
+                        hit_counts,
+                    ),
+                )
+
+    metadata = _metadata(config, positions, emitted, dropped, missed, attenuated, hit_counts)
+    if progress is not None:
+        _emit_mobile_lidar_progress(
+            progress,
+            "rays",
+            "done",
+            {
+                "sensor_positions": len(positions),
+                "processed_rays": emitted,
+                "total_rays": total_rays,
+                "emitted_rays": emitted,
+                "successful_hits": metadata.get("successful_hits", 0),
+                "dropped_rays": dropped,
+                "missed_rays": missed,
+                "attenuated_rays": attenuated,
+                "lidar_points": len(points),
+                "hit_counts_by_class": dict(sorted(hit_counts.items())),
+            },
+        )
+    return MobileLidarResult(points=points, metadata=metadata)
 
 
 def mobile_lidar_metadata(config: CityGenConfig, scene) -> dict[str, Any]:
@@ -543,6 +616,57 @@ def _distance_in_range(config: CityGenConfig, distance_m: float) -> bool:
 
 def _cross(ax: float, ay: float, bx: float, by: float) -> float:
     return ax * by - ay * bx
+
+
+def _ray_progress_details(
+    position_index: int,
+    position_total: int,
+    emitted: int,
+    total_rays: int,
+    dropped: int,
+    missed: int,
+    attenuated: int,
+    points: list[Point],
+    hit_counts: Counter[str],
+) -> dict[str, Any]:
+    return {
+        "positions": position_index,
+        "total_positions": position_total,
+        "processed_rays": emitted,
+        "total_rays": total_rays,
+        "successful_hits": sum(hit_counts.values()),
+        "dropped_rays": dropped,
+        "missed_rays": missed,
+        "attenuated_rays": attenuated,
+        "lidar_points": len(points),
+        "hit_counts_by_class": dict(sorted(hit_counts.items())),
+    }
+
+
+def _emit_mobile_lidar_progress(
+    progress: ProgressCallback | None,
+    substage: str,
+    event: str,
+    details: dict[str, Any] | None = None,
+) -> None:
+    payload = {"substage": substage, "event": event}
+    if details:
+        payload.update(details)
+    _emit_progress(progress, "mobile_lidar", "progress", payload)
+
+
+def _progress_interval(total: int, steps: int = 4) -> int:
+    return max(1, math.ceil(total / max(1, steps)))
+
+
+def _emit_progress(
+    progress: ProgressCallback | None,
+    stage: str,
+    status: str,
+    details: dict[str, Any] | None = None,
+) -> None:
+    if progress is not None:
+        progress(stage, status, details)
 
 
 def _metadata(

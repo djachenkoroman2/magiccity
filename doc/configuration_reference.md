@@ -10,6 +10,7 @@
 - `doc/biomes.md` — `urban_fields`, классификация биомов и влияние биомов;
 - `doc/parcels.md` — block/parcel subdivision и oriented parcels;
 - `doc/fences.md` — ограждения участков, типы заборов, ворота, фундаменты и metadata;
+- `doc/sampling.md` — стадии sampling pipeline, плотности точек, mobile LiDAR, semantic class/RGB и metadata;
 - `doc/building_footprints.md` — идентификаторы footprints, aliases и семплирование;
 - `doc/building_roofs.md` — идентификаторы roofs, aliases и функции высоты;
 - `doc/generated_objects.md` — feature ids объектов и semantic classes;
@@ -26,6 +27,18 @@ uv run citygen --config configs/mvp.yaml --out outputs/mvp_tile.ply
 
 ```bash
 uv run citygen --config path/to/multi_tile_config.yaml --out outputs/multi_tile
+```
+
+CLI по умолчанию показывает preflight-сводку, progress по стадиям pipeline, внутренний progress стадии `sampling` и итоговый summary. `sampling` печатает line-based диагностику по `tile_surfaces`, `buildings`, `fences` и `mobile LiDAR rays`, если соответствующие подэтапы участвуют в генерации. Для скриптов можно оставить только финальные пути:
+
+```bash
+uv run citygen --config configs/mvp.yaml --out outputs/mvp_tile.ply --quiet
+```
+
+Для диагностики доступны расширенные counters по стадиям и отдельные `item_done`-строки внутри `sampling`:
+
+```bash
+uv run citygen --config configs/mvp.yaml --out outputs/mvp_tile.ply --verbose
 ```
 
 ## Общие правила YAML
@@ -805,6 +818,8 @@ mobile_lidar:
 - Если `mobile_lidar.enabled: true` и `output_mode: additive`, итоговый PLY содержит surface + LiDAR точки.
 - Если `mobile_lidar.enabled: true` и `output_mode: lidar_only`, итоговый PLY содержит только LiDAR точки.
 
+Подробное описание порядка ray sampling, окклюзий, статистики и взаимодействия с surface sampling находится в `doc/sampling.md`.
+
 ## `sampling`
 
 Секция `sampling` управляет плотностью точек и случайным смещением samples.
@@ -833,6 +848,8 @@ sampling:
 - Для ground/road/road_median/sidewalk сначала берется минимальный шаг из `ground_spacing_m` и `road_spacing_m`, затем лишние точки прореживаются под нужный класс.
 - `building_spacing_m` отдельно применяется к крышам и фасадам.
 - Jitter детерминирован от `seed`, поэтому не ломает воспроизводимость.
+
+Подробный справочник по стадиям `sampling`, входным/выходным структурам, влиянию настроек, примерам и диагностике находится в `doc/sampling.md`.
 
 ## `output`
 

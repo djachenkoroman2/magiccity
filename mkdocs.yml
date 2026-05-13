@@ -16,6 +16,7 @@ nav:
   - Биомы: biomes.md
   - Parcels: parcels.md
   - Ограждения: fences.md
+  - Sampling pipeline: sampling.md
   - Footprints зданий: building_footprints.md
   - Крыши зданий: building_roofs.md
   - Генерируемые объекты: generated_objects.md

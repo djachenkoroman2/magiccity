@@ -53,6 +53,9 @@
                                 <a href="fences.html" class="nav-link">Ограждения</a>
                             </li>
                             <li class="nav-item">
+                                <a href="sampling.html" class="nav-link">Sampling pipeline</a>
+                            </li>
+                            <li class="nav-item">
                                 <a href="building_footprints.html" class="nav-link">Footprints зданий</a>
                             </li>
                             <li class="nav-item">
@@ -185,6 +188,7 @@
 <li><code>doc/biomes.md</code> — <code>urban_fields</code>, классификация биомов и влияние биомов;</li>
 <li><code>doc/parcels.md</code> — block/parcel subdivision и oriented parcels;</li>
 <li><code>doc/fences.md</code> — ограждения участков, типы заборов, ворота, фундаменты и metadata;</li>
+<li><code>doc/sampling.md</code> — стадии sampling pipeline, плотности точек, mobile LiDAR, semantic class/RGB и metadata;</li>
 <li><code>doc/building_footprints.md</code> — идентификаторы footprints, aliases и семплирование;</li>
 <li><code>doc/building_roofs.md</code> — идентификаторы roofs, aliases и функции высоты;</li>
 <li><code>doc/generated_objects.md</code> — feature ids объектов и semantic classes;</li>
@@ -196,6 +200,12 @@
 </code></pre>
 <p>Для multi-tile конфига <code>--out</code> должен быть директорией или может быть пропущен:</p>
 <pre><code class="language-bash">uv run citygen --config path/to/multi_tile_config.yaml --out outputs/multi_tile
+</code></pre>
+<p>CLI по умолчанию показывает preflight-сводку, progress по стадиям pipeline, внутренний progress стадии <code>sampling</code> и итоговый summary. <code>sampling</code> печатает line-based диагностику по <code>tile_surfaces</code>, <code>buildings</code>, <code>fences</code> и <code>mobile LiDAR rays</code>, если соответствующие подэтапы участвуют в генерации. Для скриптов можно оставить только финальные пути:</p>
+<pre><code class="language-bash">uv run citygen --config configs/mvp.yaml --out outputs/mvp_tile.ply --quiet
+</code></pre>
+<p>Для диагностики доступны расширенные counters по стадиям и отдельные <code>item_done</code>-строки внутри <code>sampling</code>:</p>
+<pre><code class="language-bash">uv run citygen --config configs/mvp.yaml --out outputs/mvp_tile.ply --verbose
 </code></pre>
 <h2 id="yaml">Общие правила YAML</h2>
 <ul>
@@ -2045,6 +2055,7 @@ distance &lt;= width_m / 2 + sidewalk_width_m      -&gt; sidewalk
 <li>Если <code>mobile_lidar.enabled: true</code> и <code>output_mode: additive</code>, итоговый PLY содержит surface + LiDAR точки.</li>
 <li>Если <code>mobile_lidar.enabled: true</code> и <code>output_mode: lidar_only</code>, итоговый PLY содержит только LiDAR точки.</li>
 </ul>
+<p>Подробное описание порядка ray sampling, окклюзий, статистики и взаимодействия с surface sampling находится в <code>doc/sampling.md</code>.</p>
 <h2 id="sampling"><code>sampling</code></h2>
 <p>Секция <code>sampling</code> управляет плотностью точек и случайным смещением samples.</p>
 <pre><code class="language-yaml">sampling:
@@ -2110,6 +2121,7 @@ distance &lt;= width_m / 2 + sidewalk_width_m      -&gt; sidewalk
 <li><code>building_spacing_m</code> отдельно применяется к крышам и фасадам.</li>
 <li>Jitter детерминирован от <code>seed</code>, поэтому не ломает воспроизводимость.</li>
 </ul>
+<p>Подробный справочник по стадиям <code>sampling</code>, входным/выходным структурам, влиянию настроек, примерам и диагностике находится в <code>doc/sampling.md</code>.</p>
 <h2 id="output"><code>output</code></h2>
 <p>Секция <code>output</code> управляет форматом PLY.</p>
 <pre><code class="language-yaml">output:

@@ -32,6 +32,7 @@ MagicCity — MVP CLI-генератора синтетической город
 | `doc/biomes.md` | `urban_fields`, классификация биомов и их влияние на генерацию. |
 | `doc/parcels.md` | Кварталы и parcels, ориентированное разбиение и зоны застройки. |
 | `doc/fences.md` | Ограждения участков: типы заборов, высота, ворота, фундаменты и metadata. |
+| `doc/sampling.md` | Pipeline sampling: стадии, настройки плотности, mobile LiDAR, semantic classes и metadata. |
 | `doc/building_footprints.md` | Идентификаторы footprints, aliases, геометрия и семплирование. |
 | `doc/building_roofs.md` | Идентификаторы roofs, aliases, функции высоты и семплирование. |
 | `doc/generated_objects.md` | Feature ids генерируемых объектов и semantic classes. |
@@ -92,7 +93,7 @@ outputs/mvp_tile.metadata.json
 ## CLI
 
 ```bash
-citygen --config CONFIG_PATH [--out OUTPUT_PATH_OR_DIRECTORY]
+citygen --config CONFIG_PATH [--out OUTPUT_PATH_OR_DIRECTORY] [--quiet | --verbose]
 ```
 
 `--config` обязателен. `--out` может быть:
@@ -102,6 +103,31 @@ citygen --config CONFIG_PATH [--out OUTPUT_PATH_OR_DIRECTORY]
 - пропущен, тогда результат пишется в `outputs/tile_X_Y.ply`.
 
 Если конфиг содержит `tiles`, `--out` должен быть директорией или отсутствовать.
+
+По умолчанию CLI печатает preflight-сводку, прогресс по стадиям для каждого тайла, внутренний progress длительной стадии `sampling` и финальный summary с количеством точек, class counts, source mode и путями к результатам. Для автоматизации доступны:
+
+- `--quiet` — оставить только финальные строки `Wrote ...`;
+- `--verbose` — добавить расширенную статистику по road models, buildings, parcels, fences, mobile LiDAR и отдельным sampling-элементам.
+
+Пример обычного вывода:
+
+```text
+citygen preflight
+  config: configs/mvp.yaml
+  seed: 42
+  mode: single-tile
+  tiles: (x=0, y=0, size_m=256, margin_m=32)
+citygen: tile 1/1 (x=0, y=0) sampling tile_surfaces started - grid_rows=129, grid_columns=129, grid_samples=16641, spacing_m=1.5
+citygen: tile 1/1 (x=0, y=0) sampling tile_surfaces progress - rows=33, total_rows=129, grid_samples=4257, total_grid_samples=16641, points=3798, class_counts={ground=1875, road=1296, sidewalk=627}
+citygen: tile 1/1 (x=0, y=0) sampling buildings done - buildings=24, points=5221, roof_points=837, facade_points=4384
+citygen: tile 1/1 (x=0, y=0) stage 6/8 sampling done in 218.8ms - surface_points=26484, final_points=26484
+citygen: tile 1/1 summary
+  points: 26484
+  classes: building_facade=4384, building_roof=837, ground=8409, road=8503, sidewalk=4351
+  point_sources: surface_only (surface_sampling=26484, mobile_lidar=0)
+Wrote 26484 points to outputs/mvp_tile.ply
+Wrote metadata to outputs/mvp_tile.metadata.json
+```
 
 ## Актуальные примеры конфигов
 

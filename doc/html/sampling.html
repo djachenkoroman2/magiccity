@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="ru" data-bs-theme="light">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        
+        
+        <link rel="shortcut icon" href="img/favicon.ico">
+        <title>Sampling pipeline - Документация MagicCity</title>
+        <link href="css/bootstrap.min.css" rel="stylesheet">
+        <link href="css/fontawesome.min.css" rel="stylesheet">
+        <link href="css/brands.min.css" rel="stylesheet">
+        <link href="css/solid.min.css" rel="stylesheet">
+        <link href="css/v4-font-face.min.css" rel="stylesheet">
+        <link href="css/base.css" rel="stylesheet">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="index.html">Документация MagicCity</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#navbar-collapse" aria-controls="navbar-collapse" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="nav-item">
+                                <a href="index.html" class="nav-link">Главная</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="configuration_reference.html" class="nav-link">Конфигурация</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="roads.html" class="nav-link">Дороги</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="biomes.html" class="nav-link">Биомы</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="parcels.html" class="nav-link">Parcels</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="fences.html" class="nav-link">Ограждения</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="sampling.html" class="nav-link active" aria-current="page">Sampling pipeline</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="building_footprints.html" class="nav-link">Footprints зданий</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="building_roofs.html" class="nav-link">Крыши зданий</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="generated_objects.html" class="nav-link">Генерируемые объекты</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="worldgen_catalogs.html" class="nav-link">Worldgen catalogs</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="universal_showcase.html" class="nav-link">Universal showcase</a>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ms-md-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a rel="prev" href="fences.html" class="nav-link">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" href="building_footprints.html" class="nav-link">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#sampling-pipeline" class="nav-link">Sampling pipeline</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#_1" class="nav-link">Назначение</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#_2" class="nav-link">Порядок выполнения</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#surface-sampling" class="nav-link">Стадии surface sampling</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#tile-surfaces" class="nav-link">Tile surfaces</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#buildings" class="nav-link">Buildings</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#fences" class="nav-link">Fences</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#mobile-lidar-mode" class="nav-link">Mobile LiDAR mode</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#configuration-parameters" class="nav-link">Configuration parameters</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#_3" class="nav-link">Режимы и их различия</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#_4" class="nav-link">Примеры конфигураций</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#_5" class="nav-link">Влияние настроек на результат</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#semantic-class-rgb" class="nav-link">Semantic class и RGB</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#cli-progress-during-sampling" class="nav-link">CLI progress during sampling</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#metadata-and-diagnostics" class="nav-link">Metadata and diagnostics</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#validation-and-tests" class="nav-link">Validation and tests</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#current-limitations" class="nav-link">Current limitations</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="sampling-pipeline">Sampling pipeline</h1>
+<p><code>sampling</code> превращает уже построенную сцену <code>Scene</code> в список точек <code>Point</code>, которые затем экспортируются в PLY и агрегируются в metadata. Это последняя runtime-стадия генерации перед <code>export_ply</code> и <code>export_metadata</code>.</p>
+<p>Источник истины по реализации:</p>
+<ul>
+<li><code>citygen/sampling.py</code> - surface sampling рельефа, дорог, зданий и объединение с mobile LiDAR;</li>
+<li><code>citygen/fences.py</code> - sampling ограждений и фундаментов;</li>
+<li><code>citygen/mobile_lidar.py</code> - ray sampling мобильного LiDAR;</li>
+<li><code>citygen/export.py</code> - PLY-поля, metadata и диагностические агрегаты;</li>
+<li><code>citygen/config.py</code> - значения по умолчанию и валидация параметров.</li>
+</ul>
+<h2 id="_1">Назначение</h2>
+<p>Вход <code>sampling</code>:</p>
+<ul>
+<li>resolved <code>CityGenConfig</code> после применения defaults и валидации;</li>
+<li><code>Scene</code> из <code>generate_scene(config)</code>: bbox тайла, work bbox с margin, дорожная сеть, здания, parcels, fences, biome counts и worldgen context.</li>
+</ul>
+<p>Выход <code>sampling</code>:</p>
+<ul>
+<li><code>list[Point]</code>, где каждая точка имеет <code>x</code>, <code>y</code>, <code>z</code>, <code>red</code>, <code>green</code>, <code>blue</code>, <code>class_id</code>;</li>
+<li>точки уже обрезаны по bbox тайла, а не по расширенному <code>work_bbox</code>;</li>
+<li>semantic class и RGB назначаются из <code>POINT_CLASSES</code>;</li>
+<li>PLY-поля <code>red/green/blue</code> и <code>class</code> записываются только если включены <code>output.include_rgb</code> и <code>output.include_class</code>.</li>
+</ul>
+<p><code>sampling</code> не создает дорожную сеть, parcels, здания или fences. Эти объекты должны быть уже построены на предыдущих стадиях <code>roads</code>, <code>parcels</code> и <code>objects</code>. На стадии sampling они только превращаются в точки.</p>
+<h2 id="_2">Порядок выполнения</h2>
+<p>Основная точка входа:</p>
+<pre><code class="language-python">sample_scene(config, scene)
+</code></pre>
+<p>Фактический порядок:</p>
+<ol>
+<li>Surface sampling всегда выполняется первым через <code>_sample_surface_scene(config, scene)</code>.</li>
+<li>Если <code>mobile_lidar.enabled: false</code>, результат surface sampling сразу возвращается.</li>
+<li>Если <code>mobile_lidar.enabled: true</code>, дополнительно выполняется <code>sample_mobile_lidar(config, scene)</code>.</li>
+<li>LiDAR-точки обрезаются по bbox тайла.</li>
+<li>При <code>mobile_lidar.output_mode: lidar_only</code> возвращаются только LiDAR-точки.</li>
+<li>При <code>mobile_lidar.output_mode: additive</code> surface-точки и LiDAR-точки объединяются и еще раз обрезаются по bbox тайла.</li>
+</ol>
+<p>Surface sampling внутри <code>_sample_surface_scene</code> выполняется в таком порядке:</p>
+<ol>
+<li><code>_sample_tile_surfaces</code> - рельеф, дороги, тротуары и road medians.</li>
+<li><code>_sample_building</code> для каждого здания - крыши и фасады.</li>
+<li><code>sample_fence_segment</code> для каждого fence segment - тело ограждения и, если нужен, фундамент.</li>
+<li><code>_crop_points(points, scene.bbox)</code> - финальная обрезка по границам тайла.</li>
+</ol>
+<h2 id="surface-sampling">Стадии surface sampling</h2>
+<table>
+<thead>
+<tr>
+<th>Стадия</th>
+<th>Код</th>
+<th>Вход</th>
+<th>Выход</th>
+<th>Основные параметры</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Подготовка сцены</td>
+<td><code>generate_scene</code>, <code>WorldgenContext</code></td>
+<td><code>CityGenConfig</code></td>
+<td><code>Scene</code> с <code>bbox</code> и <code>work_bbox</code></td>
+<td><code>tile.size_m</code>, <code>tile.margin_m</code>, <code>roads</code>, <code>buildings</code>, <code>parcels</code>, <code>fences</code></td>
+</tr>
+<tr>
+<td>Tile surfaces</td>
+<td><code>_sample_tile_surfaces</code></td>
+<td><code>scene.bbox</code>, <code>scene.road_network</code>, <code>scene.buildings</code></td>
+<td><code>ground</code>, <code>road</code>, <code>sidewalk</code>, <code>road_median</code> points</td>
+<td><code>sampling.ground_spacing_m</code>, <code>sampling.road_spacing_m</code>, <code>sampling.jitter_ratio</code>, <code>terrain</code>, <code>roads</code>, <code>roads.profiles</code></td>
+</tr>
+<tr>
+<td>Roofs</td>
+<td><code>_sample_roof</code></td>
+<td><code>Building.footprint</code>, <code>Building.roof</code></td>
+<td><code>building_roof</code> points</td>
+<td><code>sampling.building_spacing_m</code>, <code>sampling.jitter_ratio</code>, <code>buildings.roof</code></td>
+</tr>
+<tr>
+<td>Facades</td>
+<td><code>_sample_facades</code></td>
+<td><code>Building.footprint.boundary_segments</code>, <code>base_z</code>, <code>eave_z</code></td>
+<td><code>building_facade</code> points</td>
+<td><code>sampling.building_spacing_m</code>, <code>sampling.jitter_ratio</code>, <code>buildings.*</code>, <code>buildings.footprint</code></td>
+</tr>
+<tr>
+<td>Fences</td>
+<td><code>sample_fence_segment</code></td>
+<td><code>FenceSegment</code></td>
+<td><code>fence</code>, <code>fence_foundation</code> points</td>
+<td><code>fences.sample_spacing_m</code>, <code>fences.height_m</code>, <code>fences.foundation_*</code>, <code>fences.openness</code>, <code>fences.decorative</code></td>
+</tr>
+<tr>
+<td>Mobile LiDAR</td>
+<td><code>sample_mobile_lidar</code></td>
+<td><code>Scene</code>, ray trajectory</td>
+<td>LiDAR points with normal semantic classes</td>
+<td><code>mobile_lidar.*</code></td>
+</tr>
+<tr>
+<td>Cropping</td>
+<td><code>_crop_points</code></td>
+<td>all generated points</td>
+<td>points inside <code>scene.bbox</code></td>
+<td><code>tile.x</code>, <code>tile.y</code>, <code>tile.size_m</code></td>
+</tr>
+<tr>
+<td>Export metadata</td>
+<td><code>write_metadata</code></td>
+<td>final points, config, scene</td>
+<td><code>*.metadata.json</code></td>
+<td><code>output.*</code>, <code>mobile_lidar.*</code>, resolved config</td>
+</tr>
+</tbody>
+</table>
+<h2 id="tile-surfaces">Tile surfaces</h2>
+<p>Tile surfaces cover open ground, roads, sidewalks and road medians. The sampler builds a regular 2D grid over <code>scene.bbox</code> with:</p>
+<pre><code class="language-text">spacing = min(sampling.ground_spacing_m, sampling.road_spacing_m)
+</code></pre>
+<p>For each grid location:</p>
+<ol>
+<li>Deterministic jitter is applied to <code>x/y</code> using <code>sampling.jitter_ratio</code>.</li>
+<li>The point is clamped back into bbox.</li>
+<li>The sample is skipped if it falls inside any building footprint.</li>
+<li><code>surface_kind(config, scene, x, y)</code> asks the road network for semantic surface:</li>
+<li><code>road</code>;</li>
+<li><code>road_median</code>;</li>
+<li><code>sidewalk</code>;</li>
+<li><code>ground</code>.</li>
+<li>The desired spacing is selected:</li>
+<li><code>sampling.road_spacing_m</code> for <code>road</code>, <code>road_median</code>, <code>sidewalk</code>;</li>
+<li><code>sampling.ground_spacing_m</code> for <code>ground</code>.</li>
+<li>If the base grid is denser than the desired spacing, points are deterministically thinned with keep probability <code>(spacing / wanted_spacing) ** 2</code>.</li>
+<li><code>z</code> is read from <code>terrain_height(seed, terrain, x, y)</code>.</li>
+<li>RGB and class id come from <code>POINT_CLASSES[kind]</code>.</li>
+</ol>
+<p>Important performance detail: because the base grid uses the smaller of ground and road spacing, a very small <code>road_spacing_m</code> makes the sampler scan the whole tile at that spacing, even though most non-road points will later be thinned.</p>
+<h2 id="buildings">Buildings</h2>
+<p>Buildings are sampled only when they exist in <code>scene.buildings</code>. <code>buildings.enabled: false</code> means there are no roof or facade points.</p>
+<p>For each building:</p>
+<ol>
+<li>Buildings whose footprint does not intersect the tile bbox are skipped.</li>
+<li><code>sampling.building_spacing_m</code> is used for both roofs and facades.</li>
+<li>The RNG namespace is stable: <code>seed + "building-sampling" + building.id</code>.</li>
+<li>The roof sampler scans the footprint bbox, applies <code>sampling.jitter_ratio</code>, keeps only points inside the actual footprint, then asks the roof height function for <code>z</code>.</li>
+<li>The facade sampler walks each footprint boundary segment, samples positions along the segment and vertical levels from <code>base_z</code> to <code>eave_z</code>.</li>
+<li>Roof points get class <code>building_roof</code>; facade points get class <code>building_facade</code>.</li>
+</ol>
+<p>Roof geometry is controlled by <code>buildings.roof</code>, not by <code>sampling</code>. <code>sampling.building_spacing_m</code> changes point density, while <code>roof.model</code>, <code>pitch_degrees</code>, <code>flat_slope_degrees</code>, <code>ridge_height_ratio</code>, <code>mansard_break_ratio</code> and similar fields change the surface being sampled.</p>
+<h2 id="fences">Fences</h2>
+<p>Fences are generated before sampling by <code>build_fences</code>. They appear only when:</p>
+<pre><code class="language-yaml">parcels:
+  enabled: true
+fences:
+  enabled: true
+  mode: perimeter   # or partial
+</code></pre>
+<p>Fence sampling is separate from <code>sampling.building_spacing_m</code>. It uses <code>fences.sample_spacing_m</code>.</p>
+<p>For each fence segment:</p>
+<ul>
+<li>points are placed along the segment at <code>fences.sample_spacing_m</code>;</li>
+<li>vertical spacing is <code>max(0.25, fences.sample_spacing_m * 0.5)</code>;</li>
+<li>massive or explicitly configured foundations produce <code>fence_foundation</code> points;</li>
+<li>visible fence body points produce <code>fence</code> points;</li>
+<li><code>openness</code>, fence style, posts, rails and decorative elements decide which fence-body points are visible;</li>
+<li>material-specific colors are varied deterministically by position, not by random RNG.</li>
+</ul>
+<p>Fence placement itself respects parcels, road clearance, building conflicts, side selection and gate openings before sampling starts. Sampling does not move fence segments; it only turns accepted segments into points.</p>
+<h2 id="mobile-lidar-mode">Mobile LiDAR mode</h2>
+<p>Mobile LiDAR is not a second value of <code>sampling.mode</code>. It is controlled by the separate <code>mobile_lidar</code> section, while <code>sampling.mode</code> must still be <code>surface</code>.</p>
+<p>When enabled, <code>sample_mobile_lidar</code>:</p>
+<ol>
+<li>Builds sensor positions from <code>mobile_lidar.trajectory</code>.</li>
+<li>Computes horizontal offsets from <code>horizontal_fov_degrees</code> and <code>horizontal_step_degrees</code>.</li>
+<li>Computes vertical angles from <code>vertical_center_degrees</code>, <code>vertical_fov_degrees</code> and <code>vertical_channels</code>.</li>
+<li>Emits one ray for every position, horizontal offset and vertical channel.</li>
+<li>Applies deterministic drop probability and optional angle jitter per ray.</li>
+<li>Traces the ray against terrain, roads, sidewalks, medians, building facades, building roofs and, when occlusions are enabled, fences.</li>
+<li>Keeps the nearest hit when <code>occlusions_enabled: true</code>.</li>
+<li>Applies distance attenuation and optional range noise.</li>
+<li>Assigns the semantic class of the hit surface.</li>
+</ol>
+<p>LiDAR points do not receive a separate per-point source field. Source information is available as aggregate metadata in <code>point_sources</code>, and LiDAR ray statistics are written under <code>mobile_lidar</code>.</p>
+<h2 id="configuration-parameters">Configuration parameters</h2>
+<h3 id="direct-sampling-settings">Direct <code>sampling</code> settings</h3>
+<table>
+<thead>
+<tr>
+<th>Параметр</th>
+<th>Тип</th>
+<th>По умолчанию</th>
+<th>Допустимые значения</th>
+<th>Влияние</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>sampling.mode</code></td>
+<td>string</td>
+<td><code>surface</code></td>
+<td>only <code>surface</code></td>
+<td>Единственный поддержанный режим MVP. Любое другое значение вызывает <code>ConfigError</code>.</td>
+</tr>
+<tr>
+<td><code>sampling.ground_spacing_m</code></td>
+<td>number</td>
+<td><code>2.0</code></td>
+<td><code>&gt; 0</code></td>
+<td>Целевой шаг точек <code>ground</code>. Больше значение уменьшает число ground-точек примерно квадратично.</td>
+</tr>
+<tr>
+<td><code>sampling.road_spacing_m</code></td>
+<td>number</td>
+<td><code>1.5</code></td>
+<td><code>&gt; 0</code></td>
+<td>Целевой шаг точек <code>road</code>, <code>sidewalk</code>, <code>road_median</code>. Больше значение уменьшает плотность hardscape-точек.</td>
+</tr>
+<tr>
+<td><code>sampling.building_spacing_m</code></td>
+<td>number</td>
+<td><code>2.0</code></td>
+<td><code>&gt; 0</code></td>
+<td>Шаг roof/facade sampling. Влияет на <code>building_roof</code> и <code>building_facade</code>.</td>
+</tr>
+<tr>
+<td><code>sampling.jitter_ratio</code></td>
+<td>number</td>
+<td><code>0.18</code></td>
+<td><code>0..0.45</code></td>
+<td>Смещение sample как доля текущего spacing. <code>0</code> дает регулярную сетку; большие значения делают точки менее решетчатыми.</td>
+</tr>
+</tbody>
+</table>
+<p>Notes:</p>
+<ul>
+<li>в текущем коде секция <code>sampling</code> не имеет строгой проверки неизвестных ключей, поэтому опечатанные или лишние поля будут проигнорированы загрузчиком;</li>
+<li><code>sampling</code> не содержит отдельного <code>enabled</code>;</li>
+<li>нет настроек <code>max_points</code>, <code>per_class_density</code>, <code>drop_probability</code> для surface sampling или явного point budget;</li>
+<li>отдельная плотность fence-точек находится в <code>fences.sample_spacing_m</code>;</li>
+<li>настройки лучей LiDAR находятся в <code>mobile_lidar.*</code>.</li>
+</ul>
+<h3 id="related-settings-that-affect-sampled-points">Related settings that affect sampled points</h3>
+<table>
+<thead>
+<tr>
+<th>Секция</th>
+<th>Параметры</th>
+<th>Как влияет на итоговое облако</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>tile</code></td>
+<td><code>x</code>, <code>y</code>, <code>size_m</code>, <code>margin_m</code></td>
+<td><code>size_m</code> задает финальную область crop. <code>margin_m</code> расширяет рабочую область генерации сцены, но итоговые точки обрезаются по bbox тайла.</td>
+</tr>
+<tr>
+<td><code>terrain</code></td>
+<td><code>base_height_m</code>, <code>height_noise_m</code></td>
+<td>Определяет <code>z</code> для ground/road/sidewalk/median, базу зданий, fence base и высоту сенсора LiDAR над землей.</td>
+</tr>
+<tr>
+<td><code>roads</code></td>
+<td><code>model</code>, <code>spacing_m</code>, <code>width_m</code>, <code>sidewalk_width_m</code>, profiles</td>
+<td>Меняет распределение surface classes. При profiles может появляться <code>road_median</code>.</td>
+</tr>
+<tr>
+<td><code>buildings</code></td>
+<td><code>enabled</code>, height, footprints, roofs</td>
+<td>Определяет, есть ли roof/facade точки, где стоят здания и какую высоту имеют roof surfaces.</td>
+</tr>
+<tr>
+<td><code>parcels</code></td>
+<td><code>enabled</code>, parcel geometry</td>
+<td>Косвенно меняет здания и является условием для fences.</td>
+</tr>
+<tr>
+<td><code>fences</code></td>
+<td><code>enabled</code>, <code>mode</code>, <code>type</code>, <code>sample_spacing_m</code>, <code>height_m</code>, <code>foundation</code>, <code>openness</code></td>
+<td>Добавляет <code>fence</code> и <code>fence_foundation</code> points и влияет на LiDAR-окклюзии.</td>
+</tr>
+<tr>
+<td><code>mobile_lidar</code></td>
+<td>все поля секции</td>
+<td>Добавляет ray-sampled точки или заменяет surface output при <code>output_mode: lidar_only</code>.</td>
+</tr>
+<tr>
+<td><code>output</code></td>
+<td><code>include_rgb</code>, <code>include_class</code></td>
+<td>Не меняет внутренние точки, но меняет набор PLY-полей.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="_3">Режимы и их различия</h2>
+<table>
+<thead>
+<tr>
+<th>Режим</th>
+<th>Как включить</th>
+<th>Результат</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Surface only</td>
+<td><code>mobile_lidar.enabled: false</code></td>
+<td>Регулярно сэмплированные поверхности: ground, roads, sidewalks, medians, roofs, facades, fences.</td>
+</tr>
+<tr>
+<td>Surface + LiDAR</td>
+<td><code>mobile_lidar.enabled: true</code>, <code>output_mode: additive</code></td>
+<td>Surface points плюс ray hits мобильного сенсора.</td>
+</tr>
+<tr>
+<td>LiDAR only</td>
+<td><code>mobile_lidar.enabled: true</code>, <code>output_mode: lidar_only</code></td>
+<td>Только видимые с траектории ray hits; surface grid не попадает в итоговый PLY.</td>
+</tr>
+<tr>
+<td>No-jitter surface</td>
+<td><code>sampling.jitter_ratio: 0</code></td>
+<td>Surface grid без случайного смещения. Если <code>ground_spacing_m != road_spacing_m</code>, thinning все равно остается детерминированным.</td>
+</tr>
+<tr>
+<td>Deterministic test mode</td>
+<td>фиксированный <code>seed</code>, <code>jitter_ratio: 0</code>, для LiDAR <code>angle_jitter_degrees: 0</code>, <code>range_noise_m: 0</code>, <code>drop_probability: 0</code>, <code>distance_attenuation: 0</code></td>
+<td>Удобно для тестов и golden outputs. Один и тот же конфиг дает одинаковые точки.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="_4">Примеры конфигураций</h2>
+<p>Минимальная конфигурация использует defaults:</p>
+<pre><code class="language-yaml">seed: 7
+</code></pre>
+<p>Высокая плотность surface points:</p>
+<pre><code class="language-yaml">seed: 7
+sampling:
+  mode: surface
+  ground_spacing_m: 1.0
+  road_spacing_m: 0.75
+  building_spacing_m: 1.0
+  jitter_ratio: 0.12
+</code></pre>
+<p>Быстрый preview с малым числом точек:</p>
+<pre><code class="language-yaml">seed: 7
+tile:
+  size_m: 128
+buildings:
+  enabled: false
+sampling:
+  ground_spacing_m: 8
+  road_spacing_m: 6
+  building_spacing_m: 8
+  jitter_ratio: 0
+</code></pre>
+<p>Детерминированная surface-конфигурация без jitter и без thinning между ground/road:</p>
+<pre><code class="language-yaml">seed: 7
+sampling:
+  ground_spacing_m: 4
+  road_spacing_m: 4
+  building_spacing_m: 4
+  jitter_ratio: 0
+</code></pre>
+<p>Разные плотности для земли, hardscape, зданий и ограждений:</p>
+<pre><code class="language-yaml">seed: 7
+parcels:
+  enabled: true
+fences:
+  enabled: true
+  mode: perimeter
+  type: mixed
+  sample_spacing_m: 0.7
+sampling:
+  ground_spacing_m: 5
+  road_spacing_m: 2
+  building_spacing_m: 2.5
+  jitter_ratio: 0.16
+</code></pre>
+<p>Mobile LiDAR в режиме <code>lidar_only</code>:</p>
+<pre><code class="language-yaml">seed: 7
+mobile_lidar:
+  enabled: true
+  output_mode: lidar_only
+  trajectory: line
+  start_x: 0
+  start_y: 0
+  end_x: 256
+  end_y: 0
+  sensor_height_m: 2.2
+  position_step_m: 8
+  min_range_m: 1
+  max_range_m: 90
+  horizontal_fov_degrees: 180
+  horizontal_step_degrees: 3
+  vertical_fov_degrees: 50
+  vertical_center_degrees: -8
+  vertical_channels: 12
+  angle_jitter_degrees: 0
+  range_noise_m: 0
+  drop_probability: 0
+  distance_attenuation: 0
+  occlusions_enabled: true
+  ray_step_m: 1
+sampling:
+  mode: surface
+  ground_spacing_m: 4
+  road_spacing_m: 4
+  building_spacing_m: 4
+  jitter_ratio: 0
+</code></pre>
+<h2 id="_5">Влияние настроек на результат</h2>
+<p>Количество точек обычно меняется примерно как площадь, деленная на квадрат spacing:</p>
+<pre><code class="language-text">tile surface points ~= tile area / spacing^2
+</code></pre>
+<p>Но есть важные уточнения:</p>
+<ul>
+<li>roads, sidewalks and medians используют <code>road_spacing_m</code>, ground использует <code>ground_spacing_m</code>;</li>
+<li>если один spacing меньше другого, базовый grid строится по меньшему spacing, а другой класс прореживается;</li>
+<li>buildings добавляют roof points по площади footprint и facade points по периметру и высоте;</li>
+<li>fences добавляют точки по длине сегментов и высоте;</li>
+<li>LiDAR добавляет максимум <code>sensor_positions * horizontal_steps * vertical_channels</code> лучей, но drop, misses, attenuation and occlusions уменьшают число итоговых точек;</li>
+<li>crop по bbox тайла может удалить точки, построенные в расширенной work area.</li>
+</ul>
+<p><code>sampling.jitter_ratio</code> меняет координаты surface points, но не должен заметно менять количество точек. <code>seed</code> влияет на jitter, thinning, buildings, fences, road details and LiDAR randomness. При одинаковом <code>seed</code> и одинаковом resolved config результат детерминирован.</p>
+<p>Самые дорогие настройки:</p>
+<ul>
+<li>маленький <code>min(ground_spacing_m, road_spacing_m)</code> на большом <code>tile.size_m</code>;</li>
+<li>маленький <code>building_spacing_m</code> при большом количестве высоких зданий;</li>
+<li>маленький <code>fences.sample_spacing_m</code> при плотных parcels;</li>
+<li>маленький <code>mobile_lidar.horizontal_step_degrees</code>, большой <code>vertical_channels</code>, маленький <code>position_step_m</code> и маленький <code>ray_step_m</code>.</li>
+</ul>
+<h2 id="semantic-class-rgb">Semantic class и RGB</h2>
+<p>Surface и LiDAR используют один и тот же catalog semantic classes:</p>
+<table>
+<thead>
+<tr>
+<th>Class id</th>
+<th>Имя</th>
+<th>RGB</th>
+<th>Откуда появляется</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>1</code></td>
+<td><code>ground</code></td>
+<td><code>107, 132, 85</code></td>
+<td>terrain outside hardscape and buildings</td>
+</tr>
+<tr>
+<td><code>2</code></td>
+<td><code>road</code></td>
+<td><code>47, 50, 54</code></td>
+<td>road carriageway</td>
+</tr>
+<tr>
+<td><code>3</code></td>
+<td><code>sidewalk</code></td>
+<td><code>174, 174, 166</code></td>
+<td>sidewalk corridor</td>
+</tr>
+<tr>
+<td><code>4</code></td>
+<td><code>building_facade</code></td>
+<td><code>176, 164, 148</code></td>
+<td>facade boundary sampling or LiDAR facade hit</td>
+</tr>
+<tr>
+<td><code>5</code></td>
+<td><code>building_roof</code></td>
+<td><code>112, 116, 122</code></td>
+<td>roof height function or LiDAR roof hit</td>
+</tr>
+<tr>
+<td><code>6</code></td>
+<td><code>road_median</code></td>
+<td><code>118, 128, 84</code></td>
+<td>road profile with <code>median_width_m &gt; 0</code></td>
+</tr>
+<tr>
+<td><code>7</code></td>
+<td><code>fence</code></td>
+<td><code>130, 101, 72</code></td>
+<td>fence body or LiDAR fence hit</td>
+</tr>
+<tr>
+<td><code>8</code></td>
+<td><code>fence_foundation</code></td>
+<td><code>118, 112, 103</code></td>
+<td>fence foundation or LiDAR foundation hit</td>
+</tr>
+</tbody>
+</table>
+<p>PLY export may omit RGB or class fields, but metadata still contains <code>class_counts</code> and <code>class_mapping</code> because internal <code>Point</code> objects always carry color and class id.</p>
+<h2 id="cli-progress-during-sampling">CLI progress during sampling</h2>
+<p>When generation is started through <code>citygen</code>, <code>sample_scene</code> receives a progress callback from the CLI. The callback is diagnostic only: it does not create RNG calls, does not change point order and does not write extra fields to PLY or metadata.</p>
+<p>The output is intentionally line-based instead of a dynamic progress bar, so it stays readable in logs and smoke tests:</p>
+<pre><code class="language-text">citygen: tile 1/1 (x=0, y=0) sampling tile_surfaces started - grid_rows=129, grid_columns=129, grid_samples=16641, spacing_m=1.5
+citygen: tile 1/1 (x=0, y=0) sampling tile_surfaces progress - rows=33, total_rows=129, grid_samples=4257, total_grid_samples=16641, points=3798, class_counts={ground=1875, road=1296, sidewalk=627}
+citygen: tile 1/1 (x=0, y=0) sampling buildings done - buildings=24, points=5221, roof_points=837, facade_points=4384
+citygen: tile 1/1 (x=0, y=0) sampling surface_total done - tile_surface_points=21263, building_points=5221, fence_points=0, surface_points_before_crop=26484, surface_points=26484
+</code></pre>
+<p>Progress substages:</p>
+<table>
+<thead>
+<tr>
+<th>Substage</th>
+<th>When it appears</th>
+<th>Main counters</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>tile_surfaces</code></td>
+<td>Always during surface sampling</td>
+<td><code>grid_rows</code>, <code>grid_columns</code>, <code>grid_samples</code>, <code>rows</code>, <code>total_rows</code>, <code>points</code>, <code>class_counts</code></td>
+</tr>
+<tr>
+<td><code>buildings</code></td>
+<td>Always, including the zero-buildings case</td>
+<td><code>buildings</code>, <code>points</code>, <code>roof_points</code>, <code>facade_points</code>; in <code>--verbose</code>, per-building <code>item_done</code> also includes <code>building_id</code></td>
+</tr>
+<tr>
+<td><code>fences</code></td>
+<td>Only when generated fence segments exist</td>
+<td><code>fence_segments</code>, <code>points</code>, <code>fence_points</code>, <code>foundation_points</code>; in <code>--verbose</code>, per-segment <code>item_done</code> also includes <code>segment_id</code></td>
+</tr>
+<tr>
+<td><code>surface_total</code></td>
+<td>End of surface sampling before LiDAR merge</td>
+<td><code>tile_surface_points</code>, <code>building_points</code>, <code>fence_points</code>, <code>surface_points_before_crop</code>, <code>surface_points</code>, <code>class_counts</code></td>
+</tr>
+<tr>
+<td><code>mobile LiDAR rays</code></td>
+<td>Only when <code>mobile_lidar.enabled: true</code></td>
+<td><code>sensor_positions</code>, <code>processed_rays</code>, <code>total_rays</code>, <code>successful_hits</code>, <code>dropped_rays</code>, <code>missed_rays</code>, <code>attenuated_rays</code>, <code>lidar_points</code></td>
+</tr>
+</tbody>
+</table>
+<p>Verbosity rules:</p>
+<ul>
+<li>default mode prints compact started/progress/done lines for sampling substages;</li>
+<li><code>--quiet</code> suppresses sampling progress and keeps only final <code>Wrote ...</code> paths;</li>
+<li><code>--verbose</code> prints extra counters and <code>item_done</code> lines for individual buildings, fence segments and LiDAR sensor positions.</li>
+</ul>
+<h2 id="metadata-and-diagnostics">Metadata and diagnostics</h2>
+<p>After <code>write_metadata</code>, the JSON file contains several fields useful for sampling diagnostics:</p>
+<table>
+<thead>
+<tr>
+<th>Metadata field</th>
+<th>What to inspect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>point_count</code></td>
+<td>Total final points after crop and after LiDAR output mode is applied.</td>
+</tr>
+<tr>
+<td><code>class_counts</code></td>
+<td>Distribution by semantic class name. This is the main surface sampling sanity check.</td>
+</tr>
+<tr>
+<td><code>class_mapping</code></td>
+<td>Stable mapping from class names to class ids.</td>
+</tr>
+<tr>
+<td><code>object_feature_counts</code></td>
+<td>Counts grouped by feature ids such as <code>terrain_surface</code>, <code>road_surface</code>, <code>road_sidewalk</code>, <code>road_median</code>, <code>building_roof</code>, <code>parcel_fence</code>, <code>fence_foundation</code>.</td>
+</tr>
+<tr>
+<td><code>mobile_lidar</code></td>
+<td>Whether LiDAR was enabled, sensor positions, emitted rays, successful hits, dropped rays, misses, attenuated rays and hit counts by class.</td>
+</tr>
+<tr>
+<td><code>point_sources</code></td>
+<td>Aggregate split between <code>surface_sampling</code> and <code>mobile_lidar</code>, plus mode: <code>surface_only</code>, <code>additive</code> or <code>lidar_only</code>.</td>
+</tr>
+<tr>
+<td><code>config</code></td>
+<td>Full resolved config after defaults. Use this to confirm actual sampling and LiDAR parameters.</td>
+</tr>
+<tr>
+<td><code>worldgen.stages</code></td>
+<td>Contains the <code>sampling</code> stage in the worldgen pipeline list.</td>
+</tr>
+</tbody>
+</table>
+<p>Surface sampling currently does not write these progress counters into metadata. For persisted diagnostics, use <code>class_counts</code>, <code>object_feature_counts</code>, <code>point_sources.surface_sampling</code> and the resolved <code>config</code>; for per-stage runtime counters, use CLI progress output.</p>
+<p>Note: <code>write_metadata</code> calls <code>sample_mobile_lidar(config, scene)</code> to build LiDAR metadata. The LiDAR sampler is deterministic, so this recomputation is expected to match the LiDAR points generated during <code>sample_scene</code> for the same config and scene.</p>
+<h2 id="validation-and-tests">Validation and tests</h2>
+<p>Validation rules relevant to sampling:</p>
+<ul>
+<li><code>sampling.mode</code> must be <code>surface</code>;</li>
+<li><code>sampling.ground_spacing_m</code>, <code>sampling.road_spacing_m</code>, <code>sampling.building_spacing_m</code> must be positive;</li>
+<li><code>sampling.jitter_ratio</code> must be between <code>0</code> and <code>0.45</code>;</li>
+<li><code>mobile_lidar.output_mode</code> must be <code>additive</code> or <code>lidar_only</code>;</li>
+<li><code>mobile_lidar.trajectory</code> must be <code>centerline</code>, <code>line</code> or <code>road</code>;</li>
+<li><code>mobile_lidar.min_range_m &lt; mobile_lidar.max_range_m</code>;</li>
+<li>LiDAR FOVs, probabilities and noise fields are range-checked in <code>config.py</code>;</li>
+<li><code>fences.enabled</code> requires <code>parcels.enabled</code> because fence geometry comes from parcel boundaries.</li>
+</ul>
+<p>Existing tests that cover sampling behavior:</p>
+<ul>
+<li><code>tests/test_determinism.py</code> checks same-seed reproducibility and different-seed changes;</li>
+<li><code>tests/test_export.py</code> checks PLY headers and metadata point counts;</li>
+<li><code>tests/test_mobile_lidar.py</code> checks disabled LiDAR compatibility, LiDAR point generation, occlusion behavior, LiDAR metadata and deterministic LiDAR output;</li>
+<li><code>tests/test_fences.py</code> checks fence generation and sampled fence/foundation classes;</li>
+<li><code>tests/test_cli_progress.py</code> checks default, quiet and verbose progress output, sampling substage counters, LiDAR ray progress, multi-tile progress and unchanged deterministic PLY output;</li>
+<li><code>tests/test_road_profiles.py</code> checks road medians and road profile class behavior;</li>
+<li><code>tests/test_catalogs.py</code> checks worldgen stages and documentation coverage for catalog ids.</li>
+</ul>
+<p>Useful manual checks:</p>
+<pre><code class="language-bash">uv run python -m unittest discover -s tests
+uv run citygen --config configs/mvp.yaml --out outputs/mvp_check.ply
+uv run citygen --config configs/demo_universal_showcase.yaml --out outputs/demo_universal_showcase.ply
+</code></pre>
+<p>For quick metadata inspection:</p>
+<pre><code class="language-bash">jq '{point_count, class_counts, point_sources, mobile_lidar, sampling: .config.sampling}' outputs/demo_universal_showcase.metadata.json
+</code></pre>
+<h2 id="current-limitations">Current limitations</h2>
+<ul>
+<li><code>sampling.mode</code> has only one supported value: <code>surface</code>.</li>
+<li>There is no explicit point budget or max point limit.</li>
+<li>There is no generic per-semantic-class density table. Ground/hardscape/building/fence/LiDAR densities are controlled by separate existing parameters.</li>
+<li>Surface sampling does not store per-point source labels; source split exists only as aggregate metadata.</li>
+<li>Surface sampling has jitter but no independent coordinate noise model. LiDAR has separate angle jitter, range noise, drop probability and distance attenuation.</li>
+<li>Unknown keys in <code>sampling</code> are not rejected by the current loader, unlike stricter newer sections such as <code>fences</code>, <code>mobile_lidar</code> and <code>worldgen</code>.</li>
+</ul></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="js/bootstrap.bundle.min.js"></script>
+        <script>
+            var base_url = ".",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="js/base.js"></script>
+        <script src="search/main.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>
