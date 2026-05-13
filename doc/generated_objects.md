@@ -4,6 +4,8 @@
 
 Подробные справочники по связанным слоям: `doc/configuration_reference.md`, `doc/roads.md`, `doc/parcels.md`, `doc/fences.md`, `doc/building_footprints.md`, `doc/building_roofs.md`, `doc/biomes.md`.
 
+`mobile_lidar` не добавляет новый catalog feature id и не вводит новые semantic classes. Он добавляет альтернативный источник точек для уже существующих классов (`ground`, `road`, `sidewalk`, `road_median`, `building_facade`, `building_roof`, `fence`, `fence_foundation`) и отдельную diagnostics-секцию в metadata.
+
 ## Сводная таблица
 
 | Feature id | Стадия | Секция конфига | Semantic classes | Назначение |
@@ -176,6 +178,25 @@ Footprint ids описаны в catalog `FOOTPRINT_DEFINITIONS`; старое me
 - `cone`.
 
 Roof ids описаны в catalog `ROOF_DEFINITIONS`; старое metadata поле `supported_roof_types` сохранено.
+
+## Mobile LiDAR
+
+`mobile_lidar` включается через одноименную секцию конфига и работает на стадии `sampling` как дополнительный или альтернативный источник точек:
+
+- `output_mode: additive` добавляет LiDAR-попадания к surface sampling;
+- `output_mode: lidar_only` оставляет только LiDAR-попадания;
+- `enabled: false` сохраняет прежнее surface-only поведение.
+
+Metadata:
+
+- `mobile_lidar.enabled`, `output_mode`, `trajectory`;
+- `mobile_lidar.sensor_positions`;
+- `mobile_lidar.emitted_rays`, `successful_hits`, `dropped_rays`, `missed_rays`, `max_range_misses`, `attenuated_rays`;
+- `mobile_lidar.hit_counts_by_class`;
+- `mobile_lidar.parameters.*`;
+- `point_sources.mode`, `point_sources.surface_sampling`, `point_sources.mobile_lidar`.
+
+Ограничение MVP: это single-return модель лучей без intensity и без нескольких возвратов на один луч.
 
 ## Семантические классы
 

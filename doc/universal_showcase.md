@@ -29,6 +29,7 @@
 - `buildings.roof.model: mixed` со всеми поддержанными весами roofs;
 - `parcels.enabled: true` с размещением зданий внутри parcels;
 - layer `fences` в этом showcase не включен, чтобы не утяжелять большой тайл; для ограждений используется отдельный `configs/demo_parcel_fences.yaml`;
+- layer `mobile_lidar` в этом showcase не включен; при необходимости его можно добавить в тот же YAML;
 - сводки `worldgen`/catalogs в metadata;
 - RGB и поля semantic class в PLY.
 
@@ -90,6 +91,7 @@ jq '{
 - `parcel_counts.buildable_parcels > 0`;
 - `parcel_counts.occupied_parcels > 0`;
 - `parcel_counts.buildings_with_parcel_id == building_counts.total`.
+- `mobile_lidar.enabled == false` для этого конкретного showcase-конфига.
 
 ## Что означают важные секции
 
@@ -111,7 +113,7 @@ jq '{
 
 ## Ограничения
 
-Showcase не добавляет сущности, которых нет в текущем генераторе: машины, деревья, фонари, материалы, LAS/LAZ или настоящий LiDAR.
+Showcase не добавляет сущности, которых нет в текущем генераторе: машины, деревья, фонари, материалы или LAS/LAZ. В проекте есть mobile LiDAR mode, но этот showcase оставляет его выключенным ради времени генерации.
 
 Parcel subdivision в текущем MVP — прямоугольная road-aware аппроксимация поверх road primitives. Это не полноценная GIS-полигонализация кварталов из дорожного графа.
 

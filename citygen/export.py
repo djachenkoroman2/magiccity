@@ -12,6 +12,7 @@ from .fences import FENCE_TYPES
 from .footprints import FOOTPRINT_KINDS
 from .generator import Scene
 from .geometry import Point, angle_delta_degrees, normalize_degrees
+from .mobile_lidar import sample_mobile_lidar
 from .roofs import ROOF_KINDS
 
 
@@ -59,6 +60,7 @@ def write_metadata(path: str | Path, config: CityGenConfig, scene: Scene, points
     output_path = Path(path)
     metadata_path = output_path.with_suffix(".metadata.json")
     metadata_path.parent.mkdir(parents=True, exist_ok=True)
+    lidar_result = sample_mobile_lidar(config, scene)
     counts = Counter(point.class_id for point in points)
     footprint_counts = Counter(building.footprint.kind for building in scene.buildings)
     roof_counts = Counter((building.roof.kind if building.roof is not None else "flat") for building in scene.buildings)
@@ -130,6 +132,8 @@ def write_metadata(path: str | Path, config: CityGenConfig, scene: Scene, points
         "supported_footprint_types": list(FOOTPRINT_KINDS),
         "supported_roof_types": list(ROOF_KINDS),
         "supported_fence_types": list(FENCE_TYPES),
+        "mobile_lidar": lidar_result.metadata,
+        "point_sources": _point_source_counts(config, scene, points, lidar_result.points),
         "config": config.to_dict(),
     }
     metadata_path.write_text(
@@ -245,3 +249,24 @@ def _orientation_buckets(values) -> dict[str, int]:
 def _is_axis_aligned(angle_degrees: float) -> bool:
     angle = normalize_degrees(angle_degrees) % 90.0
     return min(angle, 90.0 - angle) <= 1e-6
+
+
+def _point_source_counts(
+    config: CityGenConfig,
+    scene: Scene,
+    points: list[Point],
+    lidar_points: list[Point],
+) -> dict[str, Any]:
+    if not config.mobile_lidar.enabled:
+        return {"mode": "surface_only", "surface_sampling": len(points), "mobile_lidar": 0}
+
+    lidar_in_tile = sum(1 for point in lidar_points if scene.bbox.contains_xy(point.x, point.y))
+    if config.mobile_lidar.output_mode == "lidar_only":
+        return {"mode": "lidar_only", "surface_sampling": 0, "mobile_lidar": len(points)}
+
+    lidar_count = min(lidar_in_tile, len(points))
+    return {
+        "mode": "additive",
+        "surface_sampling": max(0, len(points) - lidar_count),
+        "mobile_lidar": lidar_count,
+    }

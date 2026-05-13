@@ -26,7 +26,7 @@
 | `roads` | Построение road primitives, road models и road profiles. |
 | `parcels` | Опциональное block/parcel subdivision. |
 | `objects` | Размещение зданий и связанных footprint/roof features. |
-| `sampling` | Семплирование поверхностей рельефа, roads, sidewalks, medians, facades и roofs. |
+| `sampling` | Семплирование поверхностей рельефа, roads, sidewalks, medians, facades и roofs, плюс опциональный mobile LiDAR ray sampling. |
 | `export_ply` | Экспорт ASCII PLY. |
 | `export_metadata` | Экспорт JSON metadata. |
 
@@ -119,6 +119,8 @@ Metadata теперь содержит дополнительные раздел
 - `object_feature_counts`: простые агрегаты по feature ids.
 
 Старые поля сохранены: `road_models`, `biome_counts`, `building_counts`, `parcel_counts`, `supported_footprint_types`, `supported_roof_types`, `config`. Новый fence layer добавляет `fence_counts` и `supported_fence_types`. Road/profile metadata (`road_profile_counts`, `road_widths`, `road_median`), parcel geometry metadata (`parcel_building_alignment`, `building_orientations`, `block_geometry`, `parcel_geometry`) и fence metadata остаются отдельными runtime-агрегатами, а не catalog definitions.
+
+Mobile LiDAR добавляет runtime-агрегаты `mobile_lidar` и `point_sources`. Они не являются catalog definitions и не добавляют новых object feature ids.
 
 ## Ограничения MVP
 

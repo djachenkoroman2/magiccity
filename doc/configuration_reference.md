@@ -36,7 +36,7 @@ uv run citygen --config path/to/multi_tile_config.yaml --out outputs/multi_tile
 - Все размеры и расстояния задаются в метрах.
 - Горизонтальные координаты сцены: `x` и `y`; высота: `z`.
 - Булевы значения пишутся как `true` или `false`.
-- Текущий загрузчик читает описанные ниже поля. Секции `parcels`, `fences` и `worldgen` валидируют имена параметров строго, чтобы опечатки в новых слоях не проходили молча.
+- Текущий загрузчик читает описанные ниже поля. Секции `parcels`, `fences`, `mobile_lidar` и `worldgen` валидируют имена параметров строго, чтобы опечатки в новых слоях не проходили молча.
 
 Минимальный валидный конфиг:
 
@@ -161,6 +161,30 @@ fences:
   sample_spacing_m: 0.8
   openness: null
   decorative: false
+mobile_lidar:
+  enabled: false
+  output_mode: additive
+  trajectory: centerline
+  sensor_height_m: 2.2
+  direction_degrees: 0
+  start_x: null
+  start_y: null
+  end_x: null
+  end_y: null
+  position_step_m: 8
+  min_range_m: 1
+  max_range_m: 90
+  horizontal_fov_degrees: 180
+  horizontal_step_degrees: 3
+  vertical_fov_degrees: 50
+  vertical_center_degrees: -8
+  vertical_channels: 12
+  angle_jitter_degrees: 0
+  range_noise_m: 0.03
+  drop_probability: 0.02
+  distance_attenuation: 0.12
+  occlusions_enabled: true
+  ray_step_m: 1
 sampling:
   mode: surface
   ground_spacing_m: 2
@@ -189,6 +213,7 @@ worldgen:
 | `buildings` | mapping | нет | см. секцию `buildings` | Настраивает генерацию зданий. |
 | `parcels` | mapping | нет | см. секцию `parcels` | Включает прямоугольное разбиение blocks/parcels и размещение зданий внутри участков. |
 | `fences` | mapping | нет | см. секцию `fences` | Опционально добавляет заборы и ограждения по границам parcels. |
+| `mobile_lidar` | mapping | нет | см. секцию `mobile_lidar` | Опционально включает трассировку лучей мобильного LiDAR-сенсора. |
 | `sampling` | mapping | нет | см. секцию `sampling` | Настраивает плотность и регулярность точек. |
 | `output` | mapping | нет | см. секцию `output` | Настраивает PLY-поля. |
 | `worldgen` | mapping | нет | см. секцию `worldgen` | Настраивает флаги валидации catalogs/worldgen. |
@@ -716,6 +741,70 @@ Alias-значения нормализуются: `wood`/`wooden` -> `wood_pick
 
 Подробный тематический справочник по ограждениям находится в `doc/fences.md`.
 
+## `mobile_lidar`
+
+Секция `mobile_lidar` включает опциональный режим мобильного LiDAR-сканирования. В этом режиме точки создаются не по регулярному surface sampling, а по фактическим попаданиям лучей из движущегося сенсора.
+
+```yaml
+mobile_lidar:
+  enabled: true
+  output_mode: additive
+  trajectory: road
+  sensor_height_m: 2.2
+  direction_degrees: 0
+  position_step_m: 8
+  min_range_m: 1
+  max_range_m: 90
+  horizontal_fov_degrees: 180
+  horizontal_step_degrees: 3
+  vertical_fov_degrees: 50
+  vertical_center_degrees: -8
+  vertical_channels: 12
+  angle_jitter_degrees: 0
+  range_noise_m: 0.03
+  drop_probability: 0.02
+  distance_attenuation: 0.12
+  occlusions_enabled: true
+  ray_step_m: 1
+```
+
+| Параметр | Тип | По умолчанию | Возможные значения | Действие |
+| --- | --- | --- | --- | --- |
+| `enabled` | boolean | `false` | `true`, `false` | Включает mobile LiDAR-режим. При `false` поведение остается поверхностным, как в старых версиях. |
+| `output_mode` | string | `additive` | `additive`, `lidar_only` | Режим вывода: добавить LiDAR к surface sampling или оставить только LiDAR-точки. |
+| `trajectory` | string | `centerline` | `centerline`, `line`, `road` | Тип траектории сенсора: по центру тайла, по явно заданной линии или по road primitives. |
+| `sensor_height_m` | number | `2.2` | `> 0` | Высота установки сенсора над поверхностью рельефа. |
+| `direction_degrees` | number | `0.0` | любое число | Базовое направление движения для `centerline` и fallback-направление. |
+| `start_x`, `start_y`, `end_x`, `end_y` | number или null | `null` | числа или `null` | Явная линия траектории для `trajectory: line`; должны быть заданы все четыре значения одновременно. |
+| `position_step_m` | number | `8.0` | `> 0` | Шаг между позициями сенсора вдоль траектории. |
+| `min_range_m` | number | `1.0` | `> 0`, `< max_range_m` | Минимальная дальность луча. |
+| `max_range_m` | number | `90.0` | `> 0`, `> min_range_m` | Максимальная дальность луча. |
+| `horizontal_fov_degrees` | number | `180.0` | `0 < value <= 360` | Горизонтальный угол обзора. |
+| `horizontal_step_degrees` | number | `3.0` | `> 0` | Шаг горизонтального сканирования. |
+| `vertical_fov_degrees` | number | `50.0` | `0 < value <= 180` | Вертикальный угол обзора. |
+| `vertical_center_degrees` | number | `-8.0` | любое число | Центральный вертикальный угол (обычно отрицательный, чтобы смотреть вниз). |
+| `vertical_channels` | integer | `12` | `> 0` | Количество вертикальных каналов (слоев). |
+| `angle_jitter_degrees` | number | `0.0` | `>= 0` | Угловой jitter лучей. |
+| `range_noise_m` | number | `0.03` | `>= 0` | Шум дальности попадания. |
+| `drop_probability` | number | `0.02` | `0..1` | Вероятность пропуска луча. |
+| `distance_attenuation` | number | `0.12` | `0..1` | Вероятность отбросить дальние попадания для имитации потери плотности по дистанции. |
+| `occlusions_enabled` | boolean | `true` | `true`, `false` | Включает режим ближайшего пересечения и окклюзий. |
+| `ray_step_m` | number | `1.0` | `> 0` | Шаг трассировки луча при поиске пересечений с height field. |
+
+Поведение:
+
+- Лучи взаимодействуют с рельефом, дорогами, тротуарами, median, фасадами, крышами и ограждениями.
+- При `occlusions_enabled: true` сохраняется ближайшее пересечение луча; объекты за преградой не попадают в облако точек.
+- При `occlusions_enabled: false` используется дальнее пересечение по лучу, что может визуально уменьшать окклюзии.
+- Все лучи, jitter и пропуски полностью детерминированы от `seed`, координат тайла, индекса позиции и индексов углов.
+
+Взаимодействие с `sampling`:
+
+- `sampling.mode` по-прежнему должен быть `surface`.
+- Если `mobile_lidar.enabled: false`, используется только surface sampling.
+- Если `mobile_lidar.enabled: true` и `output_mode: additive`, итоговый PLY содержит surface + LiDAR точки.
+- Если `mobile_lidar.enabled: true` и `output_mode: lidar_only`, итоговый PLY содержит только LiDAR точки.
+
 ## `sampling`
 
 Секция `sampling` управляет плотностью точек и случайным смещением samples.
@@ -794,7 +883,7 @@ outputs/example.ply
 outputs/example.metadata.json
 ```
 
-Metadata содержит `seed`, bbox тайла, количество точек, распределение классов, mapping классов, использованные модели дорог, `road_profile_counts`, `road_profile_counts_by_biome`, `road_widths`, `road_median`, counts по биомам, `building_counts`, `parcel_counts`, `fence_counts`, `parcel_building_alignment`, `building_orientations`, `block_geometry`, `parcel_geometry`, списки поддержанных типов footprint/roof/fence и полный конфиг после применения значений по умолчанию.
+Metadata содержит `seed`, bbox тайла, количество точек, распределение классов, mapping классов, использованные модели дорог, `road_profile_counts`, `road_profile_counts_by_biome`, `road_widths`, `road_median`, counts по биомам, `building_counts`, `parcel_counts`, `fence_counts`, `mobile_lidar`, `point_sources`, `parcel_building_alignment`, `building_orientations`, `block_geometry`, `parcel_geometry`, списки поддержанных типов footprint/roof/fence и полный конфиг после применения значений по умолчанию.
 
 ## `worldgen`
 
@@ -882,6 +971,17 @@ worldgen:
 | `fences.foundation` неизвестен | поддерживаются `auto`, `always`, `never` |
 | `fences.height_jitter_m`, `boundary_offset_m` или `road_clearance_m < 0` | значения не могут быть отрицательными |
 | `fences.coverage_ratio`, `gate_probability` или `openness` вне `0..1` | доли должны быть в допустимом диапазоне |
+| Неизвестный ключ в `mobile_lidar` | имена параметров `mobile_lidar` валидируются строго |
+| `mobile_lidar.output_mode` неизвестен | поддерживаются `additive`, `lidar_only` |
+| `mobile_lidar.trajectory` неизвестен | поддерживаются `centerline`, `line`, `road` |
+| Для `mobile_lidar.trajectory: line` заданы не все `start_x/start_y/end_x/end_y` | явная line-траектория требует все четыре значения |
+| `mobile_lidar.min_range_m >= mobile_lidar.max_range_m` | минимальная дальность должна быть меньше максимальной |
+| `mobile_lidar.horizontal_fov_degrees` вне `0..360` | горизонтальный FOV должен быть в допустимом диапазоне |
+| `mobile_lidar.vertical_fov_degrees` вне `0..180` | вертикальный FOV должен быть в допустимом диапазоне |
+| `mobile_lidar.angle_jitter_degrees < 0` | угловой jitter не может быть отрицательным |
+| `mobile_lidar.range_noise_m < 0` | шум дальности не может быть отрицательным |
+| `mobile_lidar.drop_probability` вне `0..1` | вероятность пропуска луча должна быть в допустимом диапазоне |
+| `mobile_lidar.distance_attenuation` вне `0..1` | ослабление по расстоянию должно быть в допустимом диапазоне |
 | `sampling.mode != surface` | поддерживается только `surface` |
 | `sampling.jitter_ratio` вне `0..0.45` | jitter должен быть в допустимом диапазоне |
 | `output.format != ply` | поддерживается только `ply` |

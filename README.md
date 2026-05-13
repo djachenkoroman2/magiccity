@@ -14,6 +14,7 @@ MagicCity — MVP CLI-генератора синтетической город
 - опциональное разбиение blocks/parcels, включая oriented block/parcel subdivision;
 - размещение зданий с учетом parcels и выравнивание по parcel orientation;
 - опциональные ограждения участков: деревянные, металлические, каменные и кирпичные заборы с высотой, прозрачностью, воротами и фундаментом;
+- опциональный mobile LiDAR mode: траектория сенсора, лучи, окклюзии, шум и режимы `additive`/`lidar_only`;
 - footprints зданий: `rectangle`, `square`, `circle`, `slab`, `courtyard`, `l_shape`, `u_shape`, `t_shape`;
 - геометрия крыш: `flat`, `shed`, `gable`, `hip`, `half_hip`, `pyramid`, `mansard`, `dome`, `barrel`, `cone`;
 - семплирование поверхностей земли, дорог, median, тротуаров, фасадов и крыш;
@@ -129,7 +130,7 @@ uv run citygen --config configs/demo_universal_showcase.yaml --out outputs/demo_
 seed: 7
 ```
 
-Более полный справочник, включая `tile`, `tiles`, `terrain`, `urban_fields`, `roads`, `buildings`, `parcels`, `fences`, `sampling`, `output` и `worldgen`, находится в `doc/configuration_reference.md`.
+Более полный справочник, включая `tile`, `tiles`, `terrain`, `urban_fields`, `roads`, `buildings`, `parcels`, `fences`, `mobile_lidar`, `sampling`, `output` и `worldgen`, находится в `doc/configuration_reference.md`.
 
 ## Метаданные
 
@@ -142,13 +143,14 @@ seed: 7
 - `biome_counts`;
 - `building_counts`;
 - `parcel_counts`, `fence_counts`, `parcel_building_alignment`, `building_orientations`, `block_geometry`, `parcel_geometry`;
+- `mobile_lidar`, `point_sources`;
 - `supported_footprint_types`, `supported_roof_types`, `supported_fence_types`;
 - resolved `config`.
 
 Быстрый просмотр:
 
 ```bash
-jq '{point_count, class_counts, road_models, building_counts, parcel_counts, fence_counts}' outputs/demo_parcel_fences.metadata.json
+jq '{point_count, class_counts, road_models, building_counts, parcel_counts, fence_counts, mobile_lidar, point_sources}' outputs/demo_parcel_fences.metadata.json
 ```
 
 ## Семантические классы
@@ -178,6 +180,7 @@ citygen/
   fences.py
   footprints.py
   roofs.py
+  mobile_lidar.py
   sampling.py
   export.py
   catalogs.py
@@ -210,4 +213,4 @@ uv run citygen --config configs/demo_oriented_parcels.yaml --out outputs/demo_or
 - Нет точного polygon clipping дорожных коридоров.
 - Parcels представлены прямоугольными или oriented-rect приближениями, а не кадастровыми полигонами.
 - Buildings и roofs являются аналитическими поверхностями, которые семплируются в облака точек, а не полноценными объемными meshes.
-- Нет LAS/LAZ, CRS/georeferencing, LiDAR ray simulation, intensity или returns.
+- Нет LAS/LAZ, CRS/georeferencing, intensity или multiple returns.

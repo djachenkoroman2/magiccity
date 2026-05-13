@@ -302,6 +302,70 @@ fences:
 """
             )
 
+    def test_loads_mobile_lidar_config(self) -> None:
+        config = _config_from_text(
+            """
+seed: 7
+mobile_lidar:
+  enabled: true
+  output_mode: lidar_only
+  trajectory: road
+  sensor_height_m: 2.4
+  direction_degrees: 25
+  position_step_m: 5
+  min_range_m: 1.5
+  max_range_m: 80
+  horizontal_fov_degrees: 220
+  horizontal_step_degrees: 2
+  vertical_fov_degrees: 42
+  vertical_center_degrees: -6
+  vertical_channels: 16
+  angle_jitter_degrees: 0.4
+  range_noise_m: 0.02
+  drop_probability: 0.1
+  distance_attenuation: 0.3
+  occlusions_enabled: true
+  ray_step_m: 0.5
+"""
+        )
+        self.assertTrue(config.mobile_lidar.enabled)
+        self.assertEqual(config.mobile_lidar.output_mode, "lidar_only")
+        self.assertEqual(config.mobile_lidar.trajectory, "road")
+        self.assertEqual(config.mobile_lidar.vertical_channels, 16)
+        self.assertAlmostEqual(config.mobile_lidar.position_step_m, 5.0)
+
+    def test_invalid_mobile_lidar_config_is_error(self) -> None:
+        with self.assertRaises(ConfigError):
+            _config_from_text(
+                """
+seed: 7
+mobile_lidar:
+  trajectory: arc
+"""
+            )
+
+        with self.assertRaises(ConfigError):
+            _config_from_text(
+                """
+seed: 7
+mobile_lidar:
+  min_range_m: 10
+  max_range_m: 10
+"""
+            )
+
+        with self.assertRaises(ConfigError):
+            _config_from_text(
+                """
+seed: 7
+mobile_lidar:
+  trajectory: line
+  start_x: 0
+  start_y: 0
+  end_x: 10
+"""
+            )
+
 
 def _config_from_text(text: str):
     with tempfile.TemporaryDirectory() as tmp:

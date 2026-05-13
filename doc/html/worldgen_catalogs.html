@@ -192,7 +192,7 @@
 </tr>
 <tr>
 <td><code>sampling</code></td>
-<td>Семплирование поверхностей рельефа, roads, sidewalks, medians, facades и roofs.</td>
+<td>Семплирование поверхностей рельефа, roads, sidewalks, medians, facades и roofs, плюс опциональный mobile LiDAR ray sampling.</td>
 </tr>
 <tr>
 <td><code>export_ply</code></td>
@@ -281,6 +281,7 @@
 <li><code>object_feature_counts</code>: простые агрегаты по feature ids.</li>
 </ul>
 <p>Старые поля сохранены: <code>road_models</code>, <code>biome_counts</code>, <code>building_counts</code>, <code>parcel_counts</code>, <code>supported_footprint_types</code>, <code>supported_roof_types</code>, <code>config</code>. Новый fence layer добавляет <code>fence_counts</code> и <code>supported_fence_types</code>. Road/profile metadata (<code>road_profile_counts</code>, <code>road_widths</code>, <code>road_median</code>), parcel geometry metadata (<code>parcel_building_alignment</code>, <code>building_orientations</code>, <code>block_geometry</code>, <code>parcel_geometry</code>) и fence metadata остаются отдельными runtime-агрегатами, а не catalog definitions.</p>
+<p>Mobile LiDAR добавляет runtime-агрегаты <code>mobile_lidar</code> и <code>point_sources</code>. Они не являются catalog definitions и не добавляют новых object feature ids.</p>
 <h2 id="mvp">Ограничения MVP</h2>
 <ul>
 <li>Catalogs пока встроены в Python-код, без внешних data packs.</li>

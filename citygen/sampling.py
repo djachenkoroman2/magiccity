@@ -8,10 +8,23 @@ from .config import CityGenConfig
 from .fences import sample_fence_segment
 from .generator import Scene, surface_kind
 from .geometry import Building, Point, Rect, stable_rng, terrain_height
+from .mobile_lidar import sample_mobile_lidar
 from .roofs import default_flat_roof
 
 
 def sample_scene(config: CityGenConfig, scene: Scene) -> list[Point]:
+    surface_points = _sample_surface_scene(config, scene)
+    if not config.mobile_lidar.enabled:
+        return surface_points
+
+    lidar_result = sample_mobile_lidar(config, scene)
+    lidar_points = _crop_points(lidar_result.points, scene.bbox)
+    if config.mobile_lidar.output_mode == "lidar_only":
+        return lidar_points
+    return _crop_points(surface_points + lidar_points, scene.bbox)
+
+
+def _sample_surface_scene(config: CityGenConfig, scene: Scene) -> list[Point]:
     points: list[Point] = []
     points.extend(_sample_tile_surfaces(config, scene))
     for building in scene.buildings:

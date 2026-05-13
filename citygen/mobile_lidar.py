@@ -5,10 +5,11 @@ from dataclasses import dataclass
 import math
 from typing import Any
 
-from .classes import CLASS_BY_ID, POINT_CLASSES
+from .classes import POINT_CLASSES
 from .config import CityGenConfig
 from .fences import FenceSegment
 from .geometry import BBox, Building, Point, Rect, stable_rng, terrain_height
+from .roads import InfiniteLinePrimitive, PolylinePrimitive, RingPrimitive, SegmentPrimitive
 from .roofs import default_flat_roof
 
 
@@ -129,9 +130,9 @@ def _trace_ray(
 
     if not hits:
         return None
-    if not config.mobile_lidar.occlusions_enabled and terrain_hit is not None:
-        return terrain_hit
-    return min(hits, key=lambda hit: hit.distance_m)
+    if config.mobile_lidar.occlusions_enabled:
+        return min(hits, key=lambda hit: hit.distance_m)
+    return max(hits, key=lambda hit: hit.distance_m)
 
 
 def _intersect_terrain(
@@ -307,6 +308,9 @@ def _refine_height_field_hit(
 
 def _trajectory_positions(config: CityGenConfig, scene) -> tuple[tuple[float, float, float], ...]:
     lidar = config.mobile_lidar
+    path: tuple[tuple[float, float], ...] | None = None
+    fallback_yaw = lidar.direction_degrees
+
     if (
         lidar.trajectory == "line"
         and lidar.start_x is not None
@@ -314,27 +318,106 @@ def _trajectory_positions(config: CityGenConfig, scene) -> tuple[tuple[float, fl
         and lidar.end_x is not None
         and lidar.end_y is not None
     ):
-        start = (lidar.start_x, lidar.start_y)
-        end = (lidar.end_x, lidar.end_y)
-    else:
+        path = ((lidar.start_x, lidar.start_y), (lidar.end_x, lidar.end_y))
+    elif lidar.trajectory == "road":
+        path = _road_trajectory(scene.bbox, scene.road_network.primitives)
+    if path is None:
         start, end = _centerline(scene.bbox, lidar.direction_degrees)
+        path = (start, end)
 
-    dx = end[0] - start[0]
-    dy = end[1] - start[1]
-    length = math.hypot(dx, dy)
-    if length <= 1e-9:
-        return ((start[0], start[1], lidar.direction_degrees),)
+    return _positions_along_path(path, lidar.position_step_m, fallback_yaw)
 
-    yaw = math.degrees(math.atan2(dy, dx))
-    count = max(1, int(math.floor(length / lidar.position_step_m)) + 1)
-    positions: list[tuple[float, float, float]] = []
+
+def _positions_along_path(
+    path: tuple[tuple[float, float], ...],
+    step_m: float,
+    fallback_yaw: float,
+) -> tuple[tuple[float, float, float], ...]:
+    if len(path) < 2:
+        x, y = path[0] if path else (0.0, 0.0)
+        return ((x, y, fallback_yaw),)
+
+    segments: list[tuple[float, float, float, float, float, float, float, float]] = []
+    total = 0.0
+    for (x0, y0), (x1, y1) in zip(path, path[1:]):
+        dx = x1 - x0
+        dy = y1 - y0
+        length = math.hypot(dx, dy)
+        if length <= 1e-9:
+            continue
+        yaw = math.degrees(math.atan2(dy, dx))
+        segments.append((total, total + length, x0, y0, dx, dy, length, yaw))
+        total += length
+    if not segments:
+        x, y = path[0]
+        return ((x, y, fallback_yaw),)
+
+    distances: list[float] = []
+    count = max(1, int(math.floor(total / step_m)) + 1)
     for index in range(count):
-        distance = min(length, index * lidar.position_step_m)
-        ratio = distance / length
-        positions.append((start[0] + dx * ratio, start[1] + dy * ratio, yaw))
-    if positions[-1][0] != end[0] or positions[-1][1] != end[1]:
-        positions.append((end[0], end[1], yaw))
+        distances.append(min(total, index * step_m))
+    if abs(distances[-1] - total) > 1e-9:
+        distances.append(total)
+
+    positions: list[tuple[float, float, float]] = []
+    segment_index = 0
+    for distance in distances:
+        while segment_index + 1 < len(segments) and distance > segments[segment_index][1] + 1e-9:
+            segment_index += 1
+        seg = segments[segment_index]
+        local = max(0.0, min(seg[6], distance - seg[0]))
+        ratio = local / seg[6]
+        x = seg[2] + seg[4] * ratio
+        y = seg[3] + seg[5] * ratio
+        positions.append((x, y, seg[7]))
     return tuple(positions)
+
+
+def _road_trajectory(
+    bbox: BBox,
+    primitives: tuple[InfiniteLinePrimitive | SegmentPrimitive | RingPrimitive | PolylinePrimitive, ...],
+) -> tuple[tuple[float, float], ...] | None:
+    if not primitives:
+        return None
+    center_x = bbox.min_x + bbox.width * 0.5
+    center_y = bbox.min_y + bbox.depth * 0.5
+    for primitive in sorted(primitives, key=lambda item: item.distance_to(center_x, center_y)):
+        path = _primitive_path(primitive, bbox)
+        if path is not None and len(path) >= 2:
+            return path
+    return None
+
+
+def _primitive_path(
+    primitive: InfiniteLinePrimitive | SegmentPrimitive | RingPrimitive | PolylinePrimitive,
+    bbox: BBox,
+) -> tuple[tuple[float, float], ...] | None:
+    if isinstance(primitive, InfiniteLinePrimitive):
+        angle = math.degrees(math.atan2(primitive.dir_y, primitive.dir_x))
+        start, end = _centerline(bbox, angle)
+        return (start, end)
+    if isinstance(primitive, SegmentPrimitive):
+        points = _path_inside_bbox(((primitive.x0, primitive.y0), (primitive.x1, primitive.y1)), bbox)
+        return points if len(points) >= 2 else None
+    if isinstance(primitive, PolylinePrimitive):
+        points = _path_inside_bbox(primitive.points, bbox)
+        return points if len(points) >= 2 else None
+    return None
+
+
+def _path_inside_bbox(points: tuple[tuple[float, float], ...], bbox: BBox) -> tuple[tuple[float, float], ...]:
+    clamped = [
+        (
+            min(max(point[0], bbox.min_x), bbox.max_x),
+            min(max(point[1], bbox.min_y), bbox.max_y),
+        )
+        for point in points
+    ]
+    deduped: list[tuple[float, float]] = []
+    for point in clamped:
+        if not deduped or abs(deduped[-1][0] - point[0]) > 1e-9 or abs(deduped[-1][1] - point[1]) > 1e-9:
+            deduped.append(point)
+    return tuple(deduped)
 
 
 def _centerline(bbox: BBox, angle_degrees: float) -> tuple[tuple[float, float], tuple[float, float]]:
@@ -482,10 +565,16 @@ def _metadata(
         "successful_hits": successful,
         "dropped_rays": dropped,
         "missed_rays": missed,
+        "max_range_misses": missed,
         "attenuated_rays": attenuated,
         "hit_counts_by_class": dict(sorted(hit_counts.items())),
         "parameters": {
             "sensor_height_m": lidar.sensor_height_m,
+            "direction_degrees": lidar.direction_degrees,
+            "start_x": lidar.start_x,
+            "start_y": lidar.start_y,
+            "end_x": lidar.end_x,
+            "end_y": lidar.end_y,
             "position_step_m": lidar.position_step_m,
             "min_range_m": lidar.min_range_m,
             "max_range_m": lidar.max_range_m,
@@ -514,10 +603,16 @@ def _disabled_metadata(config: CityGenConfig) -> dict[str, Any]:
         "successful_hits": 0,
         "dropped_rays": 0,
         "missed_rays": 0,
+        "max_range_misses": 0,
         "attenuated_rays": 0,
         "hit_counts_by_class": {},
         "parameters": {
             "sensor_height_m": config.mobile_lidar.sensor_height_m,
+            "direction_degrees": config.mobile_lidar.direction_degrees,
+            "start_x": config.mobile_lidar.start_x,
+            "start_y": config.mobile_lidar.start_y,
+            "end_x": config.mobile_lidar.end_x,
+            "end_y": config.mobile_lidar.end_y,
             "position_step_m": config.mobile_lidar.position_step_m,
             "min_range_m": config.mobile_lidar.min_range_m,
             "max_range_m": config.mobile_lidar.max_range_m,

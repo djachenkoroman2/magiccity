@@ -145,6 +145,10 @@
               <ul class="nav flex-column">
               </ul>
             </li>
+            <li class="nav-item" data-bs-level="2"><a href="#mobile_lidar" class="nav-link">mobile_lidar</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
             <li class="nav-item" data-bs-level="2"><a href="#sampling" class="nav-link">sampling</a>
               <ul class="nav flex-column">
               </ul>
@@ -201,7 +205,7 @@
 <li>Все размеры и расстояния задаются в метрах.</li>
 <li>Горизонтальные координаты сцены: <code>x</code> и <code>y</code>; высота: <code>z</code>.</li>
 <li>Булевы значения пишутся как <code>true</code> или <code>false</code>.</li>
-<li>Текущий загрузчик читает описанные ниже поля. Секции <code>parcels</code>, <code>fences</code> и <code>worldgen</code> валидируют имена параметров строго, чтобы опечатки в новых слоях не проходили молча.</li>
+<li>Текущий загрузчик читает описанные ниже поля. Секции <code>parcels</code>, <code>fences</code>, <code>mobile_lidar</code> и <code>worldgen</code> валидируют имена параметров строго, чтобы опечатки в новых слоях не проходили молча.</li>
 </ul>
 <p>Минимальный валидный конфиг:</p>
 <pre><code class="language-yaml">seed: 7
@@ -321,6 +325,30 @@ fences:
   sample_spacing_m: 0.8
   openness: null
   decorative: false
+mobile_lidar:
+  enabled: false
+  output_mode: additive
+  trajectory: centerline
+  sensor_height_m: 2.2
+  direction_degrees: 0
+  start_x: null
+  start_y: null
+  end_x: null
+  end_y: null
+  position_step_m: 8
+  min_range_m: 1
+  max_range_m: 90
+  horizontal_fov_degrees: 180
+  horizontal_step_degrees: 3
+  vertical_fov_degrees: 50
+  vertical_center_degrees: -8
+  vertical_channels: 12
+  angle_jitter_degrees: 0
+  range_noise_m: 0.03
+  drop_probability: 0.02
+  distance_attenuation: 0.12
+  occlusions_enabled: true
+  ray_step_m: 1
 sampling:
   mode: surface
   ground_spacing_m: 2
@@ -409,6 +437,13 @@ worldgen:
 <td>нет</td>
 <td>см. секцию <code>fences</code></td>
 <td>Опционально добавляет заборы и ограждения по границам parcels.</td>
+</tr>
+<tr>
+<td><code>mobile_lidar</code></td>
+<td>mapping</td>
+<td>нет</td>
+<td>см. секцию <code>mobile_lidar</code></td>
+<td>Опционально включает трассировку лучей мобильного LiDAR-сенсора.</td>
 </tr>
 <tr>
 <td><code>sampling</code></td>
@@ -1820,6 +1855,196 @@ distance &lt;= width_m / 2 + sidewalk_width_m      -&gt; sidewalk
 <p>Alias-значения нормализуются: <code>wood</code>/<code>wooden</code> -&gt; <code>wood_picket</code>, <code>wood_board</code>/<code>timber</code> -&gt; <code>wood_solid</code>, <code>profile</code>/<code>corrugated</code> -&gt; <code>metal_profile</code>, <code>chain_link</code>/<code>rabitz</code>/<code>mesh</code> -&gt; <code>metal_chain_link</code>, <code>welded</code> -&gt; <code>metal_welded</code>, <code>forged</code> -&gt; <code>metal_forged</code>, <code>masonry</code> -&gt; <code>stone</code>, <code>brick_wall</code> -&gt; <code>brick</code>.</p>
 <p>Генератор делит периметр участка на стороны, оставляет разрывы под ворота, пропускает сегменты с конфликтом с road hardscape или footprint здания и семплирует точки классов <code>fence</code> и, при наличии основания, <code>fence_foundation</code>. Metadata получает <code>fence_counts</code>, а <code>object_feature_counts</code> — <code>parcel_fence</code> и <code>fence_foundation</code>.</p>
 <p>Подробный тематический справочник по ограждениям находится в <code>doc/fences.md</code>.</p>
+<h2 id="mobile_lidar"><code>mobile_lidar</code></h2>
+<p>Секция <code>mobile_lidar</code> включает опциональный режим мобильного LiDAR-сканирования. В этом режиме точки создаются не по регулярному surface sampling, а по фактическим попаданиям лучей из движущегося сенсора.</p>
+<pre><code class="language-yaml">mobile_lidar:
+  enabled: true
+  output_mode: additive
+  trajectory: road
+  sensor_height_m: 2.2
+  direction_degrees: 0
+  position_step_m: 8
+  min_range_m: 1
+  max_range_m: 90
+  horizontal_fov_degrees: 180
+  horizontal_step_degrees: 3
+  vertical_fov_degrees: 50
+  vertical_center_degrees: -8
+  vertical_channels: 12
+  angle_jitter_degrees: 0
+  range_noise_m: 0.03
+  drop_probability: 0.02
+  distance_attenuation: 0.12
+  occlusions_enabled: true
+  ray_step_m: 1
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Параметр</th>
+<th>Тип</th>
+<th>По умолчанию</th>
+<th>Возможные значения</th>
+<th>Действие</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>enabled</code></td>
+<td>boolean</td>
+<td><code>false</code></td>
+<td><code>true</code>, <code>false</code></td>
+<td>Включает mobile LiDAR-режим. При <code>false</code> поведение остается поверхностным, как в старых версиях.</td>
+</tr>
+<tr>
+<td><code>output_mode</code></td>
+<td>string</td>
+<td><code>additive</code></td>
+<td><code>additive</code>, <code>lidar_only</code></td>
+<td>Режим вывода: добавить LiDAR к surface sampling или оставить только LiDAR-точки.</td>
+</tr>
+<tr>
+<td><code>trajectory</code></td>
+<td>string</td>
+<td><code>centerline</code></td>
+<td><code>centerline</code>, <code>line</code>, <code>road</code></td>
+<td>Тип траектории сенсора: по центру тайла, по явно заданной линии или по road primitives.</td>
+</tr>
+<tr>
+<td><code>sensor_height_m</code></td>
+<td>number</td>
+<td><code>2.2</code></td>
+<td><code>&gt; 0</code></td>
+<td>Высота установки сенсора над поверхностью рельефа.</td>
+</tr>
+<tr>
+<td><code>direction_degrees</code></td>
+<td>number</td>
+<td><code>0.0</code></td>
+<td>любое число</td>
+<td>Базовое направление движения для <code>centerline</code> и fallback-направление.</td>
+</tr>
+<tr>
+<td><code>start_x</code>, <code>start_y</code>, <code>end_x</code>, <code>end_y</code></td>
+<td>number или null</td>
+<td><code>null</code></td>
+<td>числа или <code>null</code></td>
+<td>Явная линия траектории для <code>trajectory: line</code>; должны быть заданы все четыре значения одновременно.</td>
+</tr>
+<tr>
+<td><code>position_step_m</code></td>
+<td>number</td>
+<td><code>8.0</code></td>
+<td><code>&gt; 0</code></td>
+<td>Шаг между позициями сенсора вдоль траектории.</td>
+</tr>
+<tr>
+<td><code>min_range_m</code></td>
+<td>number</td>
+<td><code>1.0</code></td>
+<td><code>&gt; 0</code>, <code>&lt; max_range_m</code></td>
+<td>Минимальная дальность луча.</td>
+</tr>
+<tr>
+<td><code>max_range_m</code></td>
+<td>number</td>
+<td><code>90.0</code></td>
+<td><code>&gt; 0</code>, <code>&gt; min_range_m</code></td>
+<td>Максимальная дальность луча.</td>
+</tr>
+<tr>
+<td><code>horizontal_fov_degrees</code></td>
+<td>number</td>
+<td><code>180.0</code></td>
+<td><code>0 &lt; value &lt;= 360</code></td>
+<td>Горизонтальный угол обзора.</td>
+</tr>
+<tr>
+<td><code>horizontal_step_degrees</code></td>
+<td>number</td>
+<td><code>3.0</code></td>
+<td><code>&gt; 0</code></td>
+<td>Шаг горизонтального сканирования.</td>
+</tr>
+<tr>
+<td><code>vertical_fov_degrees</code></td>
+<td>number</td>
+<td><code>50.0</code></td>
+<td><code>0 &lt; value &lt;= 180</code></td>
+<td>Вертикальный угол обзора.</td>
+</tr>
+<tr>
+<td><code>vertical_center_degrees</code></td>
+<td>number</td>
+<td><code>-8.0</code></td>
+<td>любое число</td>
+<td>Центральный вертикальный угол (обычно отрицательный, чтобы смотреть вниз).</td>
+</tr>
+<tr>
+<td><code>vertical_channels</code></td>
+<td>integer</td>
+<td><code>12</code></td>
+<td><code>&gt; 0</code></td>
+<td>Количество вертикальных каналов (слоев).</td>
+</tr>
+<tr>
+<td><code>angle_jitter_degrees</code></td>
+<td>number</td>
+<td><code>0.0</code></td>
+<td><code>&gt;= 0</code></td>
+<td>Угловой jitter лучей.</td>
+</tr>
+<tr>
+<td><code>range_noise_m</code></td>
+<td>number</td>
+<td><code>0.03</code></td>
+<td><code>&gt;= 0</code></td>
+<td>Шум дальности попадания.</td>
+</tr>
+<tr>
+<td><code>drop_probability</code></td>
+<td>number</td>
+<td><code>0.02</code></td>
+<td><code>0..1</code></td>
+<td>Вероятность пропуска луча.</td>
+</tr>
+<tr>
+<td><code>distance_attenuation</code></td>
+<td>number</td>
+<td><code>0.12</code></td>
+<td><code>0..1</code></td>
+<td>Вероятность отбросить дальние попадания для имитации потери плотности по дистанции.</td>
+</tr>
+<tr>
+<td><code>occlusions_enabled</code></td>
+<td>boolean</td>
+<td><code>true</code></td>
+<td><code>true</code>, <code>false</code></td>
+<td>Включает режим ближайшего пересечения и окклюзий.</td>
+</tr>
+<tr>
+<td><code>ray_step_m</code></td>
+<td>number</td>
+<td><code>1.0</code></td>
+<td><code>&gt; 0</code></td>
+<td>Шаг трассировки луча при поиске пересечений с height field.</td>
+</tr>
+</tbody>
+</table>
+<p>Поведение:</p>
+<ul>
+<li>Лучи взаимодействуют с рельефом, дорогами, тротуарами, median, фасадами, крышами и ограждениями.</li>
+<li>При <code>occlusions_enabled: true</code> сохраняется ближайшее пересечение луча; объекты за преградой не попадают в облако точек.</li>
+<li>При <code>occlusions_enabled: false</code> используется дальнее пересечение по лучу, что может визуально уменьшать окклюзии.</li>
+<li>Все лучи, jitter и пропуски полностью детерминированы от <code>seed</code>, координат тайла, индекса позиции и индексов углов.</li>
+</ul>
+<p>Взаимодействие с <code>sampling</code>:</p>
+<ul>
+<li><code>sampling.mode</code> по-прежнему должен быть <code>surface</code>.</li>
+<li>Если <code>mobile_lidar.enabled: false</code>, используется только surface sampling.</li>
+<li>Если <code>mobile_lidar.enabled: true</code> и <code>output_mode: additive</code>, итоговый PLY содержит surface + LiDAR точки.</li>
+<li>Если <code>mobile_lidar.enabled: true</code> и <code>output_mode: lidar_only</code>, итоговый PLY содержит только LiDAR точки.</li>
+</ul>
 <h2 id="sampling"><code>sampling</code></h2>
 <p>Секция <code>sampling</code> управляет плотностью точек и случайным смещением samples.</p>
 <pre><code class="language-yaml">sampling:
@@ -1988,7 +2213,7 @@ distance &lt;= width_m / 2 + sidewalk_width_m      -&gt; sidewalk
 <pre><code class="language-text">outputs/example.ply
 outputs/example.metadata.json
 </code></pre>
-<p>Metadata содержит <code>seed</code>, bbox тайла, количество точек, распределение классов, mapping классов, использованные модели дорог, <code>road_profile_counts</code>, <code>road_profile_counts_by_biome</code>, <code>road_widths</code>, <code>road_median</code>, counts по биомам, <code>building_counts</code>, <code>parcel_counts</code>, <code>fence_counts</code>, <code>parcel_building_alignment</code>, <code>building_orientations</code>, <code>block_geometry</code>, <code>parcel_geometry</code>, списки поддержанных типов footprint/roof/fence и полный конфиг после применения значений по умолчанию.</p>
+<p>Metadata содержит <code>seed</code>, bbox тайла, количество точек, распределение классов, mapping классов, использованные модели дорог, <code>road_profile_counts</code>, <code>road_profile_counts_by_biome</code>, <code>road_widths</code>, <code>road_median</code>, counts по биомам, <code>building_counts</code>, <code>parcel_counts</code>, <code>fence_counts</code>, <code>mobile_lidar</code>, <code>point_sources</code>, <code>parcel_building_alignment</code>, <code>building_orientations</code>, <code>block_geometry</code>, <code>parcel_geometry</code>, списки поддержанных типов footprint/roof/fence и полный конфиг после применения значений по умолчанию.</p>
 <h2 id="worldgen"><code>worldgen</code></h2>
 <p>Секция <code>worldgen</code> опциональна и управляет флагами валидации catalogs/worldgen. Она не меняет runtime-распределение сцены.</p>
 <pre><code class="language-yaml">worldgen:
@@ -2281,6 +2506,50 @@ outputs/example.metadata.json
 <tr>
 <td><code>fences.coverage_ratio</code>, <code>gate_probability</code> или <code>openness</code> вне <code>0..1</code></td>
 <td>доли должны быть в допустимом диапазоне</td>
+</tr>
+<tr>
+<td>Неизвестный ключ в <code>mobile_lidar</code></td>
+<td>имена параметров <code>mobile_lidar</code> валидируются строго</td>
+</tr>
+<tr>
+<td><code>mobile_lidar.output_mode</code> неизвестен</td>
+<td>поддерживаются <code>additive</code>, <code>lidar_only</code></td>
+</tr>
+<tr>
+<td><code>mobile_lidar.trajectory</code> неизвестен</td>
+<td>поддерживаются <code>centerline</code>, <code>line</code>, <code>road</code></td>
+</tr>
+<tr>
+<td>Для <code>mobile_lidar.trajectory: line</code> заданы не все <code>start_x/start_y/end_x/end_y</code></td>
+<td>явная line-траектория требует все четыре значения</td>
+</tr>
+<tr>
+<td><code>mobile_lidar.min_range_m &gt;= mobile_lidar.max_range_m</code></td>
+<td>минимальная дальность должна быть меньше максимальной</td>
+</tr>
+<tr>
+<td><code>mobile_lidar.horizontal_fov_degrees</code> вне <code>0..360</code></td>
+<td>горизонтальный FOV должен быть в допустимом диапазоне</td>
+</tr>
+<tr>
+<td><code>mobile_lidar.vertical_fov_degrees</code> вне <code>0..180</code></td>
+<td>вертикальный FOV должен быть в допустимом диапазоне</td>
+</tr>
+<tr>
+<td><code>mobile_lidar.angle_jitter_degrees &lt; 0</code></td>
+<td>угловой jitter не может быть отрицательным</td>
+</tr>
+<tr>
+<td><code>mobile_lidar.range_noise_m &lt; 0</code></td>
+<td>шум дальности не может быть отрицательным</td>
+</tr>
+<tr>
+<td><code>mobile_lidar.drop_probability</code> вне <code>0..1</code></td>
+<td>вероятность пропуска луча должна быть в допустимом диапазоне</td>
+</tr>
+<tr>
+<td><code>mobile_lidar.distance_attenuation</code> вне <code>0..1</code></td>
+<td>ослабление по расстоянию должно быть в допустимом диапазоне</td>
 </tr>
 <tr>
 <td><code>sampling.mode != surface</code></td>

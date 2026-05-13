@@ -137,6 +137,10 @@
               <ul class="nav flex-column">
               </ul>
             </li>
+            <li class="nav-item" data-bs-level="2"><a href="#mobile-lidar" class="nav-link">Mobile LiDAR</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
             <li class="nav-item" data-bs-level="2"><a href="#_8" class="nav-link">Семантические классы</a>
               <ul class="nav flex-column">
               </ul>
@@ -151,6 +155,7 @@
 <h1 id="citygen">Генерируемые объекты citygen</h1>
 <p>Этот документ перечисляет generated object / feature ids из <code>citygen.catalogs.OBJECT_FEATURE_DEFINITIONS</code>. Он нужен как расширяемый справочник: при добавлении нового feature id тесты требуют обновить этот файл.</p>
 <p>Подробные справочники по связанным слоям: <code>doc/configuration_reference.md</code>, <code>doc/roads.md</code>, <code>doc/parcels.md</code>, <code>doc/fences.md</code>, <code>doc/building_footprints.md</code>, <code>doc/building_roofs.md</code>, <code>doc/biomes.md</code>.</p>
+<p><code>mobile_lidar</code> не добавляет новый catalog feature id и не вводит новые semantic classes. Он добавляет альтернативный источник точек для уже существующих классов (<code>ground</code>, <code>road</code>, <code>sidewalk</code>, <code>road_median</code>, <code>building_facade</code>, <code>building_roof</code>, <code>fence</code>, <code>fence_foundation</code>) и отдельную diagnostics-секцию в metadata.</p>
 <h2 id="_1">Сводная таблица</h2>
 <table>
 <thead>
@@ -380,6 +385,23 @@
 <li><code>cone</code>.</li>
 </ul>
 <p>Roof ids описаны в catalog <code>ROOF_DEFINITIONS</code>; старое metadata поле <code>supported_roof_types</code> сохранено.</p>
+<h2 id="mobile-lidar">Mobile LiDAR</h2>
+<p><code>mobile_lidar</code> включается через одноименную секцию конфига и работает на стадии <code>sampling</code> как дополнительный или альтернативный источник точек:</p>
+<ul>
+<li><code>output_mode: additive</code> добавляет LiDAR-попадания к surface sampling;</li>
+<li><code>output_mode: lidar_only</code> оставляет только LiDAR-попадания;</li>
+<li><code>enabled: false</code> сохраняет прежнее surface-only поведение.</li>
+</ul>
+<p>Metadata:</p>
+<ul>
+<li><code>mobile_lidar.enabled</code>, <code>output_mode</code>, <code>trajectory</code>;</li>
+<li><code>mobile_lidar.sensor_positions</code>;</li>
+<li><code>mobile_lidar.emitted_rays</code>, <code>successful_hits</code>, <code>dropped_rays</code>, <code>missed_rays</code>, <code>max_range_misses</code>, <code>attenuated_rays</code>;</li>
+<li><code>mobile_lidar.hit_counts_by_class</code>;</li>
+<li><code>mobile_lidar.parameters.*</code>;</li>
+<li><code>point_sources.mode</code>, <code>point_sources.surface_sampling</code>, <code>point_sources.mobile_lidar</code>.</li>
+</ul>
+<p>Ограничение MVP: это single-return модель лучей без intensity и без нескольких возвратов на один луч.</p>
 <h2 id="_8">Семантические классы</h2>
 <p>Semantic class ids стабильны и описаны в catalog <code>SEMANTIC_CLASS_DEFINITIONS</code>:</p>
 <ul>

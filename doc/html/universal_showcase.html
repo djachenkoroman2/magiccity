@@ -163,6 +163,7 @@
 <li><code>buildings.roof.model: mixed</code> со всеми поддержанными весами roofs;</li>
 <li><code>parcels.enabled: true</code> с размещением зданий внутри parcels;</li>
 <li>layer <code>fences</code> в этом showcase не включен, чтобы не утяжелять большой тайл; для ограждений используется отдельный <code>configs/demo_parcel_fences.yaml</code>;</li>
+<li>layer <code>mobile_lidar</code> в этом showcase не включен; при необходимости его можно добавить в тот же YAML;</li>
 <li>сводки <code>worldgen</code>/catalogs в metadata;</li>
 <li>RGB и поля semantic class в PLY.</li>
 </ul>
@@ -212,6 +213,7 @@
 <li><code>parcel_counts.buildable_parcels &gt; 0</code>;</li>
 <li><code>parcel_counts.occupied_parcels &gt; 0</code>;</li>
 <li><code>parcel_counts.buildings_with_parcel_id == building_counts.total</code>.</li>
+<li><code>mobile_lidar.enabled == false</code> для этого конкретного showcase-конфига.</li>
 </ul>
 <h2 id="_4">Что означают важные секции</h2>
 <p><code>urban_fields</code> задает плавные поля города. В этом showcase центр смещен относительно тайла, чтобы получить неоднородную карту биомов.</p>
@@ -223,7 +225,7 @@
 <p><code>fences</code> вынесен в отдельный demo <code>configs/demo_parcel_fences.yaml</code>. Этот слой строит заборы по границам parcels, добавляет воротные разрывы, фундаменты для кирпичных/каменных стен и metadata <code>fence_counts</code>.</p>
 <p><code>worldgen</code> оставлен явно включенным, чтобы metadata показывала сводки catalogs/worldgen: <code>worldgen</code>, <code>catalogs</code>, <code>biome_catalog</code> и <code>object_feature_counts</code>.</p>
 <h2 id="_5">Ограничения</h2>
-<p>Showcase не добавляет сущности, которых нет в текущем генераторе: машины, деревья, фонари, материалы, LAS/LAZ или настоящий LiDAR.</p>
+<p>Showcase не добавляет сущности, которых нет в текущем генераторе: машины, деревья, фонари, материалы или LAS/LAZ. В проекте есть mobile LiDAR mode, но этот showcase оставляет его выключенным ради времени генерации.</p>
 <p>Parcel subdivision в текущем MVP — прямоугольная road-aware аппроксимация поверх road primitives. Это не полноценная GIS-полигонализация кварталов из дорожного графа.</p>
 <p>Showcase тяжелее обычных проверочных конфигов. Для быстрых итераций уменьши <code>tile.size_m</code> или увеличь <code>sampling.ground_spacing_m</code>, <code>sampling.road_spacing_m</code>, <code>sampling.building_spacing_m</code>.</p>
 <p>Mixed footprints и roofs выбираются детерминированно, но все равно через weighted sampling. Если после изменений генератора какой-то тип исчез из metadata, сначала проверь <code>seed</code>, размеры тайла, размеры parcels, <code>footprint_min_m</code>, <code>footprint_max_m</code> и weights.</p>

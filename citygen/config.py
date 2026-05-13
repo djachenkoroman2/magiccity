@@ -49,7 +49,7 @@ SUPPORTED_FENCE_SIDES = {"front", "back", "left", "right"}
 
 SUPPORTED_FENCE_FOUNDATION_MODES = {"auto", "always", "never"}
 
-SUPPORTED_MOBILE_LIDAR_TRAJECTORIES = {"centerline", "line"}
+SUPPORTED_MOBILE_LIDAR_TRAJECTORIES = {"centerline", "line", "road"}
 
 SUPPORTED_MOBILE_LIDAR_OUTPUT_MODES = {"additive", "lidar_only"}
 
