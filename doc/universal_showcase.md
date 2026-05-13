@@ -2,7 +2,7 @@
 
 `configs/demo_universal_showcase.yaml` — большой интеграционный showcase для проверки основных возможностей `citygen` одним запуском. Этот документ описывает не схему YAML, а то, какие участки runtime-кода и диагностические поля metadata удобно проверять этим конфигом.
 
-Полная схема YAML описана в `doc/configuration_reference.md`; отдельные подсистемы — в `doc/roads.md`, `doc/biomes.md`, `doc/parcels.md`, `doc/building_footprints.md` и `doc/building_roofs.md`.
+Полная схема YAML описана в `doc/configuration_reference.md`; отдельные подсистемы — в `doc/roads.md`, `doc/biomes.md`, `doc/parcels.md`, `doc/fences.md`, `doc/building_footprints.md` и `doc/building_roofs.md`.
 
 Он полезен после изменений в следующих подсистемах:
 
@@ -11,6 +11,7 @@
 - генерация footprints зданий;
 - геометрия крыш;
 - разбиение parcels;
+- отдельный demo `configs/demo_parcel_fences.yaml` проверяет слой ограждений;
 - семплирование поверхностей;
 - экспорт PLY и metadata.
 
@@ -27,6 +28,7 @@
 - `buildings.footprint.model: mixed` со всеми поддержанными весами footprints;
 - `buildings.roof.model: mixed` со всеми поддержанными весами roofs;
 - `parcels.enabled: true` с размещением зданий внутри parcels;
+- layer `fences` в этом showcase не включен, чтобы не утяжелять большой тайл; для ограждений используется отдельный `configs/demo_parcel_fences.yaml`;
 - сводки `worldgen`/catalogs в metadata;
 - RGB и поля semantic class в PLY.
 
@@ -103,6 +105,8 @@ jq '{
 
 `parcels.enabled: true` включает block/parcel subdivision. Этот showcase проверяет размещение с учетом parcels, `parcel_id`, проверки buildable area и `parcel_counts`. Для визуально повернутых blocks/parcels используй `configs/demo_oriented_parcels.yaml`; в showcase `oriented_blocks` не включен, чтобы сохранить более предсказуемую базовую плотность на большом тайле.
 
+`fences` вынесен в отдельный demo `configs/demo_parcel_fences.yaml`. Этот слой строит заборы по границам parcels, добавляет воротные разрывы, фундаменты для кирпичных/каменных стен и metadata `fence_counts`.
+
 `worldgen` оставлен явно включенным, чтобы metadata показывала сводки catalogs/worldgen: `worldgen`, `catalogs`, `biome_catalog` и `object_feature_counts`.
 
 ## Ограничения
@@ -127,6 +131,12 @@ head -n 20 outputs/demo_universal_showcase.ply
 
 ```bash
 jq '.parcel_counts' outputs/demo_universal_showcase.metadata.json
+```
+
+Посмотреть статистику ограждений в отдельном demo:
+
+```bash
+jq '.fence_counts' outputs/demo_parcel_fences.metadata.json
 ```
 
 Посмотреть разнообразие зданий:

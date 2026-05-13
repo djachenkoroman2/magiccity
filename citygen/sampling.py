@@ -5,6 +5,7 @@ import math
 
 from .classes import POINT_CLASSES
 from .config import CityGenConfig
+from .fences import sample_fence_segment
 from .generator import Scene, surface_kind
 from .geometry import Building, Point, Rect, stable_rng, terrain_height
 from .roofs import default_flat_roof
@@ -15,6 +16,8 @@ def sample_scene(config: CityGenConfig, scene: Scene) -> list[Point]:
     points.extend(_sample_tile_surfaces(config, scene))
     for building in scene.buildings:
         points.extend(_sample_building(config, scene, building))
+    for fence in scene.fences:
+        points.extend(sample_fence_segment(config, fence))
     return _crop_points(points, scene.bbox)
 
 

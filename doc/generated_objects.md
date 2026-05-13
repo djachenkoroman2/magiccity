@@ -2,7 +2,7 @@
 
 Этот документ перечисляет generated object / feature ids из `citygen.catalogs.OBJECT_FEATURE_DEFINITIONS`. Он нужен как расширяемый справочник: при добавлении нового feature id тесты требуют обновить этот файл.
 
-Подробные справочники по связанным слоям: `doc/configuration_reference.md`, `doc/roads.md`, `doc/parcels.md`, `doc/building_footprints.md`, `doc/building_roofs.md`, `doc/biomes.md`.
+Подробные справочники по связанным слоям: `doc/configuration_reference.md`, `doc/roads.md`, `doc/parcels.md`, `doc/fences.md`, `doc/building_footprints.md`, `doc/building_roofs.md`, `doc/biomes.md`.
 
 ## Сводная таблица
 
@@ -17,6 +17,8 @@
 | `building` | `objects` | `buildings` | `building_facade`, `building_roof` | Здание как процедурный объект с footprint, фасадом и roof. |
 | `building_footprint` | `objects` | `buildings.footprint` | none | Геометрия плана здания и проверки clearance. |
 | `building_roof` | `objects` | `buildings.roof` | `building_roof` | Геометрия крыши и семплирование roof surface. |
+| `parcel_fence` | `objects` | `fences` | `fence` | Опциональные ограждения по границам parcels. |
+| `fence_foundation` | `objects` | `fences` | `fence_foundation` | Низкое основание под массивными или явно настроенными ограждениями. |
 
 ## Рельеф
 
@@ -111,6 +113,38 @@ Metadata:
 
 Ограничение MVP: здания являются аналитическими поверхностями, которые семплируются в облако точек, а не полноценными объемными meshes.
 
+## Ограждения
+
+`parcel_fence` включается через `fences.enabled: true` совместно с `parcels.enabled: true`. Генератор строит сегменты по сторонам `Parcel.geometry`, может оставлять разрывы под ворота, выбирает тип ограждения и высоту, а также пропускает сегменты, которые конфликтуют с road hardscape или footprint здания.
+
+Поддерживаемые типы fence:
+
+- `wood_picket`;
+- `wood_solid`;
+- `wood_decorative`;
+- `metal_profile`;
+- `metal_chain_link`;
+- `metal_welded`;
+- `metal_forged`;
+- `stone`;
+- `brick`.
+
+Связанные features:
+
+- `fence_foundation` появляется для `stone` и `brick` при `fences.foundation: auto`, либо для любого типа при `foundation: always`;
+- `foundation: never` полностью убирает основание.
+
+Metadata:
+
+- `fence_counts`;
+- `supported_fence_types`;
+- `object_feature_counts.parcel_fence`;
+- `object_feature_counts.fence_foundation`;
+- `class_counts.fence`;
+- `class_counts.fence_foundation`.
+
+Ограничение MVP: fence layer работает по прямоугольным или oriented-rect parcels и не выполняет точное polygon clipping произвольных кадастровых границ.
+
 ## Footprints зданий
 
 `building_footprint` поддерживает:
@@ -152,6 +186,8 @@ Semantic class ids стабильны и описаны в catalog `SEMANTIC_CLA
 - `sidewalk`: id `3`;
 - `building_facade`: id `4`;
 - `building_roof`: id `5`;
-- `road_median`: id `6`.
+- `road_median`: id `6`;
+- `fence`: id `7`;
+- `fence_foundation`: id `8`.
 
 Новые semantic classes можно добавлять только с новым id; существующие id менять нельзя.

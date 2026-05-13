@@ -8,10 +8,13 @@ import yaml
 
 from .catalogs import (
     BIOME_DEFINITIONS,
+    DEFAULT_MIXED_FENCE_WEIGHTS,
     DEFAULT_MIXED_FOOTPRINT_WEIGHTS,
     DEFAULT_MIXED_ROOF_WEIGHTS,
     DEFAULT_ROAD_PROFILE_BIOME_WEIGHTS,
     DEFAULT_ROAD_PROFILE_MODEL_WEIGHTS,
+    FENCE_DEFINITIONS,
+    FENCE_MODEL_ALIASES,
     FOOTPRINT_DEFINITIONS,
     FOOTPRINT_MODEL_ALIASES,
     ROAD_MODEL_DEFINITIONS,
@@ -35,6 +38,20 @@ SUPPORTED_CONCRETE_FOOTPRINT_MODELS = SUPPORTED_FOOTPRINT_MODELS - {"mixed"}
 SUPPORTED_ROOF_MODELS = set(ROOF_DEFINITIONS) | {"mixed"}
 
 SUPPORTED_CONCRETE_ROOF_MODELS = SUPPORTED_ROOF_MODELS - {"mixed"}
+
+SUPPORTED_FENCE_TYPES = set(FENCE_DEFINITIONS) | {"mixed"}
+
+SUPPORTED_CONCRETE_FENCE_TYPES = SUPPORTED_FENCE_TYPES - {"mixed"}
+
+SUPPORTED_FENCE_MODES = {"none", "partial", "perimeter"}
+
+SUPPORTED_FENCE_SIDES = {"front", "back", "left", "right"}
+
+SUPPORTED_FENCE_FOUNDATION_MODES = {"auto", "always", "never"}
+
+SUPPORTED_MOBILE_LIDAR_TRAJECTORIES = {"centerline", "line"}
+
+SUPPORTED_MOBILE_LIDAR_OUTPUT_MODES = {"additive", "lidar_only"}
 
 
 @dataclass(frozen=True)
@@ -188,6 +205,57 @@ class ParcelsConfig:
 
 
 @dataclass(frozen=True)
+class FencesConfig:
+    enabled: bool = False
+    mode: str = "perimeter"
+    type: str = "mixed"
+    weights: dict[str, float] = field(default_factory=lambda: dict(DEFAULT_MIXED_FENCE_WEIGHTS))
+    height_m: float = 1.8
+    height_jitter_m: float = 0.25
+    thickness_m: float = 0.12
+    boundary_offset_m: float = 0.35
+    road_clearance_m: float = 0.5
+    coverage_ratio: float = 0.65
+    sides: tuple[str, ...] = ()
+    gate_probability: float = 0.65
+    gate_width_m: float = 4.0
+    gate_sides: tuple[str, ...] = ("front",)
+    foundation: str = "auto"
+    foundation_height_m: float = 0.25
+    foundation_width_m: float = 0.35
+    sample_spacing_m: float = 0.8
+    openness: float | None = None
+    decorative: bool = False
+
+
+@dataclass(frozen=True)
+class MobileLidarConfig:
+    enabled: bool = False
+    output_mode: str = "additive"
+    trajectory: str = "centerline"
+    sensor_height_m: float = 2.2
+    direction_degrees: float = 0.0
+    start_x: float | None = None
+    start_y: float | None = None
+    end_x: float | None = None
+    end_y: float | None = None
+    position_step_m: float = 8.0
+    min_range_m: float = 1.0
+    max_range_m: float = 90.0
+    horizontal_fov_degrees: float = 180.0
+    horizontal_step_degrees: float = 3.0
+    vertical_fov_degrees: float = 50.0
+    vertical_center_degrees: float = -8.0
+    vertical_channels: int = 12
+    angle_jitter_degrees: float = 0.0
+    range_noise_m: float = 0.03
+    drop_probability: float = 0.02
+    distance_attenuation: float = 0.12
+    occlusions_enabled: bool = True
+    ray_step_m: float = 1.0
+
+
+@dataclass(frozen=True)
 class WorldgenConfig:
     catalog_docs: bool = True
     strict_catalog_validation: bool = True
@@ -204,6 +272,8 @@ class CityGenConfig:
     output: OutputConfig = OutputConfig()
     urban_fields: UrbanFieldsConfig = UrbanFieldsConfig()
     parcels: ParcelsConfig = ParcelsConfig()
+    fences: FencesConfig = FencesConfig()
+    mobile_lidar: MobileLidarConfig = MobileLidarConfig()
     worldgen: WorldgenConfig = WorldgenConfig()
     tiles: tuple[TileConfig, ...] = ()
 
@@ -237,6 +307,8 @@ def load_config(path: str | Path) -> CityGenConfig:
         output=_output_config(_section(raw, "output")),
         urban_fields=_urban_fields_config(_section(raw, "urban_fields")),
         parcels=_parcels_config(_section(raw, "parcels")),
+        fences=_fences_config(_section(raw, "fences")),
+        mobile_lidar=_mobile_lidar_config(_section(raw, "mobile_lidar")),
         worldgen=_worldgen_config(_section(raw, "worldgen")),
         tiles=tiles,
     )
@@ -664,6 +736,142 @@ def _parcels_config(raw: dict[str, Any]) -> ParcelsConfig:
     )
 
 
+def _fences_config(raw: dict[str, Any]) -> FencesConfig:
+    supported = {
+        "enabled",
+        "mode",
+        "type",
+        "weights",
+        "height_m",
+        "height_jitter_m",
+        "thickness_m",
+        "boundary_offset_m",
+        "road_clearance_m",
+        "coverage_ratio",
+        "sides",
+        "gate_probability",
+        "gate_width_m",
+        "gate_sides",
+        "foundation",
+        "foundation_height_m",
+        "foundation_width_m",
+        "sample_spacing_m",
+        "openness",
+        "decorative",
+    }
+    for key in raw:
+        if key not in supported:
+            fields = ", ".join(sorted(supported))
+            raise ConfigError(f"Unsupported fences.{key}. Supported fields: {fields}.")
+
+    defaults = FencesConfig()
+    fence_type = _normalize_fence_model(_str(raw, "type", defaults.type))
+    return FencesConfig(
+        enabled=_bool(raw, "enabled", defaults.enabled),
+        mode=_str(raw, "mode", defaults.mode),
+        type=fence_type,
+        weights=_fence_weights(raw.get("weights"), fence_type),
+        height_m=_float(raw, "height_m", defaults.height_m),
+        height_jitter_m=_float(raw, "height_jitter_m", defaults.height_jitter_m),
+        thickness_m=_float(raw, "thickness_m", defaults.thickness_m),
+        boundary_offset_m=_float(raw, "boundary_offset_m", defaults.boundary_offset_m),
+        road_clearance_m=_float(raw, "road_clearance_m", defaults.road_clearance_m),
+        coverage_ratio=_float(raw, "coverage_ratio", defaults.coverage_ratio),
+        sides=_str_tuple(raw, "sides", defaults.sides),
+        gate_probability=_float(raw, "gate_probability", defaults.gate_probability),
+        gate_width_m=_float(raw, "gate_width_m", defaults.gate_width_m),
+        gate_sides=_str_tuple(raw, "gate_sides", defaults.gate_sides),
+        foundation=_str(raw, "foundation", defaults.foundation),
+        foundation_height_m=_float(raw, "foundation_height_m", defaults.foundation_height_m),
+        foundation_width_m=_float(raw, "foundation_width_m", defaults.foundation_width_m),
+        sample_spacing_m=_float(raw, "sample_spacing_m", defaults.sample_spacing_m),
+        openness=_optional_float(raw, "openness"),
+        decorative=_bool(raw, "decorative", defaults.decorative),
+    )
+
+
+def _fence_weights(raw: Any, model: str) -> dict[str, float]:
+    if raw is None:
+        return dict(DEFAULT_MIXED_FENCE_WEIGHTS) if model == "mixed" else {}
+    if not isinstance(raw, dict):
+        raise ConfigError("fences.weights must be a mapping.")
+
+    weights: dict[str, float] = {}
+    for key, value in raw.items():
+        if not isinstance(key, str):
+            raise ConfigError("fences.weights keys must be strings.")
+        canonical = _normalize_fence_model(key)
+        if canonical == "mixed":
+            raise ConfigError("fences.weights cannot contain 'mixed'.")
+        if isinstance(value, bool):
+            raise ConfigError(f"fences.weights.{key} must be a number.")
+        try:
+            weight = float(value)
+        except (TypeError, ValueError) as exc:
+            raise ConfigError(f"fences.weights.{key} must be a number.") from exc
+        weights[canonical] = weight
+    return weights
+
+
+def _mobile_lidar_config(raw: dict[str, Any]) -> MobileLidarConfig:
+    supported = {
+        "enabled",
+        "output_mode",
+        "trajectory",
+        "sensor_height_m",
+        "direction_degrees",
+        "start_x",
+        "start_y",
+        "end_x",
+        "end_y",
+        "position_step_m",
+        "min_range_m",
+        "max_range_m",
+        "horizontal_fov_degrees",
+        "horizontal_step_degrees",
+        "vertical_fov_degrees",
+        "vertical_center_degrees",
+        "vertical_channels",
+        "angle_jitter_degrees",
+        "range_noise_m",
+        "drop_probability",
+        "distance_attenuation",
+        "occlusions_enabled",
+        "ray_step_m",
+    }
+    for key in raw:
+        if key not in supported:
+            fields = ", ".join(sorted(supported))
+            raise ConfigError(f"Unsupported mobile_lidar.{key}. Supported fields: {fields}.")
+
+    defaults = MobileLidarConfig()
+    return MobileLidarConfig(
+        enabled=_bool(raw, "enabled", defaults.enabled),
+        output_mode=_str(raw, "output_mode", defaults.output_mode),
+        trajectory=_str(raw, "trajectory", defaults.trajectory),
+        sensor_height_m=_float(raw, "sensor_height_m", defaults.sensor_height_m),
+        direction_degrees=_float(raw, "direction_degrees", defaults.direction_degrees),
+        start_x=_optional_float(raw, "start_x"),
+        start_y=_optional_float(raw, "start_y"),
+        end_x=_optional_float(raw, "end_x"),
+        end_y=_optional_float(raw, "end_y"),
+        position_step_m=_float(raw, "position_step_m", defaults.position_step_m),
+        min_range_m=_float(raw, "min_range_m", defaults.min_range_m),
+        max_range_m=_float(raw, "max_range_m", defaults.max_range_m),
+        horizontal_fov_degrees=_float(raw, "horizontal_fov_degrees", defaults.horizontal_fov_degrees),
+        horizontal_step_degrees=_float(raw, "horizontal_step_degrees", defaults.horizontal_step_degrees),
+        vertical_fov_degrees=_float(raw, "vertical_fov_degrees", defaults.vertical_fov_degrees),
+        vertical_center_degrees=_float(raw, "vertical_center_degrees", defaults.vertical_center_degrees),
+        vertical_channels=_int(raw, "vertical_channels", defaults.vertical_channels),
+        angle_jitter_degrees=_float(raw, "angle_jitter_degrees", defaults.angle_jitter_degrees),
+        range_noise_m=_float(raw, "range_noise_m", defaults.range_noise_m),
+        drop_probability=_float(raw, "drop_probability", defaults.drop_probability),
+        distance_attenuation=_float(raw, "distance_attenuation", defaults.distance_attenuation),
+        occlusions_enabled=_bool(raw, "occlusions_enabled", defaults.occlusions_enabled),
+        ray_step_m=_float(raw, "ray_step_m", defaults.ray_step_m),
+    )
+
+
 def _worldgen_config(raw: dict[str, Any]) -> WorldgenConfig:
     supported = {
         "catalog_docs",
@@ -714,6 +922,21 @@ def _validate(cfg: CityGenConfig) -> None:
         ("parcels.max_parcel_width_m", cfg.parcels.max_parcel_width_m),
         ("parcels.min_parcel_depth_m", cfg.parcels.min_parcel_depth_m),
         ("parcels.max_parcel_depth_m", cfg.parcels.max_parcel_depth_m),
+        ("fences.height_m", cfg.fences.height_m),
+        ("fences.thickness_m", cfg.fences.thickness_m),
+        ("fences.gate_width_m", cfg.fences.gate_width_m),
+        ("fences.foundation_height_m", cfg.fences.foundation_height_m),
+        ("fences.foundation_width_m", cfg.fences.foundation_width_m),
+        ("fences.sample_spacing_m", cfg.fences.sample_spacing_m),
+        ("mobile_lidar.sensor_height_m", cfg.mobile_lidar.sensor_height_m),
+        ("mobile_lidar.position_step_m", cfg.mobile_lidar.position_step_m),
+        ("mobile_lidar.min_range_m", cfg.mobile_lidar.min_range_m),
+        ("mobile_lidar.max_range_m", cfg.mobile_lidar.max_range_m),
+        ("mobile_lidar.horizontal_fov_degrees", cfg.mobile_lidar.horizontal_fov_degrees),
+        ("mobile_lidar.horizontal_step_degrees", cfg.mobile_lidar.horizontal_step_degrees),
+        ("mobile_lidar.vertical_fov_degrees", cfg.mobile_lidar.vertical_fov_degrees),
+        ("mobile_lidar.vertical_channels", cfg.mobile_lidar.vertical_channels),
+        ("mobile_lidar.ray_step_m", cfg.mobile_lidar.ray_step_m),
     ]
     for name, value in positive_fields:
         if value <= 0:
@@ -821,6 +1044,73 @@ def _validate(cfg: CityGenConfig) -> None:
         raise ConfigError("parcels.max_parcel_depth_m must be >= parcels.min_parcel_depth_m.")
     if cfg.parcels.block_size_m < cfg.parcels.min_block_size_m:
         raise ConfigError("parcels.block_size_m must be >= parcels.min_block_size_m.")
+    if cfg.fences.enabled and cfg.fences.mode != "none" and not cfg.parcels.enabled:
+        raise ConfigError("fences.enabled requires parcels.enabled because fences are generated along parcel boundaries.")
+    if cfg.fences.mode not in SUPPORTED_FENCE_MODES:
+        supported = ", ".join(sorted(SUPPORTED_FENCE_MODES))
+        raise ConfigError(f"fences.mode must be one of: {supported}.")
+    if cfg.fences.type not in SUPPORTED_FENCE_TYPES:
+        supported = ", ".join(sorted(SUPPORTED_FENCE_TYPES))
+        raise ConfigError(f"Unsupported fences.type='{cfg.fences.type}'. Supported types: {supported}.")
+    for name, weight in cfg.fences.weights.items():
+        if name not in SUPPORTED_CONCRETE_FENCE_TYPES:
+            supported = ", ".join(sorted(SUPPORTED_CONCRETE_FENCE_TYPES))
+            raise ConfigError(f"Unsupported fences.weights key='{name}'. Supported fence types: {supported}.")
+        if weight < 0:
+            raise ConfigError(f"fences.weights.{name} must be >= 0.")
+    if cfg.fences.type == "mixed" and sum(cfg.fences.weights.values()) <= 0:
+        raise ConfigError("fences.weights must have a positive sum for type='mixed'.")
+    for side in cfg.fences.sides:
+        if side not in SUPPORTED_FENCE_SIDES:
+            supported = ", ".join(sorted(SUPPORTED_FENCE_SIDES))
+            raise ConfigError(f"fences.sides contains unsupported side '{side}'. Supported sides: {supported}.")
+    for side in cfg.fences.gate_sides:
+        if side not in SUPPORTED_FENCE_SIDES:
+            supported = ", ".join(sorted(SUPPORTED_FENCE_SIDES))
+            raise ConfigError(f"fences.gate_sides contains unsupported side '{side}'. Supported sides: {supported}.")
+    if cfg.fences.foundation not in SUPPORTED_FENCE_FOUNDATION_MODES:
+        supported = ", ".join(sorted(SUPPORTED_FENCE_FOUNDATION_MODES))
+        raise ConfigError(f"fences.foundation must be one of: {supported}.")
+    if cfg.fences.height_jitter_m < 0:
+        raise ConfigError("fences.height_jitter_m must be >= 0.")
+    if cfg.fences.boundary_offset_m < 0:
+        raise ConfigError("fences.boundary_offset_m must be >= 0.")
+    if cfg.fences.road_clearance_m < 0:
+        raise ConfigError("fences.road_clearance_m must be >= 0.")
+    if not 0 <= cfg.fences.coverage_ratio <= 1:
+        raise ConfigError("fences.coverage_ratio must be between 0 and 1.")
+    if not 0 <= cfg.fences.gate_probability <= 1:
+        raise ConfigError("fences.gate_probability must be between 0 and 1.")
+    if cfg.fences.openness is not None and not 0 <= cfg.fences.openness <= 1:
+        raise ConfigError("fences.openness must be between 0 and 1.")
+    if cfg.mobile_lidar.output_mode not in SUPPORTED_MOBILE_LIDAR_OUTPUT_MODES:
+        supported = ", ".join(sorted(SUPPORTED_MOBILE_LIDAR_OUTPUT_MODES))
+        raise ConfigError(f"mobile_lidar.output_mode must be one of: {supported}.")
+    if cfg.mobile_lidar.trajectory not in SUPPORTED_MOBILE_LIDAR_TRAJECTORIES:
+        supported = ", ".join(sorted(SUPPORTED_MOBILE_LIDAR_TRAJECTORIES))
+        raise ConfigError(f"mobile_lidar.trajectory must be one of: {supported}.")
+    line_values = (
+        cfg.mobile_lidar.start_x,
+        cfg.mobile_lidar.start_y,
+        cfg.mobile_lidar.end_x,
+        cfg.mobile_lidar.end_y,
+    )
+    if any(value is not None for value in line_values) and not all(value is not None for value in line_values):
+        raise ConfigError("mobile_lidar line trajectory requires start_x, start_y, end_x and end_y together.")
+    if cfg.mobile_lidar.min_range_m >= cfg.mobile_lidar.max_range_m:
+        raise ConfigError("mobile_lidar.min_range_m must be smaller than mobile_lidar.max_range_m.")
+    if not 0 < cfg.mobile_lidar.horizontal_fov_degrees <= 360:
+        raise ConfigError("mobile_lidar.horizontal_fov_degrees must be between 0 and 360.")
+    if not 0 < cfg.mobile_lidar.vertical_fov_degrees <= 180:
+        raise ConfigError("mobile_lidar.vertical_fov_degrees must be between 0 and 180.")
+    if cfg.mobile_lidar.angle_jitter_degrees < 0:
+        raise ConfigError("mobile_lidar.angle_jitter_degrees must be >= 0.")
+    if cfg.mobile_lidar.range_noise_m < 0:
+        raise ConfigError("mobile_lidar.range_noise_m must be >= 0.")
+    if not 0 <= cfg.mobile_lidar.drop_probability <= 1:
+        raise ConfigError("mobile_lidar.drop_probability must be between 0 and 1.")
+    if not 0 <= cfg.mobile_lidar.distance_attenuation <= 1:
+        raise ConfigError("mobile_lidar.distance_attenuation must be between 0 and 1.")
 
 
 def _validate_road_profiles(cfg: CityGenConfig) -> None:
@@ -924,6 +1214,24 @@ def _str(raw: dict[str, Any], key: str, default: str) -> str:
     return value
 
 
+def _str_tuple(raw: dict[str, Any], key: str, default: tuple[str, ...]) -> tuple[str, ...]:
+    value = raw.get(key, default)
+    if not isinstance(value, (list, tuple)):
+        raise ConfigError(f"{key} must be a list of strings.")
+    result: list[str] = []
+    for index, item in enumerate(value):
+        if not isinstance(item, str):
+            raise ConfigError(f"{key}[{index}] must be a string.")
+        result.append(item)
+    return tuple(result)
+
+
+def _optional_float(raw: dict[str, Any], key: str) -> float | None:
+    if key not in raw or raw[key] is None:
+        return None
+    return _float(raw, key, 0.0)
+
+
 def _bool(raw: dict[str, Any], key: str, default: bool) -> bool:
     value = raw.get(key, default)
     if not isinstance(value, bool):
@@ -937,3 +1245,7 @@ def _normalize_footprint_model(value: str) -> str:
 
 def _normalize_roof_model(value: str) -> str:
     return ROOF_MODEL_ALIASES.get(value, value)
+
+
+def _normalize_fence_model(value: str) -> str:
+    return FENCE_MODEL_ALIASES.get(value, value)

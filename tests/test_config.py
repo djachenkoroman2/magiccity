@@ -222,6 +222,86 @@ parcels:
 """
             )
 
+    def test_loads_fence_config(self) -> None:
+        config = _config_from_text(
+            """
+seed: 7
+parcels:
+  enabled: true
+fences:
+  enabled: true
+  mode: partial
+  type: chain_link
+  height_m: 2.2
+  height_jitter_m: 0.1
+  sides:
+    - front
+    - right
+  gate_sides:
+    - front
+  foundation: always
+  openness: 0.7
+  decorative: true
+"""
+        )
+
+        self.assertTrue(config.fences.enabled)
+        self.assertEqual(config.fences.mode, "partial")
+        self.assertEqual(config.fences.type, "metal_chain_link")
+        self.assertEqual(config.fences.height_m, 2.2)
+        self.assertEqual(config.fences.sides, ("front", "right"))
+        self.assertEqual(config.fences.gate_sides, ("front",))
+        self.assertEqual(config.fences.foundation, "always")
+        self.assertEqual(config.fences.openness, 0.7)
+        self.assertTrue(config.fences.decorative)
+
+    def test_invalid_fence_config_is_error(self) -> None:
+        with self.assertRaises(ConfigError):
+            _config_from_text(
+                """
+seed: 7
+fences:
+  enabled: true
+"""
+            )
+
+        with self.assertRaises(ConfigError):
+            _config_from_text(
+                """
+seed: 7
+parcels:
+  enabled: true
+fences:
+  enabled: true
+  type: hedge
+"""
+            )
+
+        with self.assertRaises(ConfigError):
+            _config_from_text(
+                """
+seed: 7
+parcels:
+  enabled: true
+fences:
+  enabled: true
+  sides:
+    - diagonal
+"""
+            )
+
+        with self.assertRaises(ConfigError):
+            _config_from_text(
+                """
+seed: 7
+parcels:
+  enabled: true
+fences:
+  enabled: true
+  openness: 1.2
+"""
+            )
+
 
 def _config_from_text(text: str):
     with tempfile.TemporaryDirectory() as tmp:

@@ -1,6 +1,6 @@
 # Справочник по worldgen catalogs citygen
 
-`citygen` использует подход, похожий на Minecraft worldgen, в архитектурном смысле: генерация разбита на явные стадии, а поддержанные биомы, типы объектов, surface-классы, модели дорог, road profiles, footprints и roofs описаны в registry/catalog слое.
+`citygen` использует подход, похожий на Minecraft worldgen, в архитектурном смысле: генерация разбита на явные стадии, а поддержанные биомы, типы объектов, surface-классы, модели дорог, road profiles, footprints, roofs и fences описаны в registry/catalog слое.
 
 Это не voxel/block система и не runtime для data packs. Текущий MVP использует Python dataclass definitions в `citygen/catalogs.py`; они являются единым источником истины для поддержанных ids, сводок metadata и тестов покрытия документации.
 
@@ -9,6 +9,7 @@
 - `doc/roads.md` — модели дорог, road primitives, road profiles и surface-классы;
 - `doc/configuration_reference.md` — YAML-схема конфигов, значения по умолчанию и правила валидации;
 - `doc/parcels.md` — block/parcel subdivision и oriented parcels;
+- `doc/fences.md` — fence catalog ids, генерация ограждений, ворота, фундаменты и metadata;
 - `doc/generated_objects.md` — object feature ids и counts в metadata;
 - `doc/building_footprints.md` и `doc/building_roofs.md` — каталоги геометрии зданий.
 
@@ -46,6 +47,7 @@ citygen/catalogs.py
 - `RoadProfileDefinition`
 - `FootprintDefinition`
 - `RoofDefinition`
+- `FenceDefinition`
 - `SemanticClassDefinition`
 - `ObjectFeatureDefinition`
 - `WorldgenCatalogs`
@@ -78,6 +80,8 @@ citygen/catalogs.py
 - `building`
 - `building_footprint`
 - `building_roof`
+- `parcel_fence`
+- `fence_foundation`
 
 Чтобы добавить новый generated object feature:
 
@@ -114,7 +118,7 @@ Metadata теперь содержит дополнительные раздел
 - `biome_catalog`: tags, preferred road model и road profile weights;
 - `object_feature_counts`: простые агрегаты по feature ids.
 
-Старые поля сохранены: `road_models`, `biome_counts`, `building_counts`, `parcel_counts`, `supported_footprint_types`, `supported_roof_types`, `config`. Road/profile metadata (`road_profile_counts`, `road_widths`, `road_median`) и parcel geometry metadata (`parcel_building_alignment`, `building_orientations`, `block_geometry`, `parcel_geometry`) остаются отдельными runtime-агрегатами, а не catalog definitions.
+Старые поля сохранены: `road_models`, `biome_counts`, `building_counts`, `parcel_counts`, `supported_footprint_types`, `supported_roof_types`, `config`. Новый fence layer добавляет `fence_counts` и `supported_fence_types`. Road/profile metadata (`road_profile_counts`, `road_widths`, `road_median`), parcel geometry metadata (`parcel_building_alignment`, `building_orientations`, `block_geometry`, `parcel_geometry`) и fence metadata остаются отдельными runtime-агрегатами, а не catalog definitions.
 
 ## Ограничения MVP
 

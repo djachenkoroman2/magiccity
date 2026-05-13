@@ -13,6 +13,7 @@ MagicCity — MVP CLI-генератора синтетической город
 - `urban_fields` и биомы: `downtown`, `residential`, `industrial`, `suburb`;
 - опциональное разбиение blocks/parcels, включая oriented block/parcel subdivision;
 - размещение зданий с учетом parcels и выравнивание по parcel orientation;
+- опциональные ограждения участков: деревянные, металлические, каменные и кирпичные заборы с высотой, прозрачностью, воротами и фундаментом;
 - footprints зданий: `rectangle`, `square`, `circle`, `slab`, `courtyard`, `l_shape`, `u_shape`, `t_shape`;
 - геометрия крыш: `flat`, `shed`, `gable`, `hip`, `half_hip`, `pyramid`, `mansard`, `dome`, `barrel`, `cone`;
 - семплирование поверхностей земли, дорог, median, тротуаров, фасадов и крыш;
@@ -29,6 +30,7 @@ MagicCity — MVP CLI-генератора синтетической город
 | `doc/roads.md` | Модели дорог, primitives, профили, surface-классы и метаданные. |
 | `doc/biomes.md` | `urban_fields`, классификация биомов и их влияние на генерацию. |
 | `doc/parcels.md` | Кварталы и parcels, ориентированное разбиение и зоны застройки. |
+| `doc/fences.md` | Ограждения участков: типы заборов, высота, ворота, фундаменты и metadata. |
 | `doc/building_footprints.md` | Идентификаторы footprints, aliases, геометрия и семплирование. |
 | `doc/building_roofs.md` | Идентификаторы roofs, aliases, функции высоты и семплирование. |
 | `doc/generated_objects.md` | Feature ids генерируемых объектов и semantic classes. |
@@ -107,6 +109,7 @@ citygen --config CONFIG_PATH [--out OUTPUT_PATH_OR_DIRECTORY]
 | `configs/mvp.yaml` | Базовый MVP: дороги `grid`, рельеф, здания, RGB и class labels. |
 | `configs/demo_road_profiles.yaml` | Смешанные дороги, road profiles и `road_median`; здания выключены. |
 | `configs/demo_parcels.yaml` | Легкое разбиение parcels и здания, привязанные к parcels. |
+| `configs/demo_parcel_fences.yaml` | Разные ограждения участков, воротные разрывы и фундаменты. |
 | `configs/demo_parcel_alignment.yaml` | Выравнивание зданий по parcels на смешанных дорогах/profiles. |
 | `configs/demo_oriented_parcels.yaml` | Ориентированное разбиение blocks/parcels и выровненные здания. |
 | `configs/demo_universal_showcase.yaml` | Большой демонстрационный сценарий: mixed roads, profiles, биомы, parcels, footprints, roofs. |
@@ -115,6 +118,7 @@ citygen --config CONFIG_PATH [--out OUTPUT_PATH_OR_DIRECTORY]
 
 ```bash
 uv run citygen --config configs/demo_road_profiles.yaml --out outputs/demo_road_profiles.ply
+uv run citygen --config configs/demo_parcel_fences.yaml --out outputs/demo_parcel_fences.ply
 uv run citygen --config configs/demo_oriented_parcels.yaml --out outputs/demo_oriented_parcels.ply
 uv run citygen --config configs/demo_universal_showcase.yaml --out outputs/demo_universal_showcase.ply
 ```
@@ -125,7 +129,7 @@ uv run citygen --config configs/demo_universal_showcase.yaml --out outputs/demo_
 seed: 7
 ```
 
-Более полный справочник, включая `tile`, `tiles`, `terrain`, `urban_fields`, `roads`, `buildings`, `parcels`, `sampling`, `output` и `worldgen`, находится в `doc/configuration_reference.md`.
+Более полный справочник, включая `tile`, `tiles`, `terrain`, `urban_fields`, `roads`, `buildings`, `parcels`, `fences`, `sampling`, `output` и `worldgen`, находится в `doc/configuration_reference.md`.
 
 ## Метаданные
 
@@ -137,14 +141,14 @@ seed: 7
 - `road_models`, `road_profile_counts`, `road_profile_counts_by_biome`, `road_widths`, `road_median`;
 - `biome_counts`;
 - `building_counts`;
-- `parcel_counts`, `parcel_building_alignment`, `building_orientations`, `block_geometry`, `parcel_geometry`;
-- `supported_footprint_types`, `supported_roof_types`;
+- `parcel_counts`, `fence_counts`, `parcel_building_alignment`, `building_orientations`, `block_geometry`, `parcel_geometry`;
+- `supported_footprint_types`, `supported_roof_types`, `supported_fence_types`;
 - resolved `config`.
 
 Быстрый просмотр:
 
 ```bash
-jq '{point_count, class_counts, road_models, building_counts, parcel_counts}' outputs/demo_oriented_parcels.metadata.json
+jq '{point_count, class_counts, road_models, building_counts, parcel_counts, fence_counts}' outputs/demo_parcel_fences.metadata.json
 ```
 
 ## Семантические классы
@@ -157,6 +161,8 @@ jq '{point_count, class_counts, road_models, building_counts, parcel_counts}' ou
 | `4` | `building_facade` | `176, 164, 148` |
 | `5` | `building_roof` | `112, 116, 122` |
 | `6` | `road_median` | `118, 128, 84` |
+| `7` | `fence` | `130, 101, 72` |
+| `8` | `fence_foundation` | `118, 112, 103` |
 
 Существующие semantic class ids стабильны, и их нельзя менять без явного breaking change.
 
@@ -169,6 +175,7 @@ citygen/
   generator.py
   roads.py
   parcels.py
+  fences.py
   footprints.py
   roofs.py
   sampling.py
@@ -193,6 +200,7 @@ uv run python -m unittest discover -s tests
 
 ```bash
 uv run citygen --config configs/mvp.yaml --out outputs/mvp_check.ply
+uv run citygen --config configs/demo_parcel_fences.yaml --out outputs/demo_parcel_fences.ply
 uv run citygen --config configs/demo_oriented_parcels.yaml --out outputs/demo_oriented_parcels.ply
 ```
 

@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="ru" data-bs-theme="light">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        
+        
+        <link rel="shortcut icon" href="img/favicon.ico">
+        <title>Ограждения - Документация MagicCity</title>
+        <link href="css/bootstrap.min.css" rel="stylesheet">
+        <link href="css/fontawesome.min.css" rel="stylesheet">
+        <link href="css/brands.min.css" rel="stylesheet">
+        <link href="css/solid.min.css" rel="stylesheet">
+        <link href="css/v4-font-face.min.css" rel="stylesheet">
+        <link href="css/base.css" rel="stylesheet">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="index.html">Документация MagicCity</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#navbar-collapse" aria-controls="navbar-collapse" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="nav-item">
+                                <a href="index.html" class="nav-link">Главная</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="configuration_reference.html" class="nav-link">Конфигурация</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="roads.html" class="nav-link">Дороги</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="biomes.html" class="nav-link">Биомы</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="parcels.html" class="nav-link">Parcels</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="fences.html" class="nav-link active" aria-current="page">Ограждения</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="building_footprints.html" class="nav-link">Footprints зданий</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="building_roofs.html" class="nav-link">Крыши зданий</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="generated_objects.html" class="nav-link">Генерируемые объекты</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="worldgen_catalogs.html" class="nav-link">Worldgen catalogs</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="universal_showcase.html" class="nav-link">Universal showcase</a>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ms-md-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a rel="prev" href="parcels.html" class="nav-link">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" href="building_footprints.html" class="nav-link">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#_1" class="nav-link">Справочник по ограждениям участков</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#yaml" class="nav-link">YAML</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#_2" class="nav-link">Параметры</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#_3" class="nav-link">Типы ограждений</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#_4" class="nav-link">Как это работает</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#_5" class="nav-link">Фундаменты</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#_6" class="nav-link">Ворота</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#_7" class="nav-link">Метаданные</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#_8" class="nav-link">Демо</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#_9" class="nav-link">Практические подсказки</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#mvp" class="nav-link">Ограничения MVP</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="_1">Справочник по ограждениям участков</h1>
+<p><code>fences</code> — это опциональный слой ограждений для parcels. Он добавляет к земельным участкам заборы, стены, прозрачные металлические секции, воротные разрывы и фундаменты для массивных конструкций.</p>
+<p>Слой работает в координатах проекта: горизонтальная плоскость <code>x/y</code>, высота <code>z</code>. Геометрия строится по <code>Parcel.geometry</code>, поэтому для ограждений обязательно нужен включенный слой участков:</p>
+<pre><code class="language-yaml">parcels:
+  enabled: true
+fences:
+  enabled: true
+</code></pre>
+<p>Полные значения по умолчанию и правила валидации описаны в <code>doc/configuration_reference.md</code>. Геометрия parcels описана в <code>doc/parcels.md</code>, road hardscape и clearance — в <code>doc/roads.md</code>.</p>
+<h2 id="yaml">YAML</h2>
+<p>Минимальный пример:</p>
+<pre><code class="language-yaml">parcels:
+  enabled: true
+fences:
+  enabled: true
+</code></pre>
+<p>Пример с частичным ограждением и воротами:</p>
+<pre><code class="language-yaml">fences:
+  enabled: true
+  mode: partial
+  sides:
+    - front
+    - left
+    - right
+  type: metal_welded
+  height_m: 1.7
+  gate_probability: 0.8
+  gate_width_m: 4.0
+  gate_sides:
+    - front
+  foundation: never
+</code></pre>
+<p>Пример с массивной кирпичной стеной:</p>
+<pre><code class="language-yaml">fences:
+  enabled: true
+  mode: perimeter
+  type: brick
+  height_m: 2.4
+  foundation: auto
+  foundation_height_m: 0.3
+  foundation_width_m: 0.45
+</code></pre>
+<h2 id="_2">Параметры</h2>
+<table>
+<thead>
+<tr>
+<th>Параметр</th>
+<th>По умолчанию</th>
+<th>Описание</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>enabled</code></td>
+<td><code>false</code></td>
+<td>Включает генерацию ограждений.</td>
+</tr>
+<tr>
+<td><code>mode</code></td>
+<td><code>perimeter</code></td>
+<td>Режим размещения: <code>none</code>, <code>partial</code>, <code>perimeter</code>.</td>
+</tr>
+<tr>
+<td><code>type</code></td>
+<td><code>mixed</code></td>
+<td>Тип ограждения или <code>mixed</code>.</td>
+</tr>
+<tr>
+<td><code>weights</code></td>
+<td>стандартная смесь</td>
+<td>Веса выбора типа при <code>type: mixed</code>.</td>
+</tr>
+<tr>
+<td><code>height_m</code></td>
+<td><code>1.8</code></td>
+<td>Базовая высота ограждения.</td>
+</tr>
+<tr>
+<td><code>height_jitter_m</code></td>
+<td><code>0.25</code></td>
+<td>Детерминированный разброс высоты между участками.</td>
+</tr>
+<tr>
+<td><code>thickness_m</code></td>
+<td><code>0.12</code></td>
+<td>Толщина ограждения для расчета внутреннего offset.</td>
+</tr>
+<tr>
+<td><code>boundary_offset_m</code></td>
+<td><code>0.35</code></td>
+<td>Смещение внутрь участка от границы parcel.</td>
+</tr>
+<tr>
+<td><code>road_clearance_m</code></td>
+<td><code>0.5</code></td>
+<td>Минимальное расстояние до road/sidewalk/median.</td>
+</tr>
+<tr>
+<td><code>coverage_ratio</code></td>
+<td><code>0.65</code></td>
+<td>Доля сторон в режиме <code>partial</code>, если <code>sides</code> не указан.</td>
+</tr>
+<tr>
+<td><code>sides</code></td>
+<td><code>[]</code></td>
+<td>Явные стороны для <code>partial</code>: <code>front</code>, <code>back</code>, <code>left</code>, <code>right</code>.</td>
+</tr>
+<tr>
+<td><code>gate_probability</code></td>
+<td><code>0.65</code></td>
+<td>Вероятность оставить разрыв под ворота или калитку.</td>
+</tr>
+<tr>
+<td><code>gate_width_m</code></td>
+<td><code>4.0</code></td>
+<td>Ширина воротного разрыва.</td>
+</tr>
+<tr>
+<td><code>gate_sides</code></td>
+<td><code>[front]</code></td>
+<td>Стороны, где разрешены ворота.</td>
+</tr>
+<tr>
+<td><code>foundation</code></td>
+<td><code>auto</code></td>
+<td>Режим фундамента: <code>auto</code>, <code>always</code>, <code>never</code>.</td>
+</tr>
+<tr>
+<td><code>foundation_height_m</code></td>
+<td><code>0.25</code></td>
+<td>Высота семплируемого фундамента.</td>
+</tr>
+<tr>
+<td><code>foundation_width_m</code></td>
+<td><code>0.35</code></td>
+<td>Ширина фундамента, учитываемая при offset.</td>
+</tr>
+<tr>
+<td><code>sample_spacing_m</code></td>
+<td><code>0.8</code></td>
+<td>Шаг точек ограждения и фундамента.</td>
+</tr>
+<tr>
+<td><code>openness</code></td>
+<td><code>null</code></td>
+<td>Переопределяет прозрачность типа: <code>0</code> — сплошной, <code>1</code> — максимально открытый.</td>
+</tr>
+<tr>
+<td><code>decorative</code></td>
+<td><code>false</code></td>
+<td>Добавляет декоративные верхние элементы для совместимых типов.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="_3">Типы ограждений</h2>
+<table>
+<thead>
+<tr>
+<th>Тип</th>
+<th>Материал</th>
+<th>Поведение</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>wood_picket</code></td>
+<td>дерево</td>
+<td>Легкий штакетник с повторяющимися стойками и рейками.</td>
+</tr>
+<tr>
+<td><code>wood_solid</code></td>
+<td>дерево</td>
+<td>Сплошной дощатый забор с высокой закрытостью.</td>
+</tr>
+<tr>
+<td><code>wood_decorative</code></td>
+<td>дерево</td>
+<td>Декоративные деревянные секции с верхними деталями.</td>
+</tr>
+<tr>
+<td><code>metal_profile</code></td>
+<td>металл</td>
+<td>Сплошной забор из профилированного листа.</td>
+</tr>
+<tr>
+<td><code>metal_chain_link</code></td>
+<td>металл</td>
+<td>Прозрачная сетка с диагональным mesh-паттерном.</td>
+</tr>
+<tr>
+<td><code>metal_welded</code></td>
+<td>металл</td>
+<td>Сварные секции с регулярными вертикальными элементами.</td>
+</tr>
+<tr>
+<td><code>metal_forged</code></td>
+<td>металл</td>
+<td>Декоративное кованое ограждение.</td>
+</tr>
+<tr>
+<td><code>stone</code></td>
+<td>камень</td>
+<td>Массивная каменная стена, фундамент включается при <code>auto</code>.</td>
+</tr>
+<tr>
+<td><code>brick</code></td>
+<td>кирпич</td>
+<td>Кирпичная стена, фундамент включается при <code>auto</code>.</td>
+</tr>
+<tr>
+<td><code>mixed</code></td>
+<td>смесь</td>
+<td>Детерминированный выбор типа по <code>weights</code>.</td>
+</tr>
+</tbody>
+</table>
+<p>Alias-значения:</p>
+<table>
+<thead>
+<tr>
+<th>Alias</th>
+<th>Канонический тип</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>wood</code>, <code>wooden</code></td>
+<td><code>wood_picket</code></td>
+</tr>
+<tr>
+<td><code>wood_board</code>, <code>timber</code></td>
+<td><code>wood_solid</code></td>
+</tr>
+<tr>
+<td><code>profile</code>, <code>corrugated</code></td>
+<td><code>metal_profile</code></td>
+</tr>
+<tr>
+<td><code>chain_link</code>, <code>rabitz</code>, <code>mesh</code></td>
+<td><code>metal_chain_link</code></td>
+</tr>
+<tr>
+<td><code>welded</code></td>
+<td><code>metal_welded</code></td>
+</tr>
+<tr>
+<td><code>forged</code></td>
+<td><code>metal_forged</code></td>
+</tr>
+<tr>
+<td><code>masonry</code></td>
+<td><code>stone</code></td>
+</tr>
+<tr>
+<td><code>brick_wall</code></td>
+<td><code>brick</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="_4">Как это работает</h2>
+<ol>
+<li>Генератор берет только buildable parcels.</li>
+<li>Для каждого участка выбираются стороны ограждения: весь периметр или частичный набор.</li>
+<li>Выбирается тип ограждения. Для <code>mixed</code> используется deterministic weighted sampling от <code>seed</code> и <code>parcel.id</code>.</li>
+<li>Геометрия участка inset-ится внутрь на <code>boundary_offset_m</code>, толщину и, если нужен фундамент, ширину фундамента.</li>
+<li>На сторонах из <code>gate_sides</code> может появиться разрыв под ворота.</li>
+<li>Сегмент пропускается, если он слишком короткий, нарушает <code>road_clearance_m</code> или попадает в footprint здания этого parcel.</li>
+<li>В sampling попадают точки semantic class <code>fence</code>; для фундамента дополнительно создаются точки <code>fence_foundation</code>.</li>
+</ol>
+<p>Все решения детерминированы: одинаковый конфиг и <code>seed</code> дают одинаковые сегменты, ворота, типы и высоты.</p>
+<h2 id="_5">Фундаменты</h2>
+<p><code>foundation: auto</code> включает основание для тяжелых типов:</p>
+<ul>
+<li><code>stone</code>;</li>
+<li><code>brick</code>.</li>
+</ul>
+<p><code>foundation: always</code> добавляет основание для любого типа, включая дерево и металл. <code>foundation: never</code> полностью отключает фундаменты даже для камня и кирпича.</p>
+<p>Фундамент влияет на:</p>
+<ul>
+<li>наличие точек semantic class <code>fence_foundation</code>;</li>
+<li>вертикальное положение основной части ограждения;</li>
+<li>внутренний offset от границы участка через <code>foundation_width_m</code>;</li>
+<li>metadata поле <code>fence_counts.foundation_segments</code>.</li>
+</ul>
+<h2 id="_6">Ворота</h2>
+<p>Ворота в MVP представлены разрывом в линии ограждения. Отдельного mesh или створок пока нет.</p>
+<p>Разрыв появляется, если:</p>
+<ul>
+<li>сторона входит в <code>gate_sides</code>;</li>
+<li>длина стороны достаточна для <code>gate_width_m</code>;</li>
+<li>deterministic random check проходит по <code>gate_probability</code>.</li>
+</ul>
+<p>Metadata считает уникальные разрывы в <code>fence_counts.gate_openings</code>.</p>
+<h2 id="_7">Метаданные</h2>
+<p>Пример секции:</p>
+<pre><code class="language-json">{
+  &quot;fence_counts&quot;: {
+    &quot;segments&quot;: 135,
+    &quot;parcels_with_fences&quot;: 36,
+    &quot;foundation_segments&quot;: 19,
+    &quot;gate_openings&quot;: 18,
+    &quot;total_length_m&quot;: 2832.183,
+    &quot;average_height_m&quot;: 1.848,
+    &quot;by_type&quot;: {
+      &quot;brick&quot;: 8,
+      &quot;metal_chain_link&quot;: 25,
+      &quot;wood_solid&quot;: 36
+    },
+    &quot;by_side&quot;: {
+      &quot;back&quot;: 33,
+      &quot;front&quot;: 44,
+      &quot;left&quot;: 28,
+      &quot;right&quot;: 30
+    }
+  }
+}
+</code></pre>
+<p>Связанные поля:</p>
+<ul>
+<li><code>class_counts.fence</code>;</li>
+<li><code>class_counts.fence_foundation</code>;</li>
+<li><code>class_mapping.fence</code>;</li>
+<li><code>class_mapping.fence_foundation</code>;</li>
+<li><code>object_feature_counts.parcel_fence</code>;</li>
+<li><code>object_feature_counts.fence_foundation</code>;</li>
+<li><code>supported_fence_types</code>;</li>
+<li><code>config.fences</code>.</li>
+</ul>
+<h2 id="_8">Демо</h2>
+<p>Специальный demo-конфиг:</p>
+<pre><code class="language-bash">uv run citygen --config configs/demo_parcel_fences.yaml --out outputs/demo_parcel_fences.ply
+</code></pre>
+<p>Быстрый просмотр metadata:</p>
+<pre><code class="language-bash">jq '{point_count, class_counts, fence_counts, supported_fence_types}' outputs/demo_parcel_fences.metadata.json
+</code></pre>
+<h2 id="_9">Практические подсказки</h2>
+<p>Если ограждения не появляются:</p>
+<ul>
+<li>проверь, что <code>parcels.enabled: true</code>;</li>
+<li>проверь, что есть buildable parcels;</li>
+<li>уменьши <code>road_clearance_m</code>;</li>
+<li>уменьши <code>boundary_offset_m</code> или <code>foundation_width_m</code>;</li>
+<li>для проверки поставь <code>buildings.enabled: false</code>, чтобы footprints не отсеивали сегменты.</li>
+</ul>
+<p>Если точек заборов слишком много:</p>
+<ul>
+<li>увеличь <code>fences.sample_spacing_m</code>;</li>
+<li>уменьши <code>height_m</code>;</li>
+<li>используй более открытые типы или <code>openness</code>.</li>
+</ul>
+<p>Если нужно больше массивных стен:</p>
+<ul>
+<li>задай <code>type: brick</code> или <code>type: stone</code>;</li>
+<li>либо увеличь веса <code>brick</code> и <code>stone</code> в <code>weights</code>;</li>
+<li>оставь <code>foundation: auto</code> или поставь <code>foundation: always</code>.</li>
+</ul>
+<h2 id="mvp">Ограничения MVP</h2>
+<ul>
+<li>Ограждения строятся по прямоугольным или oriented-rect parcels, а не по произвольным кадастровым полигонам.</li>
+<li>Нет точного polygon clipping с дорожными коридорами; используется clearance через representative points.</li>
+<li>Ворота пока являются разрывом, без створок, калиток как отдельных объектов и без отдельного semantic class.</li>
+<li>Материалы различаются цветами, плотностью точек и паттернами sampling, а не полноценными текстурами или mesh-материалами.</li>
+<li>Между соседними участками возможны параллельные заборы, потому что слой не выполняет глобальное объединение общих границ.</li>
+</ul></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="js/bootstrap.bundle.min.js"></script>
+        <script>
+            var base_url = ".",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="js/base.js"></script>
+        <script src="search/main.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>

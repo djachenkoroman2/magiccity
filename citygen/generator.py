@@ -5,6 +5,7 @@ import math
 
 from .biomes import biome_params, classify_biome, sample_biome_counts
 from .config import CityGenConfig
+from .fences import FenceSegment, build_fences, fence_counts
 from .fields import sample_urban_fields
 from .footprints import build_footprint, select_footprint_kind
 from .geometry import BBox, Building, OrientedRect, Rect, normalize_degrees, stable_rng, terrain_height
@@ -25,6 +26,8 @@ class Scene:
     blocks: tuple[Block, ...]
     parcels: tuple[Parcel, ...]
     parcel_counts: dict
+    fences: tuple[FenceSegment, ...]
+    fence_counts: dict
     context: WorldgenContext
     worldgen_stages: tuple[str, ...]
 
@@ -40,6 +43,7 @@ def generate_scene(config: CityGenConfig) -> Scene:
         else ((), ())
     )
     buildings = _build_scene_buildings(config, work_bbox, road_network, parcels)
+    fences = build_fences(config, parcels, buildings, road_network)
     biome_step = max(32.0, config.tile.size_m / 8.0)
     biome_counts = sample_biome_counts(config.seed, config.urban_fields, bbox, biome_step)
     return Scene(
@@ -52,6 +56,8 @@ def generate_scene(config: CityGenConfig) -> Scene:
         blocks=blocks,
         parcels=parcels,
         parcel_counts=parcel_counts(blocks, parcels, buildings),
+        fences=fences,
+        fence_counts=fence_counts(fences),
         context=context,
         worldgen_stages=pipeline_stage_ids(),
     )

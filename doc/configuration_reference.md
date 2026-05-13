@@ -1,6 +1,6 @@
 # Справочник по конфигурации
 
-Этот документ является справочником по YAML-конфигам `citygen`, построенным от исходного кода. Источник истины: `CityGenConfig` и вложенные значения по умолчанию dataclass-ов в `citygen/config.py`, логика валидатора, каталоги в `citygen/catalogs.py`, runtime-код дорог/parcels/зданий и экспорт metadata.
+Этот документ является справочником по YAML-конфигам `citygen`, построенным от исходного кода. Источник истины: `CityGenConfig` и вложенные значения по умолчанию dataclass-ов в `citygen/config.py`, логика валидатора, каталоги в `citygen/catalogs.py`, runtime-код дорог/parcels/ограждений/зданий и экспорт metadata.
 
 `configs/*.yaml` остаются примерами запуска и проверочными конфигами. Они не являются источником схемы.
 
@@ -9,6 +9,7 @@
 - `doc/roads.md` — модели дорог, primitives, профили и surface-классы;
 - `doc/biomes.md` — `urban_fields`, классификация биомов и влияние биомов;
 - `doc/parcels.md` — block/parcel subdivision и oriented parcels;
+- `doc/fences.md` — ограждения участков, типы заборов, ворота, фундаменты и metadata;
 - `doc/building_footprints.md` — идентификаторы footprints, aliases и семплирование;
 - `doc/building_roofs.md` — идентификаторы roofs, aliases и функции высоты;
 - `doc/generated_objects.md` — feature ids объектов и semantic classes;
@@ -35,7 +36,7 @@ uv run citygen --config path/to/multi_tile_config.yaml --out outputs/multi_tile
 - Все размеры и расстояния задаются в метрах.
 - Горизонтальные координаты сцены: `x` и `y`; высота: `z`.
 - Булевы значения пишутся как `true` или `false`.
-- Текущий загрузчик читает описанные ниже поля. Секция `parcels` валидирует имена параметров строго, чтобы опечатки в новом слое участков не проходили молча.
+- Текущий загрузчик читает описанные ниже поля. Секции `parcels`, `fences` и `worldgen` валидируют имена параметров строго, чтобы опечатки в новых слоях не проходили молча.
 
 Минимальный валидный конфиг:
 
@@ -129,6 +130,37 @@ parcels:
   block_orientation_source: road_model
   block_orientation_jitter_degrees: 0
   organic_orientation_jitter_degrees: 10
+fences:
+  enabled: false
+  mode: perimeter
+  type: mixed
+  weights:
+    wood_picket: 0.18
+    wood_solid: 0.14
+    wood_decorative: 0.10
+    metal_profile: 0.14
+    metal_chain_link: 0.12
+    metal_welded: 0.10
+    metal_forged: 0.08
+    stone: 0.07
+    brick: 0.07
+  height_m: 1.8
+  height_jitter_m: 0.25
+  thickness_m: 0.12
+  boundary_offset_m: 0.35
+  road_clearance_m: 0.5
+  coverage_ratio: 0.65
+  sides: []
+  gate_probability: 0.65
+  gate_width_m: 4
+  gate_sides:
+    - front
+  foundation: auto
+  foundation_height_m: 0.25
+  foundation_width_m: 0.35
+  sample_spacing_m: 0.8
+  openness: null
+  decorative: false
 sampling:
   mode: surface
   ground_spacing_m: 2
@@ -156,6 +188,7 @@ worldgen:
 | `roads` | mapping | нет | см. секцию `roads` | Настраивает модель дорог, ширину дорог и тротуары. |
 | `buildings` | mapping | нет | см. секцию `buildings` | Настраивает генерацию зданий. |
 | `parcels` | mapping | нет | см. секцию `parcels` | Включает прямоугольное разбиение blocks/parcels и размещение зданий внутри участков. |
+| `fences` | mapping | нет | см. секцию `fences` | Опционально добавляет заборы и ограждения по границам parcels. |
 | `sampling` | mapping | нет | см. секцию `sampling` | Настраивает плотность и регулярность точек. |
 | `output` | mapping | нет | см. секцию `output` | Настраивает PLY-поля. |
 | `worldgen` | mapping | нет | см. секцию `worldgen` | Настраивает флаги валидации catalogs/worldgen. |
@@ -639,6 +672,50 @@ Metadata получает агрегированные секции `parcel_coun
 
 Подробный архитектурный справочник по этому слою находится в `doc/parcels.md`.
 
+## `fences`
+
+Секция `fences` включает опциональные заборы и ограждения для земельных участков. Заборы строятся только при `parcels.enabled: true`, потому что их геометрия идет по `Parcel.geometry`.
+
+```yaml
+fences:
+  enabled: true
+  mode: perimeter
+  type: mixed
+  height_m: 1.8
+  foundation: auto
+```
+
+| Параметр | Тип | По умолчанию | Возможные значения | Действие |
+| --- | --- | --- | --- | --- |
+| `enabled` | boolean | `false` | `true`, `false` | Включает генерацию ограждений. При `false` сцена полностью сохраняет прежнее поведение. |
+| `mode` | string | `perimeter` | `none`, `partial`, `perimeter` | `none` отключает сегменты, `partial` строит выбранные или случайные стороны, `perimeter` пытается оградить весь участок. |
+| `type` | string | `mixed` | тип забора или `mixed` | Выбирает материал/конструкцию. |
+| `weights` | mapping | стандартная смесь для `mixed` | ключи типов, значения `>= 0` | Веса выбора типа при `type: mixed`. |
+| `height_m` | number | `1.8` | `> 0` | Базовая высота ограждения. |
+| `height_jitter_m` | number | `0.25` | `>= 0` | Детерминированное отклонение высоты по участкам. |
+| `thickness_m` | number | `0.12` | `> 0` | Толщина ограждения для offset и metadata. |
+| `boundary_offset_m` | number | `0.35` | `>= 0` | Смещение внутрь участка от границы parcel, чтобы ограждение не лежало прямо на дороге или соседнем объекте. |
+| `road_clearance_m` | number | `0.5` | `>= 0` | Минимальный clearance от road/sidewalk/median; сегменты, нарушающие clearance, пропускаются. |
+| `coverage_ratio` | number | `0.65` | `0..1` | Доля сторон для случайного выбора в режиме `partial`, если `sides` не задан. |
+| `sides` | list | `[]` | `front`, `back`, `left`, `right` | Явные стороны для `mode: partial`. |
+| `gate_probability` | number | `0.65` | `0..1` | Вероятность оставить разрыв под ворота/калитку на разрешенной стороне. |
+| `gate_width_m` | number | `4.0` | `> 0` | Ширина разрыва под ворота. |
+| `gate_sides` | list | `[front]` | `front`, `back`, `left`, `right` | Стороны, на которых разрешены воротные разрывы. |
+| `foundation` | string | `auto` | `auto`, `always`, `never` | Фундамент включается автоматически для `stone` и `brick`, либо принудительно/запрещается. |
+| `foundation_height_m` | number | `0.25` | `> 0` | Высота семплируемого фундамента. |
+| `foundation_width_m` | number | `0.35` | `> 0` | Ширина фундамента, учитываемая при offset. |
+| `sample_spacing_m` | number | `0.8` | `> 0` | Шаг точек для забора и фундамента. |
+| `openness` | number или null | `null` | `0..1` | Переопределяет прозрачность: `0` почти сплошной забор, `1` максимально открытая решетка. `null` берет значение типа. |
+| `decorative` | boolean | `false` | `true`, `false` | Добавляет декоративные верхние элементы для совместимых типов. |
+
+Поддерживаемые типы: `wood_picket`, `wood_solid`, `wood_decorative`, `metal_profile`, `metal_chain_link`, `metal_welded`, `metal_forged`, `stone`, `brick`, а также `mixed`.
+
+Alias-значения нормализуются: `wood`/`wooden` -> `wood_picket`, `wood_board`/`timber` -> `wood_solid`, `profile`/`corrugated` -> `metal_profile`, `chain_link`/`rabitz`/`mesh` -> `metal_chain_link`, `welded` -> `metal_welded`, `forged` -> `metal_forged`, `masonry` -> `stone`, `brick_wall` -> `brick`.
+
+Генератор делит периметр участка на стороны, оставляет разрывы под ворота, пропускает сегменты с конфликтом с road hardscape или footprint здания и семплирует точки классов `fence` и, при наличии основания, `fence_foundation`. Metadata получает `fence_counts`, а `object_feature_counts` — `parcel_fence` и `fence_foundation`.
+
+Подробный тематический справочник по ограждениям находится в `doc/fences.md`.
+
 ## `sampling`
 
 Секция `sampling` управляет плотностью точек и случайным смещением samples.
@@ -707,6 +784,8 @@ x y z
 | `4` | `building_facade` | `176, 164, 148` |
 | `5` | `building_roof` | `112, 116, 122` |
 | `6` | `road_median` | `118, 128, 84` |
+| `7` | `fence` | `130, 101, 72` |
+| `8` | `fence_foundation` | `118, 112, 103` |
 
 Для каждого PLY также пишется metadata-файл рядом с ним:
 
@@ -715,7 +794,7 @@ outputs/example.ply
 outputs/example.metadata.json
 ```
 
-Metadata содержит `seed`, bbox тайла, количество точек, распределение классов, mapping классов, использованные модели дорог, `road_profile_counts`, `road_profile_counts_by_biome`, `road_widths`, `road_median`, counts по биомам, `building_counts`, `parcel_counts`, `parcel_building_alignment`, `building_orientations`, `block_geometry`, `parcel_geometry`, списки поддержанных типов footprint/roof и полный конфиг после применения значений по умолчанию.
+Metadata содержит `seed`, bbox тайла, количество точек, распределение классов, mapping классов, использованные модели дорог, `road_profile_counts`, `road_profile_counts_by_biome`, `road_widths`, `road_median`, counts по биомам, `building_counts`, `parcel_counts`, `fence_counts`, `parcel_building_alignment`, `building_orientations`, `block_geometry`, `parcel_geometry`, списки поддержанных типов footprint/roof/fence и полный конфиг после применения значений по умолчанию.
 
 ## `worldgen`
 
@@ -794,6 +873,15 @@ worldgen:
 | `parcels.max_parcel_width_m < parcels.min_parcel_width_m` | максимум ширины parcel должен быть не меньше минимума |
 | `parcels.max_parcel_depth_m < parcels.min_parcel_depth_m` | максимум глубины parcel должен быть не меньше минимума |
 | `parcels.block_size_m < parcels.min_block_size_m` | размер block должен быть не меньше минимального block |
+| Неизвестный ключ в `fences` | имена параметров `fences` валидируются строго |
+| `fences.enabled: true` без `parcels.enabled: true` | fences строятся только по границам parcels |
+| `fences.mode` неизвестен | поддерживаются `none`, `partial`, `perimeter` |
+| `fences.type` или `fences.weights.*` неизвестны | поддерживаются только catalog fence types и `mixed` |
+| `fences.weights.* < 0` или сумма weights для `mixed` `<= 0` | веса должны быть неотрицательными, а сумма положительной |
+| `fences.sides` или `fences.gate_sides` содержит неизвестную сторону | поддерживаются `front`, `back`, `left`, `right` |
+| `fences.foundation` неизвестен | поддерживаются `auto`, `always`, `never` |
+| `fences.height_jitter_m`, `boundary_offset_m` или `road_clearance_m < 0` | значения не могут быть отрицательными |
+| `fences.coverage_ratio`, `gate_probability` или `openness` вне `0..1` | доли должны быть в допустимом диапазоне |
 | `sampling.mode != surface` | поддерживается только `surface` |
 | `sampling.jitter_ratio` вне `0..0.45` | jitter должен быть в допустимом диапазоне |
 | `output.format != ply` | поддерживается только `ply` |
@@ -807,6 +895,7 @@ worldgen:
 | `configs/mvp.yaml` | Базовый MVP: дороги `grid`, sidewalks, terrain, buildings, RGB и class labels. |
 | `configs/demo_road_profiles.yaml` | `roads.model: mixed`, road profiles, `road_median`, веса profiles по биомам; здания выключены. |
 | `configs/demo_parcels.yaml` | Parcel subdivision и здания, привязанные к parcels, на легком тайле. |
+| `configs/demo_parcel_fences.yaml` | Parcel subdivision с разными ограждениями, воротными разрывами и фундаментами. |
 | `configs/demo_parcel_alignment.yaml` | Выравнивание зданий по parcels, mixed roads, profiles, footprints и roofs. |
 | `configs/demo_oriented_parcels.yaml` | Oriented block/parcel subdivision, orientation context от road model и выровненные здания. |
 | `configs/demo_universal_showcase.yaml` | Большой интеграционный демонстрационный сценарий: mixed roads, profiles, биомы, parcels, mixed footprints, mixed roofs. См. `doc/universal_showcase.md`. |

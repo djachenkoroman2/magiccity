@@ -50,6 +50,9 @@
                                 <a href="parcels.html" class="nav-link">Parcels</a>
                             </li>
                             <li class="nav-item">
+                                <a href="fences.html" class="nav-link">Ограждения</a>
+                            </li>
+                            <li class="nav-item">
                                 <a href="building_footprints.html" class="nav-link">Footprints зданий</a>
                             </li>
                             <li class="nav-item">
@@ -122,15 +125,19 @@
               <ul class="nav flex-column">
               </ul>
             </li>
+            <li class="nav-item" data-bs-level="2"><a href="#_6" class="nav-link">Ограждения</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
             <li class="nav-item" data-bs-level="2"><a href="#footprints" class="nav-link">Footprints зданий</a>
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-bs-level="2"><a href="#_6" class="nav-link">Крыши зданий</a>
+            <li class="nav-item" data-bs-level="2"><a href="#_7" class="nav-link">Крыши зданий</a>
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-bs-level="2"><a href="#_7" class="nav-link">Семантические классы</a>
+            <li class="nav-item" data-bs-level="2"><a href="#_8" class="nav-link">Семантические классы</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -143,7 +150,7 @@
 
 <h1 id="citygen">Генерируемые объекты citygen</h1>
 <p>Этот документ перечисляет generated object / feature ids из <code>citygen.catalogs.OBJECT_FEATURE_DEFINITIONS</code>. Он нужен как расширяемый справочник: при добавлении нового feature id тесты требуют обновить этот файл.</p>
-<p>Подробные справочники по связанным слоям: <code>doc/configuration_reference.md</code>, <code>doc/roads.md</code>, <code>doc/parcels.md</code>, <code>doc/building_footprints.md</code>, <code>doc/building_roofs.md</code>, <code>doc/biomes.md</code>.</p>
+<p>Подробные справочники по связанным слоям: <code>doc/configuration_reference.md</code>, <code>doc/roads.md</code>, <code>doc/parcels.md</code>, <code>doc/fences.md</code>, <code>doc/building_footprints.md</code>, <code>doc/building_roofs.md</code>, <code>doc/biomes.md</code>.</p>
 <h2 id="_1">Сводная таблица</h2>
 <table>
 <thead>
@@ -218,6 +225,20 @@
 <td><code>buildings.roof</code></td>
 <td><code>building_roof</code></td>
 <td>Геометрия крыши и семплирование roof surface.</td>
+</tr>
+<tr>
+<td><code>parcel_fence</code></td>
+<td><code>objects</code></td>
+<td><code>fences</code></td>
+<td><code>fence</code></td>
+<td>Опциональные ограждения по границам parcels.</td>
+</tr>
+<tr>
+<td><code>fence_foundation</code></td>
+<td><code>objects</code></td>
+<td><code>fences</code></td>
+<td><code>fence_foundation</code></td>
+<td>Низкое основание под массивными или явно настроенными ограждениями.</td>
 </tr>
 </tbody>
 </table>
@@ -302,6 +323,35 @@
 <li><code>object_feature_counts.building_roof</code>.</li>
 </ul>
 <p>Ограничение MVP: здания являются аналитическими поверхностями, которые семплируются в облако точек, а не полноценными объемными meshes.</p>
+<h2 id="_6">Ограждения</h2>
+<p><code>parcel_fence</code> включается через <code>fences.enabled: true</code> совместно с <code>parcels.enabled: true</code>. Генератор строит сегменты по сторонам <code>Parcel.geometry</code>, может оставлять разрывы под ворота, выбирает тип ограждения и высоту, а также пропускает сегменты, которые конфликтуют с road hardscape или footprint здания.</p>
+<p>Поддерживаемые типы fence:</p>
+<ul>
+<li><code>wood_picket</code>;</li>
+<li><code>wood_solid</code>;</li>
+<li><code>wood_decorative</code>;</li>
+<li><code>metal_profile</code>;</li>
+<li><code>metal_chain_link</code>;</li>
+<li><code>metal_welded</code>;</li>
+<li><code>metal_forged</code>;</li>
+<li><code>stone</code>;</li>
+<li><code>brick</code>.</li>
+</ul>
+<p>Связанные features:</p>
+<ul>
+<li><code>fence_foundation</code> появляется для <code>stone</code> и <code>brick</code> при <code>fences.foundation: auto</code>, либо для любого типа при <code>foundation: always</code>;</li>
+<li><code>foundation: never</code> полностью убирает основание.</li>
+</ul>
+<p>Metadata:</p>
+<ul>
+<li><code>fence_counts</code>;</li>
+<li><code>supported_fence_types</code>;</li>
+<li><code>object_feature_counts.parcel_fence</code>;</li>
+<li><code>object_feature_counts.fence_foundation</code>;</li>
+<li><code>class_counts.fence</code>;</li>
+<li><code>class_counts.fence_foundation</code>.</li>
+</ul>
+<p>Ограничение MVP: fence layer работает по прямоугольным или oriented-rect parcels и не выполняет точное polygon clipping произвольных кадастровых границ.</p>
 <h2 id="footprints">Footprints зданий</h2>
 <p><code>building_footprint</code> поддерживает:</p>
 <ul>
@@ -315,7 +365,7 @@
 <li><code>t_shape</code>.</li>
 </ul>
 <p>Footprint ids описаны в catalog <code>FOOTPRINT_DEFINITIONS</code>; старое metadata поле <code>supported_footprint_types</code> сохранено. Геометрия footprint может хранить orientation transform: <code>contains_xy</code>, roof sampling и facade boundary segments работают в world-space, но форма оценивается в local-space.</p>
-<h2 id="_6">Крыши зданий</h2>
+<h2 id="_7">Крыши зданий</h2>
 <p><code>building_roof</code> поддерживает:</p>
 <ul>
 <li><code>flat</code>;</li>
@@ -330,7 +380,7 @@
 <li><code>cone</code>.</li>
 </ul>
 <p>Roof ids описаны в catalog <code>ROOF_DEFINITIONS</code>; старое metadata поле <code>supported_roof_types</code> сохранено.</p>
-<h2 id="_7">Семантические классы</h2>
+<h2 id="_8">Семантические классы</h2>
 <p>Semantic class ids стабильны и описаны в catalog <code>SEMANTIC_CLASS_DEFINITIONS</code>:</p>
 <ul>
 <li><code>ground</code>: id <code>1</code>;</li>
@@ -338,7 +388,9 @@
 <li><code>sidewalk</code>: id <code>3</code>;</li>
 <li><code>building_facade</code>: id <code>4</code>;</li>
 <li><code>building_roof</code>: id <code>5</code>;</li>
-<li><code>road_median</code>: id <code>6</code>.</li>
+<li><code>road_median</code>: id <code>6</code>;</li>
+<li><code>fence</code>: id <code>7</code>;</li>
+<li><code>fence_foundation</code>: id <code>8</code>.</li>
 </ul>
 <p>Новые semantic classes можно добавлять только с новым id; существующие id менять нельзя.</p></div>
             </div>

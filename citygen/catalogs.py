@@ -73,6 +73,14 @@ class RoofDefinition:
 
 
 @dataclass(frozen=True)
+class FenceDefinition:
+    id: str
+    title: str
+    description: str
+    tags: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
 class SemanticClassDefinition:
     id: str
     class_id: int
@@ -101,6 +109,7 @@ class WorldgenCatalogs:
     object_features: dict[str, ObjectFeatureDefinition]
     footprint_types: dict[str, FootprintDefinition]
     roof_types: dict[str, RoofDefinition]
+    fence_types: dict[str, FenceDefinition]
     semantic_classes: dict[str, SemanticClassDefinition]
 
 
@@ -283,6 +292,91 @@ DEFAULT_MIXED_ROOF_WEIGHTS = {
     "cone": 0.04,
 }
 
+FENCE_DEFINITIONS: dict[str, FenceDefinition] = {
+    "wood_picket": FenceDefinition(
+        "wood_picket",
+        "Wood Picket",
+        "Light wooden fence with repeated pickets and horizontal rails.",
+        ("wood", "transparent", "residential"),
+    ),
+    "wood_solid": FenceDefinition(
+        "wood_solid",
+        "Wood Solid",
+        "Closed wooden board fence with a strong privacy screen.",
+        ("wood", "solid", "residential"),
+    ),
+    "wood_decorative": FenceDefinition(
+        "wood_decorative",
+        "Wood Decorative",
+        "Decorative wooden sections with visible posts, rails, and top detail.",
+        ("wood", "decorative", "residential"),
+    ),
+    "metal_profile": FenceDefinition(
+        "metal_profile",
+        "Metal Profile",
+        "Closed profiled-sheet metal fence.",
+        ("metal", "solid", "industrial"),
+    ),
+    "metal_chain_link": FenceDefinition(
+        "metal_chain_link",
+        "Metal Chain Link",
+        "Transparent chain-link fence with posts and mesh-like sampling.",
+        ("metal", "transparent"),
+    ),
+    "metal_welded": FenceDefinition(
+        "metal_welded",
+        "Metal Welded",
+        "Welded metal section fence with repeated vertical rods.",
+        ("metal", "transparent"),
+    ),
+    "metal_forged": FenceDefinition(
+        "metal_forged",
+        "Metal Forged",
+        "Decorative forged metal fence with rods and top accents.",
+        ("metal", "decorative", "transparent"),
+    ),
+    "stone": FenceDefinition(
+        "stone",
+        "Stone",
+        "Massive stone wall that uses a foundation by default.",
+        ("masonry", "solid", "foundation"),
+    ),
+    "brick": FenceDefinition(
+        "brick",
+        "Brick",
+        "Brick wall fence with masonry pattern and foundation by default.",
+        ("masonry", "solid", "foundation"),
+    ),
+}
+
+FENCE_MODEL_ALIASES = {
+    "wood": "wood_picket",
+    "wooden": "wood_picket",
+    "wood_board": "wood_solid",
+    "timber": "wood_solid",
+    "profile": "metal_profile",
+    "corrugated": "metal_profile",
+    "chain_link": "metal_chain_link",
+    "rabitz": "metal_chain_link",
+    "mesh": "metal_chain_link",
+    "welded": "metal_welded",
+    "forged": "metal_forged",
+    "masonry": "stone",
+    "brick_wall": "brick",
+}
+
+DEFAULT_MIXED_FENCE_WEIGHTS = {
+    "wood_picket": 0.18,
+    "wood_solid": 0.14,
+    "wood_decorative": 0.10,
+    "metal_profile": 0.14,
+    "metal_chain_link": 0.12,
+    "metal_welded": 0.10,
+    "metal_forged": 0.08,
+    "stone": 0.07,
+    "brick": 0.07,
+}
+
 SEMANTIC_CLASS_DEFINITIONS: dict[str, SemanticClassDefinition] = {
     "ground": SemanticClassDefinition("ground", 1, (107, 132, 85), "Terrain surface."),
     "road": SemanticClassDefinition("road", 2, (47, 50, 54), "Road carriageway surface."),
@@ -290,6 +384,13 @@ SEMANTIC_CLASS_DEFINITIONS: dict[str, SemanticClassDefinition] = {
     "building_facade": SemanticClassDefinition("building_facade", 4, (176, 164, 148), "Building facade points."),
     "building_roof": SemanticClassDefinition("building_roof", 5, (112, 116, 122), "Building roof points."),
     "road_median": SemanticClassDefinition("road_median", 6, (118, 128, 84), "Central road median."),
+    "fence": SemanticClassDefinition("fence", 7, (130, 101, 72), "Fence, wall, gate, or railing points."),
+    "fence_foundation": SemanticClassDefinition(
+        "fence_foundation",
+        8,
+        (118, 112, 103),
+        "Low foundation points under heavy or explicitly configured fences.",
+    ),
 }
 
 OBJECT_FEATURE_DEFINITIONS: dict[str, ObjectFeatureDefinition] = {
@@ -384,6 +485,27 @@ OBJECT_FEATURE_DEFINITIONS: dict[str, ObjectFeatureDefinition] = {
         "buildings.roof",
         True,
     ),
+    "parcel_fence": ObjectFeatureDefinition(
+        "parcel_fence",
+        "Parcel Fence",
+        "object",
+        "Optional fence or wall segments generated along parcel boundaries.",
+        "objects",
+        ("fence",),
+        "fences",
+        False,
+        ("urban", "industrial", "suburban"),
+    ),
+    "fence_foundation": ObjectFeatureDefinition(
+        "fence_foundation",
+        "Fence Foundation",
+        "object",
+        "Low foundation sampled beneath massive or explicitly configured fence segments.",
+        "objects",
+        ("fence_foundation",),
+        "fences",
+        False,
+    ),
 }
 
 DEFAULT_CATALOGS = WorldgenCatalogs(
@@ -393,6 +515,7 @@ DEFAULT_CATALOGS = WorldgenCatalogs(
     object_features=OBJECT_FEATURE_DEFINITIONS,
     footprint_types=FOOTPRINT_DEFINITIONS,
     roof_types=ROOF_DEFINITIONS,
+    fence_types=FENCE_DEFINITIONS,
     semantic_classes=SEMANTIC_CLASS_DEFINITIONS,
 )
 
@@ -410,6 +533,7 @@ def catalog_summary(catalogs: WorldgenCatalogs = DEFAULT_CATALOGS) -> dict[str, 
         "road_profiles": sorted(catalogs.road_profiles),
         "footprint_types": sorted(catalogs.footprint_types),
         "roof_types": sorted(catalogs.roof_types),
+        "fence_types": sorted(catalogs.fence_types),
         "semantic_classes": sorted(catalogs.semantic_classes),
     }
 
@@ -441,6 +565,7 @@ def validate_catalogs(catalogs: WorldgenCatalogs = DEFAULT_CATALOGS) -> list[str
     _validate_key_matches(catalogs.object_features, "object feature", issues)
     _validate_key_matches(catalogs.footprint_types, "footprint type", issues)
     _validate_key_matches(catalogs.roof_types, "roof type", issues)
+    _validate_key_matches(catalogs.fence_types, "fence type", issues)
     _validate_key_matches(catalogs.semantic_classes, "semantic class", issues)
 
     for biome in catalogs.biomes.values():
@@ -472,6 +597,7 @@ def validate_catalogs(catalogs: WorldgenCatalogs = DEFAULT_CATALOGS) -> list[str
 
     _validate_weights(DEFAULT_MIXED_FOOTPRINT_WEIGHTS, catalogs.footprint_types, "DEFAULT_MIXED_FOOTPRINT_WEIGHTS", issues)
     _validate_weights(DEFAULT_MIXED_ROOF_WEIGHTS, catalogs.roof_types, "DEFAULT_MIXED_ROOF_WEIGHTS", issues)
+    _validate_weights(DEFAULT_MIXED_FENCE_WEIGHTS, catalogs.fence_types, "DEFAULT_MIXED_FENCE_WEIGHTS", issues)
 
     for feature in catalogs.object_features.values():
         if feature.stage not in WORLDGEN_STAGES:

@@ -95,6 +95,7 @@ class CatalogTests(unittest.TestCase):
             "roads.md",
             "biomes.md",
             "parcels.md",
+            "fences.md",
             "building_footprints.md",
             "building_roofs.md",
             "generated_objects.md",

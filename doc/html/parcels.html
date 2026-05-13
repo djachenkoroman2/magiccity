@@ -50,6 +50,9 @@
                                 <a href="parcels.html" class="nav-link active" aria-current="page">Parcels</a>
                             </li>
                             <li class="nav-item">
+                                <a href="fences.html" class="nav-link">Ограждения</a>
+                            </li>
+                            <li class="nav-item">
                                 <a href="building_footprints.html" class="nav-link">Footprints зданий</a>
                             </li>
                             <li class="nav-item">
@@ -78,7 +81,7 @@
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a rel="next" href="building_footprints.html" class="nav-link">
+                                <a rel="next" href="fences.html" class="nav-link">
                                     Next <i class="fa fa-arrow-right"></i>
                                 </a>
                             </li>
@@ -140,7 +143,7 @@
 <h1 id="parcels">Справочник по участкам (parcels)</h1>
 <p><code>parcels</code> — это опциональный слой кварталов и земельных участков для размещения зданий. Он работает в координатах проекта: горизонтальная плоскость <code>x/y</code>, высота <code>z</code>.</p>
 <p>Главная идея: дорожная сеть остается источником недоступных зон дорог, median и тротуаров, а здания в режиме parcels больше не ставятся просто по центрам-кандидатам. Генератор сначала строит прямоугольные <code>Block</code>, делит их на <code>Parcel</code>, фильтрует пригодные для застройки участки и только потом размещает footprint здания внутри выбранного parcel.</p>
-<p>Значения YAML по умолчанию и правила валидации описаны в <code>doc/configuration_reference.md</code>. Road primitives, road profiles и hardscape distance подробно описаны в <code>doc/roads.md</code>.</p>
+<p>Значения YAML по умолчанию и правила валидации описаны в <code>doc/configuration_reference.md</code>. Road primitives, road profiles и hardscape distance подробно описаны в <code>doc/roads.md</code>. Ограждения участков включаются отдельной секцией <code>fences</code>, но используют геометрию parcels.</p>
 <h2 id="yaml">YAML</h2>
 <p>Секция находится на верхнем уровне конфига:</p>
 <pre><code class="language-yaml">parcels:
@@ -321,6 +324,7 @@
 }
 </code></pre>
 <p><code>building_counts.by_parcel_biome</code> дополнительно показывает распределение зданий, которые были размещены через parcels.</p>
+<p>Если включен слой ограждений, metadata также получает <code>fence_counts</code>: количество сегментов, участков с ограждениями, сегментов с фундаментом, воротных разрывов, суммарную длину, среднюю высоту и распределения по типам/сторонам.</p>
 <p>Для parcel-aware placement добавляются агрегаты:</p>
 <pre><code class="language-json">{
   &quot;parcel_building_alignment&quot;: {

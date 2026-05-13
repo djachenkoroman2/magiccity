@@ -8,6 +8,7 @@ from typing import Any
 from .classes import CLASS_BY_ID, class_mapping
 from .catalogs import biome_catalog_summary, catalog_summary, worldgen_summary
 from .config import CityGenConfig
+from .fences import FENCE_TYPES
 from .footprints import FOOTPRINT_KINDS
 from .generator import Scene
 from .geometry import Point, angle_delta_degrees, normalize_degrees
@@ -121,12 +122,14 @@ def write_metadata(path: str | Path, config: CityGenConfig, scene: Scene, points
             "by_parcel_biome": dict(sorted(parcel_biome_counts.items())),
         },
         "parcel_counts": scene.parcel_counts,
+        "fence_counts": scene.fence_counts,
         "parcel_building_alignment": _parcel_building_alignment(config, scene),
         "building_orientations": _building_orientation_summary(scene),
         "block_geometry": _block_geometry_summary(config, scene),
         "parcel_geometry": _parcel_geometry_summary(scene),
         "supported_footprint_types": list(FOOTPRINT_KINDS),
         "supported_roof_types": list(ROOF_KINDS),
+        "supported_fence_types": list(FENCE_TYPES),
         "config": config.to_dict(),
     }
     metadata_path.write_text(
@@ -153,6 +156,8 @@ def _object_feature_counts(scene: Scene, points: list[Point]) -> dict[str, int]:
         "building": len(scene.buildings),
         "building_footprint": len(scene.buildings),
         "building_roof": class_name_counts.get("building_roof", 0),
+        "parcel_fence": scene.fence_counts.get("segments", 0),
+        "fence_foundation": class_name_counts.get("fence_foundation", 0),
     }
 
 
