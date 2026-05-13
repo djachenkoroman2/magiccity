@@ -2,8 +2,8 @@ seed: 851
 tile:
   x: 0
   y: 0
-  size_m: 2000
-  margin_m: 96
+  size_m: 1200
+  margin_m: 72
 terrain:
   base_height_m: 0
   height_noise_m: 3.8
@@ -133,7 +133,7 @@ buildings:
     dome_segments: 20
 parcels:
   enabled: true
-  block_size_m: 224
+  block_size_m: 192
   block_jitter_m: 4
   min_block_size_m: 28
   min_parcel_width_m: 10
@@ -142,7 +142,7 @@ parcels:
   max_parcel_depth_m: 48
   parcel_setback_m: 0.5
   split_jitter_ratio: 0.12
-  max_subdivision_depth: 6
+  max_subdivision_depth: 5
 mobile_lidar:
   enabled: true
   output_mode: additive
@@ -164,9 +164,9 @@ mobile_lidar:
   ray_step_m: 0.75
 sampling:
   mode: surface
-  ground_spacing_m: 8
-  road_spacing_m: 5
-  building_spacing_m: 4.5
+  ground_spacing_m: 10
+  road_spacing_m: 6
+  building_spacing_m: 5.5
   jitter_ratio: 0.14
 output:
   format: ply
