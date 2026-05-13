@@ -46,7 +46,13 @@ def sample_scene(config: CityGenConfig, scene: Scene, progress: ProgressCallback
         )
 
     _emit_progress(progress, "mobile_lidar", "started")
-    lidar_result = sample_mobile_lidar(config, scene, progress)
+    lidar_result = sample_mobile_lidar(
+        config,
+        scene,
+        progress,
+        progress_stage="sampling",
+        progress_substage="mobile_lidar_rays",
+    )
     lidar_points = _crop_points(lidar_result.points, scene.bbox)
     if config.mobile_lidar.output_mode == "lidar_only":
         if progress is not None:
@@ -82,9 +88,15 @@ def _sample_surface_scene(config: CityGenConfig, scene: Scene, progress: Progres
             "started",
             {"buildings": len(scene.buildings)},
         )
+    total_roof_points = 0
+    total_facade_points = 0
     for building_index, building in enumerate(scene.buildings, start=1):
         sampled = _sample_building(config, scene, building)
         building_points.extend(sampled)
+        roof_points = _count_points(sampled, "building_roof")
+        facade_points = _count_points(sampled, "building_facade")
+        total_roof_points += roof_points
+        total_facade_points += facade_points
         if progress is not None:
             _emit_sampling_progress(
                 progress,
@@ -95,9 +107,11 @@ def _sample_surface_scene(config: CityGenConfig, scene: Scene, progress: Progres
                     "buildings": len(scene.buildings),
                     "building_id": building.id,
                     "points": len(sampled),
-                    "roof_points": _count_points(sampled, "building_roof"),
-                    "facade_points": _count_points(sampled, "building_facade"),
+                    "roof_points": roof_points,
+                    "facade_points": facade_points,
                     "total_building_points": len(building_points),
+                    "total_roof_points": total_roof_points,
+                    "total_facade_points": total_facade_points,
                 },
             )
     points.extend(building_points)
@@ -109,8 +123,10 @@ def _sample_surface_scene(config: CityGenConfig, scene: Scene, progress: Progres
             {
                 "buildings": len(scene.buildings),
                 "points": len(building_points),
-                "roof_points": _count_points(building_points, "building_roof"),
-                "facade_points": _count_points(building_points, "building_facade"),
+                "roof_points": total_roof_points,
+                "facade_points": total_facade_points,
+                "total_roof_points": total_roof_points,
+                "total_facade_points": total_facade_points,
             },
         )
 
@@ -123,9 +139,15 @@ def _sample_surface_scene(config: CityGenConfig, scene: Scene, progress: Progres
                 "started",
                 {"fence_segments": len(scene.fences)},
             )
+        total_fence_body_points = 0
+        total_foundation_points = 0
         for fence_index, fence in enumerate(scene.fences, start=1):
             sampled = sample_fence_segment(config, fence)
             fence_points.extend(sampled)
+            segment_fence_points = _count_points(sampled, "fence")
+            segment_foundation_points = _count_points(sampled, "fence_foundation")
+            total_fence_body_points += segment_fence_points
+            total_foundation_points += segment_foundation_points
             if progress is not None:
                 _emit_sampling_progress(
                     progress,
@@ -136,9 +158,11 @@ def _sample_surface_scene(config: CityGenConfig, scene: Scene, progress: Progres
                         "fence_segments": len(scene.fences),
                         "segment_id": fence.id,
                         "points": len(sampled),
-                        "fence_points": _count_points(sampled, "fence"),
-                        "foundation_points": _count_points(sampled, "fence_foundation"),
+                        "fence_points": segment_fence_points,
+                        "foundation_points": segment_foundation_points,
                         "total_fence_points": len(fence_points),
+                        "total_fence_body_points": total_fence_body_points,
+                        "total_foundation_points": total_foundation_points,
                     },
                 )
         points.extend(fence_points)
@@ -150,13 +174,16 @@ def _sample_surface_scene(config: CityGenConfig, scene: Scene, progress: Progres
                 {
                     "fence_segments": len(scene.fences),
                     "points": len(fence_points),
-                    "fence_points": _count_points(fence_points, "fence"),
-                    "foundation_points": _count_points(fence_points, "fence_foundation"),
+                    "fence_points": total_fence_body_points,
+                    "foundation_points": total_foundation_points,
+                    "total_fence_body_points": total_fence_body_points,
+                    "total_foundation_points": total_foundation_points,
                 },
             )
 
     cropped = _crop_points(points, scene.bbox)
     if progress is not None:
+        cropped_class_counts = _class_counts(cropped)
         _emit_sampling_progress(
             progress,
             "surface_total",
@@ -165,9 +192,13 @@ def _sample_surface_scene(config: CityGenConfig, scene: Scene, progress: Progres
                 "tile_surface_points": len(tile_points),
                 "building_points": len(building_points),
                 "fence_points": len(fence_points),
+                "ground_points": cropped_class_counts.get("ground", 0),
+                "hardscape_points": _hardscape_points(cropped_class_counts),
+                "cropped_building_points": _building_points(cropped_class_counts),
+                "cropped_fence_points": _fence_points(cropped_class_counts),
                 "surface_points_before_crop": len(points),
                 "surface_points": len(cropped),
-                "class_counts": _class_counts(cropped),
+                "class_counts": cropped_class_counts,
             },
         )
     return cropped
@@ -184,7 +215,6 @@ def _sample_tile_surfaces(
     x_rows = _grid_count(scene.bbox.min_x, scene.bbox.max_x, spacing)
     y_rows = _grid_count(scene.bbox.min_y, scene.bbox.max_y, spacing)
     total_grid_samples = x_rows * y_rows
-    milestone_interval = _progress_interval(x_rows)
     class_counts: Counter[str] | None = Counter() if progress is not None else None
     processed_samples = 0
 
@@ -226,7 +256,7 @@ def _sample_tile_surfaces(
             if class_counts is not None:
                 class_counts[kind] += 1
 
-        if progress is not None and (row_index == x_rows or row_index % milestone_interval == 0):
+        if progress is not None:
             _emit_sampling_progress(
                 progress,
                 "tile_surfaces",
@@ -237,6 +267,11 @@ def _sample_tile_surfaces(
                     "grid_samples": processed_samples,
                     "total_grid_samples": total_grid_samples,
                     "points": len(points),
+                    "ground_points": class_counts.get("ground", 0) if class_counts is not None else 0,
+                    "hardscape_points": _hardscape_points(class_counts) if class_counts is not None else 0,
+                    "road_points": class_counts.get("road", 0) if class_counts is not None else 0,
+                    "sidewalk_points": class_counts.get("sidewalk", 0) if class_counts is not None else 0,
+                    "road_median_points": class_counts.get("road_median", 0) if class_counts is not None else 0,
                     "class_counts": dict(sorted(class_counts.items())) if class_counts is not None else {},
                 },
             )
@@ -250,6 +285,11 @@ def _sample_tile_surfaces(
                 "grid_rows": x_rows,
                 "grid_samples": processed_samples,
                 "points": len(points),
+                "ground_points": class_counts.get("ground", 0) if class_counts is not None else 0,
+                "hardscape_points": _hardscape_points(class_counts) if class_counts is not None else 0,
+                "road_points": class_counts.get("road", 0) if class_counts is not None else 0,
+                "sidewalk_points": class_counts.get("sidewalk", 0) if class_counts is not None else 0,
+                "road_median_points": class_counts.get("road_median", 0) if class_counts is not None else 0,
                 "class_counts": dict(sorted(class_counts.items())) if class_counts is not None else {},
             },
         )
@@ -382,6 +422,18 @@ def _class_counts(points: Iterable[Point]) -> dict[str, int]:
     for point in points:
         counts[names_by_id.get(point.class_id, str(point.class_id))] += 1
     return dict(sorted(counts.items()))
+
+
+def _hardscape_points(counts: dict[str, int] | Counter[str]) -> int:
+    return sum(counts.get(class_name, 0) for class_name in ("road", "sidewalk", "road_median"))
+
+
+def _building_points(counts: dict[str, int] | Counter[str]) -> int:
+    return sum(counts.get(class_name, 0) for class_name in ("building_roof", "building_facade"))
+
+
+def _fence_points(counts: dict[str, int] | Counter[str]) -> int:
+    return sum(counts.get(class_name, 0) for class_name in ("fence", "fence_foundation"))
 
 
 def _emit_progress(

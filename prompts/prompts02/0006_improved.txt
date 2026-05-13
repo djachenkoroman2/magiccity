@@ -1,0 +1,83 @@
+Нужно доработать CLI-progress для долгих этапов генерации так, чтобы интерактивный запуск обязательно использовал `tqdm` для стадии `sampling`.
+
+Контекст: сейчас для длительных стадий вроде `stage 6/9 sampling` пользователь может видеть только редкие строки или общий stage-progress. Для больших тайлов, плотного surface sampling, большого количества зданий/ограждений или включенного mobile LiDAR этого недостаточно: в интерактивном CLI должно быть видно живой, обновляемый progress bar.
+
+Требование принципиальное: в обычном интерактивном CLI-режиме для подэтапов `sampling` должен использоваться именно `tqdm`, а не только line-based логирование. Нельзя заменить это только периодическими `print`-строками. Если `tqdm` еще не является зависимостью проекта, добавь его в зависимости осознанно и обнови lock-файл принятым в проекте способом.
+
+Функциональные требования:
+
+1. `tqdm` должен покрывать внутренние подэтапы стадии `sampling`, а не только общий pipeline stage:
+   - sampling tile surfaces: ground, road, sidewalk, road_median;
+   - sampling buildings: roofs and facades;
+   - sampling fences, если они включены и есть segments;
+   - mobile LiDAR ray sampling, если `mobile_lidar.enabled: true`.
+
+2. Для surface sampling нужен progress bar с вычислимым total:
+   - total должен отражать количество grid rows или grid samples;
+   - progress должен обновляться регулярно во время обработки grid;
+   - postfix/counters должны показывать уже созданные surface points;
+   - желательно показывать counters `ground_points`, `hardscape_points`, `road_points`, `sidewalk_points`, `road_median_points`, если это можно сделать без заметной цены.
+
+3. Для building sampling:
+   - total равен количеству зданий;
+   - bar должен показывать текущий building index;
+   - postfix/counters должны показывать накопленные `roof_points`, `facade_points`, `building_points`;
+   - если зданий нет, не нужно оставлять шумный пустой progress bar, но подэтап должен корректно считаться завершенным.
+
+4. Для fence sampling:
+   - total равен количеству fence segments;
+   - bar должен показывать текущий segment index;
+   - postfix/counters должны показывать `fence_points`, `fence_foundation`/`foundation_points` и общий `fence_points`;
+   - если fences выключены или segments отсутствуют, не выводить шумный bar.
+
+5. Для mobile LiDAR:
+   - progress bar должен отражать ray sampling;
+   - total должен быть `sensor_positions * horizontal_angles * vertical_channels`, если это значение вычислимо заранее;
+   - обновления должны показывать processed/emitted rays, successful hits, dropped, missed, attenuated и итоговые LiDAR points;
+   - если удобнее обновлять bar пачками после sensor position, `n` все равно должен соответствовать количеству обработанных rays.
+
+6. Стратегия вывода:
+   - в обычном интерактивном режиме показывать компактные `tqdm` bars для sampling-подэтапов;
+   - в `--quiet` полностью скрывать progress bars и промежуточные строки;
+   - в `--verbose` показывать больше counters через tqdm postfix и/или стабильные диагностические строки;
+   - если stdout/stderr не является TTY, не использовать динамические progress bars: вывод должен оставаться стабильным и пригодным для логов/тестов;
+   - выбрать один stream для progress bars (`stderr` обычно предпочтителен для tqdm), чтобы не ломать PLY/metadata paths и обычный stdout summary;
+   - итоговый summary по тайлу и по run должен остаться читаемым.
+
+7. Архитектура:
+   - не смешивать форматирование `tqdm` с бизнес-логикой sampling;
+   - sampling-функции должны оставаться пригодными для вызова из Python без CLI;
+   - если уже есть progress callback для pipeline stages, расширить/адаптировать его так, чтобы CLI-слой создавал и обновлял `tqdm`;
+   - генератор должен эмитить структурированные события/counters, а CLI должен решать, печатать строки или обновлять progress bar;
+   - не дублировать progress-системы без необходимости.
+
+8. Детерминизм:
+   - progress не должен менять seed;
+   - не должен менять порядок RNG calls;
+   - не должен менять порядок точек в итоговом PLY;
+   - не должен менять class ids, RGB, metadata или содержимое PLY;
+   - не добавлять недетерминированные timestamps/durations в PLY/metadata.
+
+9. Multi-tile режим:
+   - каждый progress bar должен явно указывать текущий tile: index/total и `(x, y)`;
+   - progress каждого тайла должен начинаться и завершаться отдельно;
+   - bars разных тайлов не должны смешиваться в нечитаемый вывод;
+   - итоговый summary по всем тайлам должен сохраниться.
+
+10. Тесты:
+    - интерактивный CLI-режим использует `tqdm` для sampling progress (можно мокать TTY и/или `tqdm`);
+    - `--quiet` скрывает tqdm bars и промежуточный progress;
+    - non-TTY режим не выводит динамические tqdm escape/control sequences и остается стабильным;
+    - `--verbose` показывает расширенные counters;
+    - mobile LiDAR выводит ray progress/statistics через tqdm в TTY-режиме;
+    - multi-tile запуск показывает progress по каждому tile;
+    - PLY, metadata и deterministic output совпадают между запуском с progress и без progress.
+
+11. Документация:
+    - обновить README и профильную документацию по sampling/CLI progress;
+    - описать, что интерактивный CLI теперь использует `tqdm` для долгих sampling-подэтапов;
+    - объяснить поведение `default`, `--quiet`, `--verbose` и non-TTY;
+    - показать короткий пример интерактивного вывода;
+    - явно указать, что progress является диагностическим UI и не влияет на результат генерации.
+
+Итог: при интерактивном запуске пользователь должен видеть настоящий `tqdm` progress внутри `sampling`, понимать текущий подэтап и объем оставшейся работы, а в quiet/non-TTY режимах вывод должен оставаться чистым, стабильным и совместимым с тестами.

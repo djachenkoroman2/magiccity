@@ -8,6 +8,8 @@ import sys
 import time
 from typing import Any
 
+from tqdm import tqdm
+
 from .config import CityGenConfig, ConfigError, iter_tile_configs, load_config
 from .export import write_metadata, write_ply
 from .generator import generate_scene
@@ -25,6 +27,12 @@ STAGE_LABELS = {
     "writing_ply": "writing PLY",
     "writing_metadata": "writing metadata",
 }
+
+PROGRESS_SUBSTAGE_LABELS = {
+    "mobile_lidar_rays": "mobile LiDAR rays",
+}
+
+_TQDM_SUBSTAGES = {"tile_surfaces", "buildings", "fences", "mobile_lidar_rays"}
 
 
 @dataclass
@@ -64,6 +72,7 @@ class TileProgress:
         tile_total: int,
         tile_config: CityGenConfig,
         stage_total: int,
+        progress_stream: Any | None = None,
     ) -> None:
         self.verbosity = verbosity
         self.context = context
@@ -73,6 +82,14 @@ class TileProgress:
         self.stage_total = stage_total
         self.stage_index = 0
         self.started_at: dict[str, float] = {}
+        self.progress_stream = progress_stream if progress_stream is not None else sys.stderr
+        self.use_tqdm = (
+            verbosity > 0
+            and _is_tty(sys.stdout)
+            and _is_tty(self.progress_stream)
+        )
+        self._bars: dict[tuple[str, str], Any] = {}
+        self._line_progress_buckets: dict[tuple[str, str], int] = {}
 
     def __call__(self, stage: str, status: str, details: dict[str, Any] | None = None) -> None:
         label = STAGE_LABELS.get(stage, stage)
@@ -80,11 +97,16 @@ class TileProgress:
         if status == "progress":
             substage = str((details or {}).get("substage", "")).strip()
             event = str((details or {}).get("event", "progress")).strip() or "progress"
-            progress_label = f"{label} {substage}" if substage else label
+            substage_label = PROGRESS_SUBSTAGE_LABELS.get(substage, substage)
+            progress_label = f"{label} {substage_label}" if substage_label else label
             self.context.stage = progress_label
             if self.verbosity == 0:
                 return
+            if self.use_tqdm and self._handle_tqdm_progress(stage, substage, progress_label, event, details or {}):
+                return
             if event == "item_done" and self.verbosity < 2:
+                return
+            if event == "progress" and not self._should_print_line_progress(stage, substage, details or {}):
                 return
             print(
                 "citygen: "
@@ -96,6 +118,9 @@ class TileProgress:
             return
 
         self.context.stage = label
+
+        if status in {"done", "failed"}:
+            self._close_bars_for_stage(stage)
 
         if status == "started":
             self.stage_index += 1
@@ -130,6 +155,79 @@ class TileProgress:
                 f"{label} {status}"
                 f"{_format_details(details, self.verbosity)}"
             )
+
+    def _handle_tqdm_progress(
+        self,
+        stage: str,
+        substage: str,
+        progress_label: str,
+        event: str,
+        details: dict[str, Any],
+    ) -> bool:
+        total = _progress_total(substage, details)
+        if total <= 0:
+            return substage in _TQDM_SUBSTAGES
+        if substage not in _TQDM_SUBSTAGES:
+            return False
+
+        key = (stage, substage)
+        bar = self._bars.get(key)
+        if bar is None and event in {"started", "progress", "item_done"}:
+            bar = tqdm(
+                total=total,
+                desc=self._tqdm_description(progress_label),
+                unit=_progress_unit(substage),
+                file=self.progress_stream,
+                leave=True,
+                dynamic_ncols=True,
+                mininterval=0.1,
+                bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt} {unit}{postfix}",
+                disable=False,
+            )
+            self._bars[key] = bar
+
+        if bar is None:
+            return True
+
+        current = _progress_current(substage, event, details, total)
+        if current > bar.n:
+            bar.update(current - bar.n)
+        elif event == "done" and bar.n < total:
+            bar.update(total - bar.n)
+        bar.set_postfix(_tqdm_postfix(substage, details, self.verbosity), refresh=True)
+
+        if event == "done":
+            bar.close()
+            self._bars.pop(key, None)
+        return True
+
+    def _tqdm_description(self, progress_label: str) -> str:
+        return (
+            f"tile {self.tile_index}/{self.tile_total} "
+            f"(x={self.tile_config.tile.x}, y={self.tile_config.tile.y}) "
+            f"{progress_label}"
+        )
+
+    def _should_print_line_progress(self, stage: str, substage: str, details: dict[str, Any]) -> bool:
+        current, total = _line_progress_position(substage, details)
+        if total <= 0 or current <= 0:
+            return True
+        buckets = 10 if self.verbosity > 1 else 4
+        bucket = min(buckets, int(current * buckets / total))
+        if bucket <= 0:
+            return False
+        key = (stage, substage)
+        if self._line_progress_buckets.get(key) == bucket:
+            return False
+        self._line_progress_buckets[key] = bucket
+        return True
+
+    def _close_bars_for_stage(self, stage: str) -> None:
+        for key, bar in list(self._bars.items()):
+            if key[0] != stage:
+                continue
+            bar.close()
+            self._bars.pop(key, None)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -443,6 +541,119 @@ def _format_progress_details(details: dict[str, Any] | None, verbosity: int) -> 
         hidden.update({"building_id", "segment_id", "hit_counts_by_class"})
     visible = {key: value for key, value in details.items() if key not in hidden}
     return _format_details(visible, verbosity)
+
+
+def _is_tty(stream: Any) -> bool:
+    isatty = getattr(stream, "isatty", None)
+    return bool(isatty()) if callable(isatty) else False
+
+
+def _progress_total(substage: str, details: dict[str, Any]) -> int:
+    if substage == "tile_surfaces":
+        return _int_detail(details, "total_rows", "grid_rows")
+    if substage == "buildings":
+        return _int_detail(details, "buildings")
+    if substage == "fences":
+        return _int_detail(details, "fence_segments")
+    if substage == "mobile_lidar_rays":
+        return _int_detail(details, "total_rays")
+    return 0
+
+
+def _progress_current(substage: str, event: str, details: dict[str, Any], total: int) -> int:
+    if event == "started":
+        return 0
+    if event == "done":
+        return total
+    if substage == "tile_surfaces":
+        return _int_detail(details, "rows", default=0)
+    if substage == "buildings":
+        return _int_detail(details, "building", default=0)
+    if substage == "fences":
+        return _int_detail(details, "segment", default=0)
+    if substage == "mobile_lidar_rays":
+        return _int_detail(details, "processed_rays", "emitted_rays", default=0)
+    return 0
+
+
+def _line_progress_position(substage: str, details: dict[str, Any]) -> tuple[int, int]:
+    total = _progress_total(substage, details)
+    current = _progress_current(substage, "progress", details, total)
+    return current, total
+
+
+def _progress_unit(substage: str) -> str:
+    if substage == "tile_surfaces":
+        return "row"
+    if substage == "buildings":
+        return "building"
+    if substage == "fences":
+        return "segment"
+    if substage == "mobile_lidar_rays":
+        return "ray"
+    return "item"
+
+
+def _tqdm_postfix(substage: str, details: dict[str, Any], verbosity: int) -> dict[str, Any]:
+    if substage == "tile_surfaces":
+        keys = ("points", "ground_points", "hardscape_points")
+        if verbosity > 1:
+            keys += ("road_points", "sidewalk_points", "road_median_points")
+        return _postfix(details, keys)
+    if substage == "buildings":
+        return _postfix(details, ("total_building_points", "total_roof_points", "total_facade_points"))
+    if substage == "fences":
+        return _postfix(details, ("total_fence_points", "total_fence_body_points", "total_foundation_points"))
+    if substage == "mobile_lidar_rays":
+        keys = ("successful_hits", "dropped_rays", "missed_rays", "attenuated_rays", "lidar_points")
+        return _postfix(details, keys)
+    return {}
+
+
+def _postfix(details: dict[str, Any], keys: tuple[str, ...]) -> dict[str, Any]:
+    return {
+        _short_counter_name(key): value
+        for key in keys
+        if (value := details.get(key)) is not None
+    }
+
+
+def _short_counter_name(key: str) -> str:
+    return {
+        "points": "pts",
+        "ground_points": "ground",
+        "hardscape_points": "hardscape",
+        "road_points": "road",
+        "sidewalk_points": "sidewalk",
+        "road_median_points": "median",
+        "total_building_points": "pts",
+        "roof_points": "roof",
+        "facade_points": "facade",
+        "total_roof_points": "roof",
+        "total_facade_points": "facade",
+        "total_fence_points": "pts",
+        "fence_points": "fence",
+        "foundation_points": "foundation",
+        "total_fence_body_points": "fence",
+        "total_foundation_points": "foundation",
+        "successful_hits": "hits",
+        "dropped_rays": "dropped",
+        "missed_rays": "missed",
+        "attenuated_rays": "attenuated",
+        "lidar_points": "pts",
+    }.get(key, key)
+
+
+def _int_detail(details: dict[str, Any], *keys: str, default: int = 0) -> int:
+    for key in keys:
+        value = details.get(key)
+        if value is None:
+            continue
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            continue
+    return default
 
 
 def _format_value(value: Any, verbosity: int) -> str:

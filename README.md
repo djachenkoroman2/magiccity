@@ -104,12 +104,21 @@ citygen --config CONFIG_PATH [--out OUTPUT_PATH_OR_DIRECTORY] [--quiet | --verbo
 
 Если конфиг содержит `tiles`, `--out` должен быть директорией или отсутствовать.
 
-По умолчанию CLI печатает preflight-сводку, прогресс по стадиям для каждого тайла, внутренний progress длительной стадии `sampling` и финальный summary с количеством точек, class counts, source mode и путями к результатам. Для автоматизации доступны:
+По умолчанию CLI печатает preflight-сводку, прогресс по стадиям для каждого тайла, внутренний progress длительной стадии `sampling` и финальный summary с количеством точек, class counts, source mode и путями к результатам. В интерактивном терминале подэтапы `sampling` показываются через `tqdm` progress bars на `stderr`; при redirected/non-TTY выводе CLI использует стабильные line-based строки для логов и тестов. Для автоматизации доступны:
 
 - `--quiet` — оставить только финальные строки `Wrote ...`;
 - `--verbose` — добавить расширенную статистику по road models, buildings, parcels, fences, mobile LiDAR и отдельным sampling-элементам.
 
-Пример обычного вывода:
+Progress является диагностическим UI: он не меняет seed, порядок RNG calls, порядок точек, PLY или metadata.
+
+Пример интерактивного `tqdm` progress во время `sampling`:
+
+```text
+tile 1/1 (x=0, y=0) sampling tile_surfaces: 100%|██████████| 171/171 row, pts=21263, ground=8409, hardscape=12854
+tile 1/1 (x=0, y=0) sampling buildings: 100%|██████████| 8/8 building, pts=5221, roof=837, facade=4384
+```
+
+Пример stable output для redirected stdout/non-TTY:
 
 ```text
 citygen preflight
@@ -118,7 +127,7 @@ citygen preflight
   mode: single-tile
   tiles: (x=0, y=0, size_m=256, margin_m=32)
 citygen: tile 1/1 (x=0, y=0) sampling tile_surfaces started - grid_rows=129, grid_columns=129, grid_samples=16641, spacing_m=1.5
-citygen: tile 1/1 (x=0, y=0) sampling tile_surfaces progress - rows=33, total_rows=129, grid_samples=4257, total_grid_samples=16641, points=3798, class_counts={ground=1875, road=1296, sidewalk=627}
+citygen: tile 1/1 (x=0, y=0) sampling tile_surfaces progress - rows=33, total_rows=129, grid_samples=4257, total_grid_samples=16641, points=3798, ground_points=1875, hardscape_points=1923, road_points=1296, sidewalk_points=627, road_median_points=0, class_counts={ground=1875, road=1296, sidewalk=627}
 citygen: tile 1/1 (x=0, y=0) sampling buildings done - buildings=24, points=5221, roof_points=837, facade_points=4384
 citygen: tile 1/1 (x=0, y=0) stage 6/8 sampling done in 218.8ms - surface_points=26484, final_points=26484
 citygen: tile 1/1 summary

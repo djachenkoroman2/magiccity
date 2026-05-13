@@ -5,6 +5,7 @@ description = "MVP command line generator for synthetic urban point clouds."
 requires-python = ">=3.11"
 dependencies = [
     "PyYAML>=6.0.0",
+    "tqdm>=4.67.3",
 ]
 
 [project.scripts]

@@ -337,7 +337,15 @@ PLY export may omit RGB or class fields, but metadata still contains `class_coun
 
 When generation is started through `citygen`, `sample_scene` receives a progress callback from the CLI. The callback is diagnostic only: it does not create RNG calls, does not change point order and does not write extra fields to PLY or metadata.
 
-The output is intentionally line-based instead of a dynamic progress bar, so it stays readable in logs and smoke tests:
+In an interactive terminal, the CLI uses `tqdm` progress bars for long `sampling` substages and writes them to `stderr`. This keeps normal summaries and `Wrote ...` lines on `stdout`, while still showing a live progress bar:
+
+```text
+tile 1/1 (x=0, y=0) sampling tile_surfaces: 100%|██████████| 171/171 row, pts=21263, ground=8409, hardscape=12854
+tile 1/1 (x=0, y=0) sampling buildings: 100%|██████████| 8/8 building, pts=5221, roof=837, facade=4384
+tile 1/1 (x=0, y=0) sampling mobile LiDAR rays: 100%|██████████| 17856/17856 ray, hits=14302, dropped=360, missed=2871, attenuated=323, pts=14302
+```
+
+When stdout or stderr is not a TTY, dynamic bars are disabled and the same structured events are rendered as stable lines suitable for logs and tests:
 
 ```text
 citygen: tile 1/1 (x=0, y=0) sampling tile_surfaces started - grid_rows=129, grid_columns=129, grid_samples=16641, spacing_m=1.5
@@ -346,21 +354,32 @@ citygen: tile 1/1 (x=0, y=0) sampling buildings done - buildings=24, points=5221
 citygen: tile 1/1 (x=0, y=0) sampling surface_total done - tile_surface_points=21263, building_points=5221, fence_points=0, surface_points_before_crop=26484, surface_points=26484
 ```
 
+With `mobile_lidar.enabled: true`, the ray sampler is reported as a `sampling` substage while the CLI still keeps the high-level mobile LiDAR stage boundary:
+
+```text
+citygen: tile 1/1 (x=0, y=0) stage 7/9 mobile LiDAR started
+citygen: tile 1/1 (x=0, y=0) sampling mobile LiDAR rays progress - positions=8, total_positions=31, processed_rays=4608, emitted_rays=4608, total_rays=17856, successful_hits=3721, dropped_rays=94, missed_rays=712, attenuated_rays=81, lidar_points=3721
+citygen: tile 1/1 (x=0, y=0) sampling mobile LiDAR rays done - sensor_positions=31, processed_rays=17856, total_rays=17856, emitted_rays=17856, successful_hits=14302, dropped_rays=360, missed_rays=2871, attenuated_rays=323, lidar_points=14302
+```
+
 Progress substages:
 
 | Substage | When it appears | Main counters |
 | --- | --- | --- |
-| `tile_surfaces` | Always during surface sampling | `grid_rows`, `grid_columns`, `grid_samples`, `rows`, `total_rows`, `points`, `class_counts` |
-| `buildings` | Always, including the zero-buildings case | `buildings`, `points`, `roof_points`, `facade_points`; in `--verbose`, per-building `item_done` also includes `building_id` |
-| `fences` | Only when generated fence segments exist | `fence_segments`, `points`, `fence_points`, `foundation_points`; in `--verbose`, per-segment `item_done` also includes `segment_id` |
-| `surface_total` | End of surface sampling before LiDAR merge | `tile_surface_points`, `building_points`, `fence_points`, `surface_points_before_crop`, `surface_points`, `class_counts` |
-| `mobile LiDAR rays` | Only when `mobile_lidar.enabled: true` | `sensor_positions`, `processed_rays`, `total_rays`, `successful_hits`, `dropped_rays`, `missed_rays`, `attenuated_rays`, `lidar_points` |
+| `tile_surfaces` | Always during surface sampling | `grid_rows`, `grid_columns`, `grid_samples`, `rows`, `total_rows`, `points`, `ground_points`, `hardscape_points`, `road_points`, `sidewalk_points`, `road_median_points`, `class_counts` |
+| `buildings` | Always, including the zero-buildings case | `buildings`, `points`, `roof_points`, `facade_points`; in `--verbose`, per-building `item_done` also includes `building_id`, `total_roof_points` and `total_facade_points` |
+| `fences` | Only when generated fence segments exist | `fence_segments`, `points`, `fence_points`, `foundation_points`; in `--verbose`, per-segment `item_done` also includes `segment_id`, `total_fence_body_points` and `total_foundation_points` |
+| `surface_total` | End of surface sampling before LiDAR merge | `tile_surface_points`, `building_points`, `fence_points`, `ground_points`, `hardscape_points`, `cropped_building_points`, `cropped_fence_points`, `surface_points_before_crop`, `surface_points`, `class_counts` |
+| `mobile_lidar_rays` | Only when `mobile_lidar.enabled: true`; printed as `sampling mobile LiDAR rays` | `sensor_positions`, `processed_rays`, `emitted_rays`, `total_rays`, `successful_hits`, `dropped_rays`, `missed_rays`, `attenuated_rays`, `lidar_points` |
 
 Verbosity rules:
 
-- default mode prints compact started/progress/done lines for sampling substages;
-- `--quiet` suppresses sampling progress and keeps only final `Wrote ...` paths;
-- `--verbose` prints extra counters and `item_done` lines for individual buildings, fence segments and LiDAR sensor positions.
+- default interactive mode shows compact `tqdm` bars for `tile_surfaces`, `buildings`, `fences` and `mobile_lidar_rays`;
+- default non-TTY mode prints compact started/progress/done lines for sampling substages;
+- `--quiet` suppresses progress bars and intermediate progress lines, keeping only final `Wrote ...` paths;
+- `--verbose` shows extra counters in tqdm postfixes and, in non-TTY mode, prints more detailed item-level diagnostics for buildings, fence segments and LiDAR sensor positions.
+
+The `tqdm` dependency is used only by the CLI reporting layer. Sampling code emits structured progress events and remains usable from Python without CLI formatting.
 
 ## Metadata and diagnostics
 

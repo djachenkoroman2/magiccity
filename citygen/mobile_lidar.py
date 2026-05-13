@@ -35,6 +35,8 @@ def sample_mobile_lidar(
     config: CityGenConfig,
     scene,
     progress: ProgressCallback | None = None,
+    progress_stage: str = "mobile_lidar",
+    progress_substage: str = "rays",
 ) -> MobileLidarResult:
     lidar = config.mobile_lidar
     if not lidar.enabled:
@@ -56,12 +58,15 @@ def sample_mobile_lidar(
     if progress is not None:
         _emit_mobile_lidar_progress(
             progress,
-            "rays",
+            progress_stage,
+            progress_substage,
             "started",
             {
                 "sensor_positions": len(positions),
                 "horizontal_angles": len(horizontal_offsets),
                 "vertical_channels": len(vertical_angles),
+                "processed_rays": 0,
+                "emitted_rays": 0,
                 "total_rays": total_rays,
             },
         )
@@ -117,7 +122,8 @@ def sample_mobile_lidar(
         if progress is not None:
             _emit_mobile_lidar_progress(
                 progress,
-                "rays",
+                progress_stage,
+                progress_substage,
                 "item_done",
                 _ray_progress_details(
                     position_index + 1,
@@ -134,7 +140,8 @@ def sample_mobile_lidar(
             if position_index + 1 == len(positions) or (position_index + 1) % milestone_interval == 0:
                 _emit_mobile_lidar_progress(
                     progress,
-                    "rays",
+                    progress_stage,
+                    progress_substage,
                     "progress",
                     _ray_progress_details(
                         position_index + 1,
@@ -153,7 +160,8 @@ def sample_mobile_lidar(
     if progress is not None:
         _emit_mobile_lidar_progress(
             progress,
-            "rays",
+            progress_stage,
+            progress_substage,
             "done",
             {
                 "sensor_positions": len(positions),
@@ -633,6 +641,7 @@ def _ray_progress_details(
         "positions": position_index,
         "total_positions": position_total,
         "processed_rays": emitted,
+        "emitted_rays": emitted,
         "total_rays": total_rays,
         "successful_hits": sum(hit_counts.values()),
         "dropped_rays": dropped,
@@ -645,6 +654,7 @@ def _ray_progress_details(
 
 def _emit_mobile_lidar_progress(
     progress: ProgressCallback | None,
+    stage: str,
     substage: str,
     event: str,
     details: dict[str, Any] | None = None,
@@ -652,7 +662,7 @@ def _emit_mobile_lidar_progress(
     payload = {"substage": substage, "event": event}
     if details:
         payload.update(details)
-    _emit_progress(progress, "mobile_lidar", "progress", payload)
+    _emit_progress(progress, stage, "progress", payload)
 
 
 def _progress_interval(total: int, steps: int = 4) -> int:
