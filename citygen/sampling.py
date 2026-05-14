@@ -13,6 +13,7 @@ from .geometry import Building, Point, Rect, stable_rng, terrain_height
 from .mobile_lidar import sample_mobile_lidar
 from .roofs import default_flat_roof
 from .trees import sample_tree
+from .vehicles import sample_vehicle
 
 
 ProgressCallback = Callable[[str, str, dict[str, Any] | None], None]
@@ -233,6 +234,64 @@ def _sample_surface_scene(config: CityGenConfig, scene: Scene, progress: Progres
                 },
             )
 
+    vehicle_points: list[Point] = []
+    if scene.vehicles:
+        if progress is not None:
+            _emit_sampling_progress(
+                progress,
+                "vehicles",
+                "started",
+                {"vehicles": len(scene.vehicles)},
+            )
+        total_body_points = 0
+        total_wheel_points = 0
+        total_window_points = 0
+        for vehicle_index, vehicle in enumerate(scene.vehicles, start=1):
+            sampled = sample_vehicle(config, vehicle)
+            vehicle_points.extend(sampled)
+            body_points = _count_points(sampled, "vehicle_body")
+            wheel_points = _count_points(sampled, "vehicle_wheel")
+            window_points = _count_points(sampled, "vehicle_window")
+            total_body_points += body_points
+            total_wheel_points += wheel_points
+            total_window_points += window_points
+            if progress is not None:
+                _emit_sampling_progress(
+                    progress,
+                    "vehicles",
+                    "item_done",
+                    {
+                        "vehicle": vehicle_index,
+                        "vehicles": len(scene.vehicles),
+                        "vehicle_id": vehicle.id,
+                        "points": len(sampled),
+                        "body_points": body_points,
+                        "wheel_points": wheel_points,
+                        "window_points": window_points,
+                        "total_vehicle_points": len(vehicle_points),
+                        "total_body_points": total_body_points,
+                        "total_wheel_points": total_wheel_points,
+                        "total_window_points": total_window_points,
+                    },
+                )
+        points.extend(vehicle_points)
+        if progress is not None:
+            _emit_sampling_progress(
+                progress,
+                "vehicles",
+                "done",
+                {
+                    "vehicles": len(scene.vehicles),
+                    "points": len(vehicle_points),
+                    "body_points": total_body_points,
+                    "wheel_points": total_wheel_points,
+                    "window_points": total_window_points,
+                    "total_body_points": total_body_points,
+                    "total_wheel_points": total_wheel_points,
+                    "total_window_points": total_window_points,
+                },
+            )
+
     cropped = _crop_points(points, scene.bbox)
     if progress is not None:
         cropped_class_counts = _class_counts(cropped)
@@ -249,6 +308,7 @@ def _sample_surface_scene(config: CityGenConfig, scene: Scene, progress: Progres
                 "cropped_building_points": _building_points(cropped_class_counts),
                 "cropped_fence_points": _fence_points(cropped_class_counts),
                 "cropped_tree_points": _tree_points(cropped_class_counts),
+                "cropped_vehicle_points": _vehicle_points(cropped_class_counts),
                 "surface_points_before_crop": len(points),
                 "surface_points": len(cropped),
                 "class_counts": cropped_class_counts,
@@ -491,6 +551,13 @@ def _fence_points(counts: dict[str, int] | Counter[str]) -> int:
 
 def _tree_points(counts: dict[str, int] | Counter[str]) -> int:
     return sum(counts.get(class_name, 0) for class_name in ("tree_trunk", "tree_crown"))
+
+
+def _vehicle_points(counts: dict[str, int] | Counter[str]) -> int:
+    return sum(
+        counts.get(class_name, 0)
+        for class_name in ("vehicle_body", "vehicle_wheel", "vehicle_window")
+    )
 
 
 def _emit_progress(

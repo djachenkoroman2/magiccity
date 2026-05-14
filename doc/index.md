@@ -2,7 +2,7 @@
 
 MagicCity — процедурный генератор городских point clouds. `citygen` строит детерминированные городские тайлы из YAML-конфигов и экспортирует ASCII PLY вместе с JSON-файлом metadata.
 
-Документация описывает runtime-модели, конфиги, рельеф, дороги, биомы, parcels, ограждения, деревья, mobile LiDAR, здания, sampling, catalogs и metadata. Координатная конвенция проекта: горизонтальная плоскость `x/y`, высота `z`.
+Документация описывает runtime-модели, конфиги, рельеф, дороги, биомы, parcels, ограждения, деревья, транспорт, mobile LiDAR, здания, sampling, catalogs и metadata. Координатная конвенция проекта: горизонтальная плоскость `x/y`, высота `z`.
 
 ## Разделы
 
@@ -13,6 +13,7 @@ MagicCity — процедурный генератор городских point
 - [Parcels](parcels.md) — blocks/parcels, oriented subdivision, buildable areas и placement зданий.
 - [Ограждения](fences.md) — заборы по границам parcels, типы материалов, высота, ворота и фундаменты.
 - [Деревья](trees.md) — формы крон, плотность по биомам, natural-ground placement, sampling и LiDAR.
+- [Транспорт](vehicles.md) — типы транспорта, road/parking/yard placement, sampling, LiDAR и metadata.
 - [Sampling pipeline](sampling.md) — стадии surface sampling, mobile LiDAR, настройки плотности, semantic class/RGB и metadata.
 - [Footprints зданий](building_footprints.md) — поддержанные footprint types, aliases, геометрия и clearance.
 - [Крыши зданий](building_roofs.md) — roof types, aliases, функции высоты и sampling.

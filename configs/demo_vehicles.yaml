@@ -1,0 +1,145 @@
+seed: 2606
+
+tile:
+  x: 0
+  y: 0
+  size_m: 160
+  margin_m: 16
+
+terrain:
+  base_height_m: 0
+  height_noise_m: 0.8
+  hills:
+    - center_x: 118
+      center_y: 46
+      height_m: 5
+      radius_m: 95
+
+urban_fields:
+  enabled: true
+  center_x: 70
+  center_y: 78
+  city_radius_m: 230
+  noise_scale_m: 120
+  density_bias: 0.04
+  industrial_bias: 0.18
+  green_bias: 0.02
+
+roads:
+  model: mixed
+  spacing_m: 64
+  width_m: 8
+  sidewalk_width_m: 2
+  profiles:
+    enabled: true
+    default: collector
+
+buildings:
+  enabled: false
+  min_height_m: 6
+  max_height_m: 18
+  setback_m: 2
+  footprint_min_m: 8
+  footprint_max_m: 18
+  footprint:
+    model: mixed
+    weights:
+      rectangle: 0.55
+      slab: 0.20
+      courtyard: 0.10
+      l_shape: 0.15
+  roof:
+    model: mixed
+    weights:
+      flat: 0.55
+      gable: 0.20
+      hip: 0.15
+      shed: 0.10
+
+parcels:
+  enabled: true
+  block_size_m: 64
+  block_jitter_m: 4
+  min_block_size_m: 28
+  min_parcel_width_m: 14
+  max_parcel_width_m: 36
+  min_parcel_depth_m: 16
+  max_parcel_depth_m: 42
+  parcel_setback_m: 1.5
+  max_subdivision_depth: 3
+  oriented_blocks: true
+  block_orientation_source: road_model
+  block_orientation_jitter_degrees: 4
+
+fences:
+  enabled: false
+  mode: partial
+  type: mixed
+  coverage_ratio: 0.45
+  gate_probability: 0.75
+  road_clearance_m: 0.4
+  sample_spacing_m: 1.2
+
+trees:
+  enabled: true
+  density_per_ha: 24
+  min_spacing_m: 8
+  crown_shape: mixed
+  crown_radius_m: 2.0
+  road_clearance_m: 2
+  building_clearance_m: 2
+  fence_clearance_m: 1
+  sample_spacing_m: 1.4
+
+vehicles:
+  enabled: true
+  density_per_km: 18
+  parking_density_per_ha: 180
+  min_spacing_m: 7
+  placement_modes: mixed
+  vehicle_type: mixed
+  weights:
+    car: 0.52
+    truck: 0.20
+    bus: 0.10
+    emergency: 0.08
+    tractor: 0.10
+  biome_density_multipliers:
+    downtown: 1.35
+    residential: 0.90
+    suburb: 0.70
+    industrial: 1.15
+  orientation_jitter_degrees: 2.5
+  building_clearance_m: 1.2
+  fence_clearance_m: 0.8
+  tree_clearance_m: 1.4
+  tile_margin_clearance_m: 1
+  side_of_road: both
+  parked_ratio: 0.45
+  sample_spacing_m: 1.0
+  max_points_per_vehicle: 360
+
+sampling:
+  mode: surface
+  ground_spacing_m: 3
+  road_spacing_m: 2
+  building_spacing_m: 2
+  jitter_ratio: 0.12
+
+mobile_lidar:
+  enabled: true
+  output_mode: additive
+  trajectory: road
+  sensor_height_m: 2.2
+  position_step_m: 16
+  min_range_m: 1
+  max_range_m: 80
+  horizontal_fov_degrees: 180
+  horizontal_step_degrees: 8
+  vertical_fov_degrees: 35
+  vertical_center_degrees: -8
+  vertical_channels: 6
+  range_noise_m: 0.02
+  drop_probability: 0.02
+  distance_attenuation: 0.1
+  ray_step_m: 1.2

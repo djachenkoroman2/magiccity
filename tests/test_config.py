@@ -448,6 +448,135 @@ trees:
                 with self.assertRaises(ConfigError):
                     _config_from_text(text)
 
+    def test_loads_vehicle_config_with_defaults_and_aliases(self) -> None:
+        config = _config_from_text(
+            """
+seed: 7
+vehicles:
+  enabled: true
+  density_per_km: 30
+  parking_density_per_ha: 18
+  min_spacing_m: 5
+  placement_modes: mixed
+  vehicle_type: sedan
+  weights:
+    sedan: 1
+    lorry: 2
+    firetruck: 3
+    farm_tractor: 4
+  biome_density_multipliers:
+    residential: 0
+    industrial: 2
+  length_m: 4.8
+  width_m: 1.9
+  height_m: 1.6
+  wheel_radius_m: 0.36
+  clearance_m: 0.5
+  orientation_jitter_degrees: 2
+  building_clearance_m: 1
+  fence_clearance_m: 0.5
+  tree_clearance_m: 1.2
+  tile_margin_clearance_m: 1
+  allowed_road_profiles:
+    - default
+  lane_offset_m: 2
+  parked_ratio: 0.4
+  side_of_road: left
+  sample_spacing_m: 0.9
+  max_points_per_vehicle: 320
+"""
+        )
+
+        self.assertTrue(config.vehicles.enabled)
+        self.assertEqual(config.vehicles.vehicle_type, "car")
+        self.assertEqual(config.vehicles.placement_modes, ("road", "parking", "industrial_yard"))
+        self.assertEqual(config.vehicles.weights["truck"], 2.0)
+        self.assertEqual(config.vehicles.weights["emergency"], 3.0)
+        self.assertEqual(config.vehicles.weights["tractor"], 4.0)
+        self.assertEqual(config.vehicles.biome_density_multipliers["residential"], 0.0)
+        self.assertEqual(config.vehicles.biome_density_multipliers["industrial"], 2.0)
+        self.assertEqual(config.vehicles.allowed_road_profiles, ("default",))
+        self.assertEqual(config.vehicles.side_of_road, "left")
+
+    def test_invalid_vehicle_config_is_error(self) -> None:
+        invalid_configs = [
+            """
+seed: 7
+vehicles:
+  unknown_field: true
+""",
+            """
+seed: 7
+vehicles:
+  density_per_km: -1
+""",
+            """
+seed: 7
+vehicles:
+  parking_density_per_ha: -1
+""",
+            """
+seed: 7
+vehicles:
+  min_spacing_m: 0
+""",
+            """
+seed: 7
+vehicles:
+  vehicle_type: hovercraft
+""",
+            """
+seed: 7
+vehicles:
+  placement_modes:
+    - sidewalk
+""",
+            """
+seed: 7
+vehicles:
+  vehicle_type: mixed
+  weights:
+    car: 0
+    truck: 0
+""",
+            """
+seed: 7
+vehicles:
+  weights:
+    car: -1
+""",
+            """
+seed: 7
+vehicles:
+  biome_density_multipliers:
+    tundra: 1
+""",
+            """
+seed: 7
+vehicles:
+  building_clearance_m: -1
+""",
+            """
+seed: 7
+vehicles:
+  side_of_road: center
+""",
+            """
+seed: 7
+vehicles:
+  parked_ratio: 1.2
+""",
+            """
+seed: 7
+vehicles:
+  length_m: 0
+""",
+        ]
+        for text in invalid_configs:
+            with self.subTest(text=text):
+                with self.assertRaises(ConfigError):
+                    _config_from_text(text)
+
     def test_loads_mobile_lidar_config(self) -> None:
         config = _config_from_text(
             """

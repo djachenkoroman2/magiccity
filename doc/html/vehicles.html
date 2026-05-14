@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="ru" data-bs-theme="light">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        
+        
+        <link rel="shortcut icon" href="img/favicon.ico">
+        <title>Транспорт - Документация MagicCity</title>
+        <link href="css/bootstrap.min.css" rel="stylesheet">
+        <link href="css/fontawesome.min.css" rel="stylesheet">
+        <link href="css/brands.min.css" rel="stylesheet">
+        <link href="css/solid.min.css" rel="stylesheet">
+        <link href="css/v4-font-face.min.css" rel="stylesheet">
+        <link href="css/base.css" rel="stylesheet">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="index.html">Документация MagicCity</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#navbar-collapse" aria-controls="navbar-collapse" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="nav-item">
+                                <a href="index.html" class="nav-link">Главная</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="configuration_reference.html" class="nav-link">Конфигурация</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="terrain.html" class="nav-link">Рельеф</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="roads.html" class="nav-link">Дороги</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="biomes.html" class="nav-link">Биомы</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="parcels.html" class="nav-link">Parcels</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="fences.html" class="nav-link">Ограждения</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="trees.html" class="nav-link">Деревья</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="vehicles.html" class="nav-link active" aria-current="page">Транспорт</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="sampling.html" class="nav-link">Sampling pipeline</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="building_footprints.html" class="nav-link">Footprints зданий</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="building_roofs.html" class="nav-link">Крыши зданий</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="generated_objects.html" class="nav-link">Генерируемые объекты</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="worldgen_catalogs.html" class="nav-link">Worldgen catalogs</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="universal_showcase.html" class="nav-link">Universal showcase</a>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ms-md-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a rel="prev" href="trees.html" class="nav-link">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" href="sampling.html" class="nav-link">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#_1" class="nav-link">Транспорт</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#pipeline" class="nav-link">Pipeline</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#_2" class="nav-link">Типы транспорта</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#placement" class="nav-link">Placement</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#_3" class="nav-link">Биомы</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#yaml" class="nav-link">YAML</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#geometry-and-sampling" class="nav-link">Geometry and Sampling</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#mobile-lidar" class="nav-link">Mobile LiDAR</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#metadata" class="nav-link">Metadata</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#demo" class="nav-link">Demo</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="_1">Транспорт</h1>
+<p>Слой <code>vehicles</code> добавляет в <code>citygen</code> опциональные generated objects: легковые автомобили, грузовики, автобусы, спецтехнику и тракторы/utility vehicles. Слой выключен по умолчанию (<code>vehicles.enabled: false</code>) и не меняет старые сцены, пока явно не включен.</p>
+<p>Координатная конвенция та же, что во всем проекте: горизонтальная плоскость <code>x/y</code>, высота <code>z</code>. Базовая высота каждого транспортного средства берется через <code>terrain_height(seed, terrain, x, y)</code>.</p>
+<h2 id="pipeline">Pipeline</h2>
+<p>Транспорт строится отдельной стадией <code>vehicles</code> после <code>trees</code> и до <code>sampling</code>:</p>
+<pre><code class="language-text">roads -&gt; parcels -&gt; objects -&gt; fences -&gt; trees -&gt; vehicles -&gt; sampling
+</code></pre>
+<p>В <code>Scene</code> транспорт хранится отдельно от зданий, fences и trees. Surface sampling только превращает готовые <code>Vehicle</code> instances в точки; placement не скрыт внутри sampling.</p>
+<h2 id="_2">Типы транспорта</h2>
+<p>Catalog ids:</p>
+<ul>
+<li><code>car</code> — легковой автомобиль, taxi/sedan-sized;</li>
+<li><code>truck</code> — грузовик, фургон или delivery vehicle;</li>
+<li><code>bus</code> — городской/пригородный автобус;</li>
+<li><code>emergency</code> — пожарная, ambulance или служебная машина;</li>
+<li><code>tractor</code> — трактор или utility vehicle.</li>
+</ul>
+<p>Aliases нормализуются при загрузке YAML:</p>
+<table>
+<thead>
+<tr>
+<th>Alias</th>
+<th>Canonical</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>sedan</code>, <code>hatchback</code>, <code>taxi</code></td>
+<td><code>car</code></td>
+</tr>
+<tr>
+<td><code>van</code>, <code>lorry</code>, <code>delivery</code></td>
+<td><code>truck</code></td>
+</tr>
+<tr>
+<td><code>coach</code></td>
+<td><code>bus</code></td>
+</tr>
+<tr>
+<td><code>firetruck</code>, <code>ambulance</code>, <code>service</code></td>
+<td><code>emergency</code></td>
+</tr>
+<tr>
+<td><code>utility</code>, <code>farm_tractor</code></td>
+<td><code>tractor</code></td>
+</tr>
+</tbody>
+</table>
+<p>Каждый catalog type задает габариты, радиус колеса, базовый цвет корпуса, допустимые placement modes и tags. При необходимости <code>vehicles.length_m</code>, <code>width_m</code>, <code>height_m</code>, <code>wheel_radius_m</code> могут глобально переопределить catalog defaults.</p>
+<h2 id="placement">Placement</h2>
+<p>Поддерживаемые режимы:</p>
+<ul>
+<li><code>road</code> — транспорт на проезжей части road primitive;</li>
+<li><code>parking</code> — стоящий транспорт внутри buildable parcels, только на <code>ground</code>;</li>
+<li><code>industrial_yard</code> — двор/площадка industrial parcels для trucks, emergency и tractors;</li>
+<li><code>mixed</code> — shorthand для всех режимов.</li>
+</ul>
+<p>Road placement выбирает точки вдоль road primitives, проверяет ширину carriageway и ставит объект со смещением от оси/median. Orientation идет вдоль road primitive, с опциональным <code>orientation_jitter_degrees</code>.</p>
+<p>Parking и industrial yard placement используют <code>Parcel.buildable_geometry</code>: это простая MVP-аппроксимация parking/yard surface внутри участка. Такой транспорт не ставится на произвольный natural ground вне parcel.</p>
+<p>Транспорт запрещен:</p>
+<ul>
+<li>на <code>sidewalk</code>;</li>
+<li>на <code>road_median</code>, если <code>allow_road_medians: false</code>;</li>
+<li>внутри building footprint и building clearance;</li>
+<li>рядом с fences/foundations;</li>
+<li>рядом с деревьями;</li>
+<li>за пределами crop bbox тайла;</li>
+<li>на слишком узкой дороге.</li>
+</ul>
+<h2 id="_3">Биомы</h2>
+<p>Итоговая плотность умножается на <code>vehicles.biome_density_multipliers</code>. Значение <code>0</code> полностью отключает транспорт в биоме.</p>
+<p>Defaults:</p>
+<table>
+<thead>
+<tr>
+<th>Биом</th>
+<th>Множитель</th>
+<th>Характер</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>downtown</code></td>
+<td><code>1.25</code></td>
+<td>больше road vehicles, buses и служебной техники</td>
+</tr>
+<tr>
+<td><code>residential</code></td>
+<td><code>0.85</code></td>
+<td>средняя плотность легковых</td>
+</tr>
+<tr>
+<td><code>suburb</code></td>
+<td><code>0.65</code></td>
+<td>меньше движения, больше parked/utility</td>
+</tr>
+<tr>
+<td><code>industrial</code></td>
+<td><code>0.75</code></td>
+<td>больше trucks, emergency/utility и tractors</td>
+</tr>
+</tbody>
+</table>
+<p>При <code>vehicle_type: mixed</code> веса типов дополнительно корректируются по биому: downtown поднимает <code>bus</code>/<code>car</code>, industrial поднимает <code>truck</code>/<code>tractor</code>, suburb повышает utility-like vehicles. Явный вес <code>0</code> остается нулем.</p>
+<h2 id="yaml">YAML</h2>
+<p>Минимальный пример:</p>
+<pre><code class="language-yaml">vehicles:
+  enabled: true
+  density_per_km: 30
+  parking_density_per_ha: 20
+  min_spacing_m: 7
+  placement_modes: mixed
+  vehicle_type: mixed
+  sample_spacing_m: 1
+</code></pre>
+<p>Ключевые поля:</p>
+<table>
+<thead>
+<tr>
+<th>Поле</th>
+<th>Назначение</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>density_per_km</code></td>
+<td>плотность road vehicles вдоль дорожных primitives</td>
+</tr>
+<tr>
+<td><code>parking_density_per_ha</code></td>
+<td>плотность стоящих машин на parcel parking/yard</td>
+</tr>
+<tr>
+<td><code>placement_modes</code></td>
+<td><code>road</code>, <code>parking</code>, <code>industrial_yard</code> или <code>mixed</code></td>
+</tr>
+<tr>
+<td><code>vehicle_type</code></td>
+<td>конкретный тип или <code>mixed</code></td>
+</tr>
+<tr>
+<td><code>weights</code></td>
+<td>веса типов при <code>mixed</code></td>
+</tr>
+<tr>
+<td><code>biome_density_multipliers</code></td>
+<td>множители плотности по биомам</td>
+</tr>
+<tr>
+<td><code>allowed_road_profiles</code></td>
+<td>whitelist profiles для road placement</td>
+</tr>
+<tr>
+<td><code>side_of_road</code></td>
+<td><code>left</code>, <code>right</code> или <code>both</code></td>
+</tr>
+<tr>
+<td><code>parked_ratio</code></td>
+<td>доля parking-кандидатов в industrial parcels, если включены и <code>parking</code>, и <code>industrial_yard</code></td>
+</tr>
+<tr>
+<td><code>sample_spacing_m</code></td>
+<td>плотность точек транспорта</td>
+</tr>
+<tr>
+<td><code>max_points_per_vehicle</code></td>
+<td>cap, который защищает большие тайлы от слишком большого числа точек</td>
+</tr>
+</tbody>
+</table>
+<p>Полный список полей и строгие правила валидации описаны в <code>doc/configuration_reference.md</code>.</p>
+<h2 id="geometry-and-sampling">Geometry and Sampling</h2>
+<p>MVP использует аналитические формы:</p>
+<ul>
+<li>корпус — oriented box в world-space;</li>
+<li>колеса — упрощенные диски/кольца на боковых сторонах;</li>
+<li>окна — patches на боках и торцах корпуса.</li>
+</ul>
+<p>Surface sampling создает semantic classes:</p>
+<table>
+<thead>
+<tr>
+<th>Class</th>
+<th>Id</th>
+<th>RGB</th>
+<th>Что семплируется</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>vehicle_body</code></td>
+<td><code>11</code></td>
+<td><code>52, 93, 142</code></td>
+<td>корпус</td>
+</tr>
+<tr>
+<td><code>vehicle_wheel</code></td>
+<td><code>12</code></td>
+<td><code>28, 30, 33</code></td>
+<td>колеса</td>
+</tr>
+<tr>
+<td><code>vehicle_window</code></td>
+<td><code>13</code></td>
+<td><code>98, 148, 172</code></td>
+<td>окна</td>
+</tr>
+</tbody>
+</table>
+<p>Существующие class ids не изменены.</p>
+<h2 id="mobile-lidar">Mobile LiDAR</h2>
+<p>Mobile LiDAR учитывает транспорт вместе с terrain, roads, buildings, fences и trees. Корпус трассируется как oriented box obstacle; при включенных occlusions он может закрывать объекты позади.</p>
+<p>Ограничение MVP: wheels/windows пока не являются отдельными LiDAR-примитивами. Луч возвращает <code>vehicle_body</code> для попадания в oriented box, а детализация колес и окон видна через surface sampling.</p>
+<h2 id="metadata">Metadata</h2>
+<p>Metadata получает:</p>
+<ul>
+<li><code>vehicle_counts.total</code>;</li>
+<li><code>vehicle_counts.by_type</code>;</li>
+<li><code>vehicle_counts.by_placement_mode</code>;</li>
+<li><code>vehicle_counts.by_biome</code>;</li>
+<li><code>vehicle_counts.dimensions_m</code>;</li>
+<li><code>vehicle_counts.body_points</code>, <code>wheel_points</code>, <code>window_points</code>;</li>
+<li><code>supported_vehicle_types</code>;</li>
+<li><code>vehicle_catalog</code>;</li>
+<li><code>vehicle_aliases</code>;</li>
+<li><code>object_feature_counts.vehicle</code>;</li>
+<li><code>object_feature_counts.vehicle_body</code>;</li>
+<li><code>object_feature_counts.vehicle_wheel</code>;</li>
+<li><code>object_feature_counts.vehicle_window</code>;</li>
+<li>resolved <code>config.vehicles</code>.</li>
+</ul>
+<h2 id="demo">Demo</h2>
+<p>Запуск:</p>
+<pre><code class="language-bash">uv run citygen --config configs/demo_vehicles.yaml --out outputs/demo_vehicles.ply
+</code></pre>
+<p>Демо включает road vehicles, parcel parking/yard placement, mixed vehicle types, trees, road profiles и additive mobile LiDAR; fences в нем выключены, чтобы не сжимать площадки для parked/yard vehicles.</p></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="js/bootstrap.bundle.min.js"></script>
+        <script>
+            var base_url = ".",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="js/base.js"></script>
+        <script src="search/main.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>

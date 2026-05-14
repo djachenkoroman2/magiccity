@@ -1,6 +1,6 @@
 # Справочник по конфигурации
 
-Этот документ является справочником по YAML-конфигам `citygen`, построенным от исходного кода. Источник истины: `CityGenConfig` и вложенные значения по умолчанию dataclass-ов в `citygen/config.py`, логика валидатора, каталоги в `citygen/catalogs.py`, runtime-код дорог/parcels/ограждений/деревьев/зданий и экспорт metadata.
+Этот документ является справочником по YAML-конфигам `citygen`, построенным от исходного кода. Источник истины: `CityGenConfig` и вложенные значения по умолчанию dataclass-ов в `citygen/config.py`, логика валидатора, каталоги в `citygen/catalogs.py`, runtime-код дорог/parcels/ограждений/деревьев/транспорта/зданий и экспорт metadata.
 
 `configs/*.yaml` остаются примерами запуска и проверочными конфигами. Они не являются источником схемы.
 
@@ -12,6 +12,7 @@
 - `doc/parcels.md` — block/parcel subdivision и oriented parcels;
 - `doc/fences.md` — ограждения участков, типы заборов, ворота, фундаменты и metadata;
 - `doc/trees.md` — деревья, формы крон, biome-aware плотность, placement clearance, sampling и LiDAR;
+- `doc/vehicles.md` — транспорт, типы, road/parking/yard placement, sampling, LiDAR и metadata;
 - `doc/sampling.md` — стадии sampling pipeline, плотности точек, mobile LiDAR, semantic class/RGB и metadata;
 - `doc/building_footprints.md` — идентификаторы footprints, aliases и семплирование;
 - `doc/building_roofs.md` — идентификаторы roofs, aliases и функции высоты;
@@ -31,7 +32,7 @@ uv run citygen --config configs/mvp.yaml --out outputs/mvp_tile.ply
 uv run citygen --config path/to/multi_tile_config.yaml --out outputs/multi_tile
 ```
 
-CLI по умолчанию показывает preflight-сводку, progress по стадиям pipeline, внутренний progress стадии `sampling` и итоговый summary. `sampling` печатает line-based диагностику по `tile_surfaces`, `buildings`, `fences`, `trees` и `mobile LiDAR rays`, если соответствующие подэтапы участвуют в генерации. Для скриптов можно оставить только финальные пути:
+CLI по умолчанию показывает preflight-сводку, progress по стадиям pipeline, внутренний progress стадии `sampling` и итоговый summary. `sampling` печатает line-based диагностику по `tile_surfaces`, `buildings`, `fences`, `trees`, `vehicles` и `mobile LiDAR rays`, если соответствующие подэтапы участвуют в генерации. Для скриптов можно оставить только финальные пути:
 
 ```bash
 uv run citygen --config configs/mvp.yaml --out outputs/mvp_tile.ply --quiet
@@ -51,7 +52,7 @@ uv run citygen --config configs/mvp.yaml --out outputs/mvp_tile.ply --verbose
 - Все размеры и расстояния задаются в метрах.
 - Горизонтальные координаты сцены: `x` и `y`; высота: `z`.
 - Булевы значения пишутся как `true` или `false`.
-- Текущий загрузчик читает описанные ниже поля. Секции `terrain`, `parcels`, `fences`, `trees`, `mobile_lidar` и `worldgen` валидируют имена параметров строго, чтобы опечатки в новых слоях не проходили молча.
+- Текущий загрузчик читает описанные ниже поля. Секции `terrain`, `parcels`, `fences`, `trees`, `vehicles`, `mobile_lidar` и `worldgen` валидируют имена параметров строго, чтобы опечатки в новых слоях не проходили молча.
 
 Минимальный валидный конфиг:
 
@@ -208,6 +209,44 @@ trees:
   tile_margin_clearance_m: 1
   allow_road_medians: false
   sample_spacing_m: 1
+vehicles:
+  enabled: false
+  density_per_km: 10
+  parking_density_per_ha: 12
+  min_spacing_m: 8
+  placement_modes:
+    - road
+    - parking
+    - industrial_yard
+  vehicle_type: mixed
+  weights:
+    car: 0.55
+    truck: 0.18
+    bus: 0.10
+    emergency: 0.07
+    tractor: 0.10
+  biome_density_multipliers:
+    downtown: 1.25
+    residential: 0.85
+    industrial: 0.75
+    suburb: 0.65
+  length_m: null
+  width_m: null
+  height_m: null
+  wheel_radius_m: null
+  clearance_m: 0.7
+  orientation_jitter_degrees: 3
+  building_clearance_m: 1
+  fence_clearance_m: 0.6
+  tree_clearance_m: 1.5
+  tile_margin_clearance_m: 1
+  allow_road_medians: false
+  allowed_road_profiles: []
+  lane_offset_m: null
+  parked_ratio: 0.35
+  side_of_road: both
+  sample_spacing_m: 0.75
+  max_points_per_vehicle: 500
 mobile_lidar:
   enabled: false
   output_mode: additive
@@ -261,6 +300,7 @@ worldgen:
 | `parcels` | mapping | нет | см. секцию `parcels` | Включает прямоугольное разбиение blocks/parcels и размещение зданий внутри участков. |
 | `fences` | mapping | нет | см. секцию `fences` | Опционально добавляет заборы и ограждения по границам parcels. |
 | `trees` | mapping | нет | см. секцию `trees` | Опционально добавляет деревья на естественном грунте. |
+| `vehicles` | mapping | нет | см. секцию `vehicles` | Опционально добавляет транспорт на проезжей части, parking pockets и industrial yards. |
 | `mobile_lidar` | mapping | нет | см. секцию `mobile_lidar` | Опционально включает трассировку лучей мобильного LiDAR-сенсора. |
 | `sampling` | mapping | нет | см. секцию `sampling` | Настраивает плотность и регулярность точек. |
 | `output` | mapping | нет | см. секцию `output` | Настраивает PLY-поля. |
@@ -857,6 +897,58 @@ Alias-значения форм крон: `sphere`/`spherical` -> `round`, `oval
 
 Подробный тематический справочник по деревьям находится в `doc/trees.md`.
 
+## `vehicles`
+
+Секция `vehicles` включает независимый слой транспорта. По умолчанию он выключен, поэтому старые конфиги и PLY-результаты не меняются, пока не задано `vehicles.enabled: true`.
+
+```yaml
+vehicles:
+  enabled: true
+  density_per_km: 32
+  parking_density_per_ha: 24
+  min_spacing_m: 7
+  placement_modes: mixed
+  vehicle_type: mixed
+  weights:
+    car: 0.55
+    truck: 0.18
+    bus: 0.10
+    emergency: 0.07
+    tractor: 0.10
+  sample_spacing_m: 1
+```
+
+| Параметр | Тип | По умолчанию | Возможные значения | Действие |
+| --- | --- | --- | --- | --- |
+| `enabled` | boolean | `false` | `true`, `false` | Включает генерацию транспорта. |
+| `density_per_km` | number | `10.0` | `>= 0` | Базовая плотность road vehicles на километр дорожных primitives до biome multiplier. |
+| `parking_density_per_ha` | number | `12.0` | `>= 0` | Базовая плотность стоящего транспорта в parking/yard зонах внутри buildable parcels. |
+| `min_spacing_m` | number | `8.0` | `> 0` | Минимальная дистанция между принятыми транспортными средствами. |
+| `placement_modes` | string или list | `road`, `parking`, `industrial_yard` | `road`, `parking`, `industrial_yard`, `mixed` | Где разрешено размещать транспорт. `mixed` раскрывается во все поддержанные режимы. |
+| `vehicle_type` | string | `mixed` | `car`, `truck`, `bus`, `emergency`, `tractor`, `mixed` | Конкретный тип или weighted selector. |
+| `weights` | mapping | встроенная смесь | типы транспорта, значения `>= 0` | Веса выбора типа при `vehicle_type: mixed`. |
+| `biome_density_multipliers` | mapping | `downtown: 1.25`, `residential: 0.85`, `industrial: 0.75`, `suburb: 0.65` | known biome ids, значения `>= 0` | Множители плотности; `0` отключает транспорт в биоме. |
+| `length_m`, `width_m`, `height_m`, `wheel_radius_m` | number или null | `null` | `null` или `> 0` | Глобальное переопределение габаритов catalog default для выбранных типов. |
+| `clearance_m` | number | `0.7` | `> 0` | Базовый зазор для road lane offset и placement-проверок. |
+| `orientation_jitter_degrees` | number | `3.0` | `>= 0` | Детерминированное отклонение orientation от оси дороги или участка. |
+| `building_clearance_m` | number | `1.0` | `>= 0` | Отступ от footprints зданий. |
+| `fence_clearance_m` | number | `0.6` | `>= 0` | Отступ от fence segments/foundations. |
+| `tree_clearance_m` | number | `1.5` | `>= 0` | Отступ от деревьев. |
+| `tile_margin_clearance_m` | number | `1.0` | `>= 0` | Отступ от crop bbox тайла. |
+| `allow_road_medians` | boolean | `false` | `true`, `false` | Разрешает размещение на `road_median`; по умолчанию medians запрещены. |
+| `allowed_road_profiles` | list | `[]` | имена profiles | Если список непустой, road placement работает только на этих road profiles. |
+| `lane_offset_m` | number или null | `null` | `null` или `>= 0` | Явный боковой offset от median/оси; `null` выбирает допустимый offset внутри carriageway. |
+| `parked_ratio` | number | `0.35` | `0..1` | Доля parking-кандидатов внутри industrial parcels, когда одновременно включены `parking` и `industrial_yard`. |
+| `side_of_road` | string | `both` | `left`, `right`, `both` | Сторона дороги для road placement. |
+| `sample_spacing_m` | number | `0.75` | `> 0` | Шаг точек корпуса, колес и окон. |
+| `max_points_per_vehicle` | integer | `500` | `> 0` | Верхний предел surface points на одно транспортное средство. |
+
+Catalog types: `car`, `truck`, `bus`, `emergency`, `tractor`. Aliases: `sedan`, `hatchback`, `taxi` -> `car`; `van`, `lorry`, `delivery` -> `truck`; `coach` -> `bus`; `firetruck`, `ambulance`, `service` -> `emergency`; `utility`, `farm_tractor` -> `tractor`.
+
+Road vehicles размещаются только на `road`/carriageway и получают orientation вдоль road primitive. Parking и industrial yard vehicles размещаются внутри buildable parcels только на `ground`, то есть не на sidewalks, medians или обычном natural ground вне явной parking/yard зоны. Все типы проверяют здания, fences, trees, соседний транспорт и границу crop bbox. Sampling добавляет semantic classes `vehicle_body`, `vehicle_wheel`, `vehicle_window`; mobile LiDAR трассирует корпус как oriented box obstacle.
+
+Подробный тематический справочник по транспорту находится в `doc/vehicles.md`.
+
 ## `mobile_lidar`
 
 Секция `mobile_lidar` включает опциональный режим мобильного LiDAR-сканирования. В этом режиме точки создаются не по регулярному surface sampling, а по фактическим попаданиям лучей из движущегося сенсора.
@@ -998,6 +1090,9 @@ x y z
 | `8` | `fence_foundation` | `118, 112, 103` |
 | `9` | `tree_trunk` | `111, 78, 46` |
 | `10` | `tree_crown` | `54, 128, 70` |
+| `11` | `vehicle_body` | `52, 93, 142` |
+| `12` | `vehicle_wheel` | `28, 30, 33` |
+| `13` | `vehicle_window` | `98, 148, 172` |
 
 Для каждого PLY также пишется metadata-файл рядом с ним:
 
@@ -1006,7 +1101,7 @@ outputs/example.ply
 outputs/example.metadata.json
 ```
 
-Metadata содержит `seed`, bbox тайла, количество точек, распределение классов, mapping классов, RGB-палитру `class_colors`, использованные модели дорог, `road_profile_counts`, `road_profile_counts_by_biome`, `road_widths`, `road_median`, counts по биомам, `building_counts`, `parcel_counts`, `fence_counts`, `tree_counts`, `mobile_lidar`, `point_sources`, `parcel_building_alignment`, `building_orientations`, `block_geometry`, `parcel_geometry`, списки поддержанных типов footprint/roof/fence/tree crowns и полный конфиг после применения значений по умолчанию.
+Metadata содержит `seed`, bbox тайла, количество точек, распределение классов, mapping классов, RGB-палитру `class_colors`, использованные модели дорог, `road_profile_counts`, `road_profile_counts_by_biome`, `road_widths`, `road_median`, counts по биомам, `building_counts`, `parcel_counts`, `fence_counts`, `tree_counts`, `vehicle_counts`, `mobile_lidar`, `point_sources`, `parcel_building_alignment`, `building_orientations`, `block_geometry`, `parcel_geometry`, списки поддержанных типов footprint/roof/fence/tree crowns/vehicle types и полный конфиг после применения значений по умолчанию.
 
 ## `worldgen`
 
@@ -1104,6 +1199,18 @@ worldgen:
 | `trees.weights.*` содержит неизвестную форму или отрицательный вес | веса должны ссылаться на поддержанные формы крон |
 | `trees.crown_shape: mixed` и сумма weights `<= 0` | для mixed нужна положительная сумма весов |
 | `trees.biome_density_multipliers.*` содержит неизвестный биом или отрицательное значение | multipliers должны ссылаться на поддержанные биомы |
+| Неизвестный ключ в `vehicles` | имена параметров `vehicles` валидируются строго |
+| `vehicles.density_per_km` или `parking_density_per_ha < 0` | плотности не могут быть отрицательными |
+| `vehicles.min_spacing_m`, `clearance_m`, `sample_spacing_m` или `max_points_per_vehicle <= 0` | spacing, clearance и point cap должны быть положительными |
+| `vehicles.length_m`, `width_m`, `height_m`, `wheel_radius_m <= 0` | габариты при явном переопределении должны быть положительными |
+| `vehicles.vehicle_type` неизвестен | поддерживаются `car`, `truck`, `bus`, `emergency`, `tractor`, `mixed` и aliases |
+| `vehicles.placement_modes` содержит неизвестный режим | поддерживаются `road`, `parking`, `industrial_yard`, `mixed` |
+| `vehicles.side_of_road` неизвестен | поддерживаются `left`, `right`, `both` |
+| `vehicles.parked_ratio` вне `0..1` | доля стоящего транспорта должна быть в допустимом диапазоне |
+| `vehicles.allowed_road_profiles` содержит неизвестный profile | profiles должны существовать в `roads.profiles.definitions` |
+| `vehicles.weights.*` содержит неизвестный тип или отрицательный вес | веса должны ссылаться на поддержанные типы транспорта |
+| `vehicles.vehicle_type: mixed` и сумма weights `<= 0` | для mixed нужна положительная сумма весов |
+| `vehicles.biome_density_multipliers.*` содержит неизвестный биом или отрицательное значение | multipliers должны ссылаться на поддержанные биомы |
 | Неизвестный ключ в `mobile_lidar` | имена параметров `mobile_lidar` валидируются строго |
 | `mobile_lidar.output_mode` неизвестен | поддерживаются `additive`, `lidar_only` |
 | `mobile_lidar.trajectory` неизвестен | поддерживаются `centerline`, `line`, `road` |
@@ -1130,6 +1237,7 @@ worldgen:
 | `configs/demo_parcels.yaml` | Parcel subdivision и здания, привязанные к parcels, на легком тайле. |
 | `configs/demo_parcel_fences.yaml` | Parcel subdivision с разными ограждениями, воротными разрывами и фундаментами. |
 | `configs/demo_trees.yaml` | Опциональный слой деревьев: mixed кроны, biome-aware density, natural-ground placement и tree classes. |
+| `configs/demo_vehicles.yaml` | Опциональный слой транспорта: road vehicles, parking/yard placement, mixed vehicle types и vehicle classes. |
 | `configs/demo_parcel_alignment.yaml` | Выравнивание зданий по parcels, mixed roads, profiles, footprints и roofs. |
 | `configs/demo_oriented_parcels.yaml` | Oriented block/parcel subdivision, orientation context от road model и выровненные здания. |
 | `configs/demo_universal_showcase.yaml` | Большой интеграционный демонстрационный сценарий: mixed roads, profiles, биомы, parcels, mixed footprints, mixed roofs. См. `doc/universal_showcase.md`. |

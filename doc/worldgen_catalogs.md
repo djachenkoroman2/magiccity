@@ -1,6 +1,6 @@
 # Справочник по worldgen catalogs citygen
 
-`citygen` использует подход, похожий на Minecraft worldgen, в архитектурном смысле: генерация разбита на явные стадии, а поддержанные биомы, типы объектов, surface-классы, модели дорог, road profiles, footprints, roofs, fences и tree crowns описаны в registry/catalog слое.
+`citygen` использует подход, похожий на Minecraft worldgen, в архитектурном смысле: генерация разбита на явные стадии, а поддержанные биомы, типы объектов, surface-классы, модели дорог, road profiles, footprints, roofs, fences, tree crowns и vehicle types описаны в registry/catalog слое.
 
 Это не voxel/block система и не runtime для data packs. Текущий MVP использует Python dataclass definitions в `citygen/catalogs.py`; они являются единым источником истины для поддержанных ids, сводок metadata и тестов покрытия документации.
 
@@ -11,6 +11,7 @@
 - `doc/parcels.md` — block/parcel subdivision и oriented parcels;
 - `doc/fences.md` — fence catalog ids, генерация ограждений, ворота, фундаменты и metadata;
 - `doc/trees.md` — tree crown ids, biome-aware density, placement и sampling деревьев;
+- `doc/vehicles.md` — vehicle type ids, placement modes, sampling и LiDAR транспорта;
 - `doc/sampling.md` — detailed sampling pipeline, surface sampling, mobile LiDAR и metadata diagnostics;
 - `doc/generated_objects.md` — object feature ids и counts в metadata;
 - `doc/building_footprints.md` и `doc/building_roofs.md` — каталоги геометрии зданий.
@@ -30,7 +31,8 @@
 | `objects` | Размещение зданий и связанных footprint/roof features. |
 | `fences` | Опциональное размещение fence segments и foundations по boundaries parcels. |
 | `trees` | Опциональное размещение деревьев на natural ground с учетом биомов, дорог, зданий и fences. |
-| `sampling` | Семплирование поверхностей рельефа, roads, sidewalks, medians, facades, roofs, fences и деревьев, плюс опциональный mobile LiDAR ray sampling. |
+| `vehicles` | Опциональное размещение транспорта на carriageway, parking pockets и industrial yards. |
+| `sampling` | Семплирование поверхностей рельефа, roads, sidewalks, medians, facades, roofs, fences, деревьев и транспорта, плюс опциональный mobile LiDAR ray sampling. |
 | `export_ply` | Экспорт ASCII PLY. |
 | `export_metadata` | Экспорт JSON metadata. |
 
@@ -53,6 +55,7 @@ citygen/catalogs.py
 - `RoofDefinition`
 - `FenceDefinition`
 - `TreeCrownDefinition`
+- `VehicleTypeDefinition`
 - `SemanticClassDefinition`
 - `ObjectFeatureDefinition`
 - `WorldgenCatalogs`
@@ -90,6 +93,10 @@ citygen/catalogs.py
 - `tree`
 - `tree_trunk`
 - `tree_crown`
+- `vehicle`
+- `vehicle_body`
+- `vehicle_wheel`
+- `vehicle_window`
 
 Чтобы добавить новый generated object feature:
 
@@ -111,6 +118,18 @@ Tree crown catalog ids:
 - `umbrella`
 
 Формы используются секцией `trees`: `crown_shape` может указывать конкретный id или `mixed`, а `trees.weights` задает weighted selector для смешанной посадки. Alias-значения (`sphere`, `oval`, `conical`, `narrow`, `wide` и другие) нормализуются на уровне загрузки YAML, но canonical ids в catalogs остаются стабильными.
+
+## Идентификаторы типов транспорта
+
+Vehicle type catalog ids:
+
+- `car`
+- `truck`
+- `bus`
+- `emergency`
+- `tractor`
+
+Типы используются секцией `vehicles`: `vehicle_type` может указывать конкретный id или `mixed`, а `vehicles.weights` задает weighted selector. Alias-значения (`sedan`, `van`, `lorry`, `firetruck`, `utility`, `farm_tractor` и другие) нормализуются на уровне загрузки YAML; canonical ids в catalogs остаются стабильными.
 
 ## Взвешенные селекторы
 
@@ -138,7 +157,7 @@ Metadata теперь содержит дополнительные раздел
 - `biome_catalog`: tags, preferred road model и road profile weights;
 - `object_feature_counts`: простые агрегаты по feature ids.
 
-Старые поля сохранены: `road_models`, `biome_counts`, `building_counts`, `parcel_counts`, `supported_footprint_types`, `supported_roof_types`, `config`. Fence layer добавляет `fence_counts` и `supported_fence_types`; tree layer добавляет `tree_counts` и `supported_tree_crown_shapes`. Road/profile metadata (`road_profile_counts`, `road_widths`, `road_median`), parcel geometry metadata (`parcel_building_alignment`, `building_orientations`, `block_geometry`, `parcel_geometry`), fence metadata и tree metadata остаются отдельными runtime-агрегатами, а не catalog definitions.
+Старые поля сохранены: `road_models`, `biome_counts`, `building_counts`, `parcel_counts`, `supported_footprint_types`, `supported_roof_types`, `config`. Fence layer добавляет `fence_counts` и `supported_fence_types`; tree layer добавляет `tree_counts` и `supported_tree_crown_shapes`; vehicle layer добавляет `vehicle_counts`, `supported_vehicle_types`, `vehicle_catalog` и `vehicle_aliases`. Road/profile metadata (`road_profile_counts`, `road_widths`, `road_median`), parcel geometry metadata (`parcel_building_alignment`, `building_orientations`, `block_geometry`, `parcel_geometry`), fence/tree/vehicle metadata остаются отдельными runtime-агрегатами, а не catalog definitions.
 
 Mobile LiDAR добавляет runtime-агрегаты `mobile_lidar` и `point_sources`. Они не являются catalog definitions и не добавляют новых object feature ids.
 

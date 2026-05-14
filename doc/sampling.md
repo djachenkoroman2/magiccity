@@ -4,9 +4,10 @@
 
 Источник истины по реализации:
 
-- `citygen/sampling.py` - surface sampling рельефа, дорог, зданий, деревьев и объединение с mobile LiDAR;
+- `citygen/sampling.py` - surface sampling рельефа, дорог, зданий, деревьев, транспорта и объединение с mobile LiDAR;
 - `citygen/fences.py` - sampling ограждений и фундаментов;
 - `citygen/trees.py` - sampling стволов/крон и helper-ы для LiDAR-пересечений;
+- `citygen/vehicles.py` - sampling корпуса/колес/окон и helper-ы для LiDAR-пересечений транспорта;
 - `citygen/mobile_lidar.py` - ray sampling мобильного LiDAR;
 - `citygen/export.py` - PLY-поля, metadata и диагностические агрегаты;
 - `citygen/config.py` - значения по умолчанию и валидация параметров.
@@ -16,7 +17,7 @@
 Вход `sampling`:
 
 - resolved `CityGenConfig` после применения defaults и валидации;
-- `Scene` из `generate_scene(config)`: bbox тайла, work bbox с margin, дорожная сеть, здания, parcels, fences, trees, biome counts и worldgen context.
+- `Scene` из `generate_scene(config)`: bbox тайла, work bbox с margin, дорожная сеть, здания, parcels, fences, trees, vehicles, biome counts и worldgen context.
 
 Выход `sampling`:
 
@@ -25,7 +26,7 @@
 - semantic class и RGB назначаются из `POINT_CLASSES`;
 - PLY-поля `red/green/blue` и `class` записываются только если включены `output.include_rgb` и `output.include_class`.
 
-`sampling` не создает дорожную сеть, parcels, здания, fences или trees. Эти объекты должны быть уже построены на предыдущих стадиях `roads`, `parcels`, `objects`, `fences` и `trees`. На стадии sampling они только превращаются в точки.
+`sampling` не создает дорожную сеть, parcels, здания, fences, trees или vehicles. Эти объекты должны быть уже построены на предыдущих стадиях `roads`, `parcels`, `objects`, `fences`, `trees` и `vehicles`. На стадии sampling они только превращаются в точки.
 
 ## Порядок выполнения
 
@@ -50,18 +51,20 @@ Surface sampling внутри `_sample_surface_scene` выполняется в 
 2. `_sample_building` для каждого здания - крыши и фасады.
 3. `sample_fence_segment` для каждого fence segment - тело ограждения и, если нужен, фундамент.
 4. `sample_tree` для каждого дерева - ствол и крона.
-5. `_crop_points(points, scene.bbox)` - финальная обрезка по границам тайла.
+5. `sample_vehicle` для каждого транспортного средства - корпус, колеса и окна.
+6. `_crop_points(points, scene.bbox)` - финальная обрезка по границам тайла.
 
 ## Стадии surface sampling
 
 | Стадия | Код | Вход | Выход | Основные параметры |
 | --- | --- | --- | --- | --- |
-| Подготовка сцены | `generate_scene`, `WorldgenContext` | `CityGenConfig` | `Scene` с `bbox` и `work_bbox` | `tile.size_m`, `tile.margin_m`, `roads`, `buildings`, `parcels`, `fences`, `trees` |
+| Подготовка сцены | `generate_scene`, `WorldgenContext` | `CityGenConfig` | `Scene` с `bbox` и `work_bbox` | `tile.size_m`, `tile.margin_m`, `roads`, `buildings`, `parcels`, `fences`, `trees`, `vehicles` |
 | Tile surfaces | `_sample_tile_surfaces` | `scene.bbox`, `scene.road_network`, `scene.buildings` | `ground`, `road`, `sidewalk`, `road_median` points | `sampling.ground_spacing_m`, `sampling.road_spacing_m`, `sampling.jitter_ratio`, `terrain`, `roads`, `roads.profiles` |
 | Roofs | `_sample_roof` | `Building.footprint`, `Building.roof` | `building_roof` points | `sampling.building_spacing_m`, `sampling.jitter_ratio`, `buildings.roof` |
 | Facades | `_sample_facades` | `Building.footprint.boundary_segments`, `base_z`, `eave_z` | `building_facade` points | `sampling.building_spacing_m`, `sampling.jitter_ratio`, `buildings.*`, `buildings.footprint` |
 | Fences | `sample_fence_segment` | `FenceSegment` | `fence`, `fence_foundation` points | `fences.sample_spacing_m`, `fences.height_m`, `fences.foundation_*`, `fences.openness`, `fences.decorative` |
 | Trees | `sample_tree` | `Tree` | `tree_trunk`, `tree_crown` points | `trees.sample_spacing_m`, `trees.crown_shape`, `trees.crown_segments` |
+| Vehicles | `sample_vehicle` | `Vehicle` | `vehicle_body`, `vehicle_wheel`, `vehicle_window` points | `vehicles.sample_spacing_m`, `vehicles.max_points_per_vehicle`, vehicle catalog dimensions |
 | Mobile LiDAR | `sample_mobile_lidar` | `Scene`, ray trajectory | LiDAR points with normal semantic classes | `mobile_lidar.*` |
 | Cropping | `_crop_points` | all generated points | points inside `scene.bbox` | `tile.x`, `tile.y`, `tile.size_m` |
 | Export metadata | `write_metadata` | final points, config, scene | `*.metadata.json` | `output.*`, `mobile_lidar.*`, resolved config |
@@ -148,6 +151,22 @@ Fence placement itself respects parcels, road clearance, building conflicts, sid
 
 Размещение деревьев не происходит в sampling. Оно уже проверило natural ground, road/sidewalk/median clearance, footprints зданий, fences, границы тайла, biome density multipliers и `min_spacing_m`.
 
+## Vehicles
+
+Транспорт генерируется до sampling на стадии `vehicles`. Surface sampling получает готовые `Vehicle` instances и не меняет placement.
+
+Для каждого транспортного средства:
+
+- `base_z` уже вычислен через `terrain_height` в точке установки;
+- корпус семплируется как oriented box в world-space;
+- колеса семплируются как упрощенные диски/кольца;
+- окна семплируются как patches на боках и торцах корпуса;
+- `vehicles.sample_spacing_m` задает шаг точек;
+- `vehicles.max_points_per_vehicle` ограничивает число точек на объект;
+- точки получают semantic classes `vehicle_body`, `vehicle_wheel`, `vehicle_window`.
+
+Размещение транспорта не происходит в sampling. Оно уже проверило road/parking/industrial_yard surface, road profiles, sidewalks/medians, здания, fences, trees, границы тайла, biome density multipliers, type weights и `min_spacing_m`.
+
 ## Mobile LiDAR mode
 
 Mobile LiDAR is not a second value of `sampling.mode`. It is controlled by the separate `mobile_lidar` section, while `sampling.mode` must still be `surface`.
@@ -159,7 +178,7 @@ When enabled, `sample_mobile_lidar`:
 3. Computes vertical angles from `vertical_center_degrees`, `vertical_fov_degrees` and `vertical_channels`.
 4. Emits one ray for every position, horizontal offset and vertical channel.
 5. Applies deterministic drop probability and optional angle jitter per ray.
-6. Traces the ray against terrain, roads, sidewalks, medians, building facades, building roofs, trees and, when occlusions are enabled, fences.
+6. Traces the ray against terrain, roads, sidewalks, medians, building facades, building roofs, trees, vehicles and, when occlusions are enabled, fences.
 7. Keeps the nearest hit when `occlusions_enabled: true`.
 8. Applies distance attenuation and optional range noise.
 9. Assigns the semantic class of the hit surface.
@@ -185,6 +204,7 @@ Notes:
 - нет настроек `max_points`, `per_class_density`, `drop_probability` для surface sampling или явного point budget;
 - отдельная плотность fence-точек находится в `fences.sample_spacing_m`;
 - отдельная плотность tree-точек находится в `trees.sample_spacing_m`;
+- отдельная плотность vehicle-точек находится в `vehicles.sample_spacing_m`, а cap - в `vehicles.max_points_per_vehicle`;
 - настройки лучей LiDAR находятся в `mobile_lidar.*`.
 
 ### Related settings that affect sampled points
@@ -198,6 +218,7 @@ Notes:
 | `parcels` | `enabled`, parcel geometry | Косвенно меняет здания и является условием для fences. |
 | `fences` | `enabled`, `mode`, `type`, `sample_spacing_m`, `height_m`, `foundation`, `openness` | Добавляет `fence` и `fence_foundation` points и влияет на LiDAR-окклюзии. |
 | `trees` | `enabled`, `density_per_ha`, `biome_density_multipliers`, `crown_shape`, `sample_spacing_m`, clearances | Добавляет `tree_trunk` и `tree_crown` points и влияет на LiDAR-окклюзии. |
+| `vehicles` | `enabled`, `density_per_km`, `parking_density_per_ha`, `vehicle_type`, `placement_modes`, `sample_spacing_m`, clearances | Добавляет `vehicle_body`, `vehicle_wheel`, `vehicle_window` points и влияет на LiDAR-окклюзии. |
 | `mobile_lidar` | все поля секции | Добавляет ray-sampled точки или заменяет surface output при `output_mode: lidar_only`. |
 | `output` | `include_rgb`, `include_class` | Не меняет внутренние точки, но меняет набор PLY-полей. |
 
@@ -205,7 +226,7 @@ Notes:
 
 | Режим | Как включить | Результат |
 | --- | --- | --- |
-| Surface only | `mobile_lidar.enabled: false` | Регулярно сэмплированные поверхности: ground, roads, sidewalks, medians, roofs, facades, fences, trees. |
+| Surface only | `mobile_lidar.enabled: false` | Регулярно сэмплированные поверхности: ground, roads, sidewalks, medians, roofs, facades, fences, trees, vehicles. |
 | Surface + LiDAR | `mobile_lidar.enabled: true`, `output_mode: additive` | Surface points плюс ray hits мобильного сенсора. |
 | LiDAR only | `mobile_lidar.enabled: true`, `output_mode: lidar_only` | Только видимые с траектории ray hits; surface grid не попадает в итоговый PLY. |
 | No-jitter surface | `sampling.jitter_ratio: 0` | Surface grid без случайного смещения. Если `ground_spacing_m != road_spacing_m`, thinning все равно остается детерминированным. |
@@ -341,10 +362,11 @@ tile surface points ~= tile area / spacing^2
 - buildings добавляют roof points по площади footprint и facade points по периметру и высоте;
 - fences добавляют точки по длине сегментов и высоте;
 - trees добавляют точки по высоте стволов и поверхности крон; число деревьев зависит от плотности, биомов и clearances;
+- vehicles добавляют точки корпуса, колес и окон; число объектов зависит от road/parking density, биомов, road profiles, parcels и clearances;
 - LiDAR добавляет максимум `sensor_positions * horizontal_steps * vertical_channels` лучей, но drop, misses, attenuation and occlusions уменьшают число итоговых точек;
 - crop по bbox тайла может удалить точки, построенные в расширенной work area.
 
-`sampling.jitter_ratio` меняет координаты surface points, но не должен заметно менять количество точек. `seed` влияет на jitter, thinning, buildings, fences, trees, road details and LiDAR randomness. При одинаковом `seed` и одинаковом resolved config результат детерминирован.
+`sampling.jitter_ratio` меняет координаты surface points, но не должен заметно менять количество точек. `seed` влияет на jitter, thinning, buildings, fences, trees, vehicles, road details and LiDAR randomness. При одинаковом `seed` и одинаковом resolved config результат детерминирован.
 
 Самые дорогие настройки:
 
@@ -352,6 +374,7 @@ tile surface points ~= tile area / spacing^2
 - маленький `building_spacing_m` при большом количестве высоких зданий;
 - маленький `fences.sample_spacing_m` при плотных parcels;
 - маленький `trees.sample_spacing_m` при высокой `trees.density_per_ha`;
+- маленький `vehicles.sample_spacing_m` при высокой `vehicles.density_per_km` или `parking_density_per_ha`;
 - маленький `mobile_lidar.horizontal_step_degrees`, большой `vertical_channels`, маленький `position_step_m` и маленький `ray_step_m`.
 
 ## Semantic class и RGB
@@ -370,6 +393,9 @@ Surface и LiDAR используют один и тот же catalog semantic c
 | `8` | `fence_foundation` | `118, 112, 103` | fence foundation or LiDAR foundation hit |
 | `9` | `tree_trunk` | `111, 78, 46` | tree trunk surface or LiDAR trunk hit |
 | `10` | `tree_crown` | `54, 128, 70` | tree crown surface or LiDAR crown hit |
+| `11` | `vehicle_body` | `52, 93, 142` | vehicle body surface or LiDAR oriented-box hit |
+| `12` | `vehicle_wheel` | `28, 30, 33` | vehicle wheel surface sampling |
+| `13` | `vehicle_window` | `98, 148, 172` | vehicle window surface sampling |
 
 PLY export may omit RGB or class fields, but metadata still contains `class_counts` and `class_mapping` because internal `Point` objects always carry color and class id.
 
@@ -383,6 +409,7 @@ In an interactive terminal, the CLI uses `tqdm` progress bars for long `sampling
 tile 1/1 (x=0, y=0) sampling tile_surfaces: 100%|██████████| 171/171 row, pts=21263, ground=8409, hardscape=12854
 tile 1/1 (x=0, y=0) sampling buildings: 100%|██████████| 8/8 building, pts=5221, roof=837, facade=4384
 tile 1/1 (x=0, y=0) sampling trees: 100%|██████████| 58/58 tree, total_tree_points=3797, total_trunk_points=1680, total_crown_points=2117
+tile 1/1 (x=0, y=0) sampling vehicles: 100%|██████████| 14/14 vehicle, total_vehicle_points=4200, total_body_points=2600, total_wheel_points=900, total_window_points=700
 tile 1/1 (x=0, y=0) sampling mobile LiDAR rays: 100%|██████████| 17856/17856 ray, hits=14302, dropped=360, missed=2871, attenuated=323, pts=14302
 ```
 
@@ -393,13 +420,14 @@ citygen: tile 1/1 (x=0, y=0) sampling tile_surfaces started - grid_rows=129, gri
 citygen: tile 1/1 (x=0, y=0) sampling tile_surfaces progress - rows=33, total_rows=129, grid_samples=4257, total_grid_samples=16641, points=3798, class_counts={ground=1875, road=1296, sidewalk=627}
 citygen: tile 1/1 (x=0, y=0) sampling buildings done - buildings=24, points=5221, roof_points=837, facade_points=4384
 citygen: tile 1/1 (x=0, y=0) sampling trees done - trees=58, points=3797, trunk_points=1680, crown_points=2117
-citygen: tile 1/1 (x=0, y=0) sampling surface_total done - tile_surface_points=21263, building_points=5221, fence_points=0, cropped_tree_points=3797, surface_points_before_crop=30281, surface_points=30281
+citygen: tile 1/1 (x=0, y=0) sampling vehicles done - vehicles=14, points=4200, body_points=2600, wheel_points=900, window_points=700
+citygen: tile 1/1 (x=0, y=0) sampling surface_total done - tile_surface_points=21263, building_points=5221, fence_points=0, cropped_tree_points=3797, cropped_vehicle_points=4200, surface_points_before_crop=34481, surface_points=34481
 ```
 
 With `mobile_lidar.enabled: true`, the ray sampler is reported as a `sampling` substage while the CLI still keeps the high-level mobile LiDAR stage boundary:
 
 ```text
-citygen: tile 1/1 (x=0, y=0) stage 8/10 mobile LiDAR started
+citygen: tile 1/1 (x=0, y=0) stage 9/11 mobile LiDAR started
 citygen: tile 1/1 (x=0, y=0) sampling mobile LiDAR rays progress - positions=8, total_positions=31, processed_rays=4608, emitted_rays=4608, total_rays=17856, successful_hits=3721, dropped_rays=94, missed_rays=712, attenuated_rays=81, lidar_points=3721
 citygen: tile 1/1 (x=0, y=0) sampling mobile LiDAR rays done - sensor_positions=31, processed_rays=17856, total_rays=17856, emitted_rays=17856, successful_hits=14302, dropped_rays=360, missed_rays=2871, attenuated_rays=323, lidar_points=14302
 ```
@@ -412,15 +440,16 @@ Progress substages:
 | `buildings` | Always, including the zero-buildings case | `buildings`, `points`, `roof_points`, `facade_points`; in `--verbose`, per-building `item_done` also includes `building_id`, `total_roof_points` and `total_facade_points` |
 | `fences` | Only when generated fence segments exist | `fence_segments`, `points`, `fence_points`, `foundation_points`; in `--verbose`, per-segment `item_done` also includes `segment_id`, `total_fence_body_points` and `total_foundation_points` |
 | `trees` | Only when generated trees exist | `trees`, `points`, `trunk_points`, `crown_points`; in `--verbose`, per-tree `item_done` also includes `tree_id`, `total_trunk_points` and `total_crown_points` |
-| `surface_total` | End of surface sampling before LiDAR merge | `tile_surface_points`, `building_points`, `fence_points`, `ground_points`, `hardscape_points`, `cropped_building_points`, `cropped_fence_points`, `cropped_tree_points`, `surface_points_before_crop`, `surface_points`, `class_counts` |
+| `vehicles` | Only when generated vehicles exist | `vehicles`, `points`, `body_points`, `wheel_points`, `window_points`; in `--verbose`, per-vehicle `item_done` also includes `vehicle_id`, `total_body_points`, `total_wheel_points` and `total_window_points` |
+| `surface_total` | End of surface sampling before LiDAR merge | `tile_surface_points`, `building_points`, `fence_points`, `ground_points`, `hardscape_points`, `cropped_building_points`, `cropped_fence_points`, `cropped_tree_points`, `cropped_vehicle_points`, `surface_points_before_crop`, `surface_points`, `class_counts` |
 | `mobile_lidar_rays` | Only when `mobile_lidar.enabled: true`; printed as `sampling mobile LiDAR rays` | `sensor_positions`, `processed_rays`, `emitted_rays`, `total_rays`, `successful_hits`, `dropped_rays`, `missed_rays`, `attenuated_rays`, `lidar_points` |
 
 Verbosity rules:
 
-- default interactive mode shows compact `tqdm` bars for `tile_surfaces`, `buildings`, `fences`, `trees` and `mobile_lidar_rays`;
+- default interactive mode shows compact `tqdm` bars for `tile_surfaces`, `buildings`, `fences`, `trees`, `vehicles` and `mobile_lidar_rays`;
 - default non-TTY mode prints compact started/progress/done lines for sampling substages;
 - `--quiet` suppresses progress bars and intermediate progress lines, keeping only final `Wrote ...` paths;
-- `--verbose` shows extra counters in tqdm postfixes and, in non-TTY mode, prints more detailed item-level diagnostics for buildings, fence segments, trees and LiDAR sensor positions.
+- `--verbose` shows extra counters in tqdm postfixes and, in non-TTY mode, prints more detailed item-level diagnostics for buildings, fence segments, trees, vehicles and LiDAR sensor positions.
 
 The `tqdm` dependency is used only by the CLI reporting layer. Sampling code emits structured progress events and remains usable from Python without CLI formatting.
 
@@ -434,8 +463,9 @@ After `write_metadata`, the JSON file contains several fields useful for samplin
 | `class_counts` | Distribution by semantic class name. This is the main surface sampling sanity check. |
 | `class_mapping` | Stable mapping from class names to class ids. |
 | `class_colors` | Stable RGB palette for semantic classes. |
-| `object_feature_counts` | Counts grouped by feature ids such as `terrain_surface`, `road_surface`, `road_sidewalk`, `road_median`, `building_roof`, `parcel_fence`, `fence_foundation`, `tree`, `tree_trunk`, `tree_crown`. |
+| `object_feature_counts` | Counts grouped by feature ids such as `terrain_surface`, `road_surface`, `road_sidewalk`, `road_median`, `building_roof`, `parcel_fence`, `fence_foundation`, `tree`, `tree_trunk`, `tree_crown`, `vehicle`, `vehicle_body`, `vehicle_wheel`, `vehicle_window`. |
 | `tree_counts` | Total trees, counts by crown shape and biome, height stats, trunk/crown point counts. |
+| `vehicle_counts` | Total vehicles, counts by type, placement mode and biome, dimension stats, body/wheel/window point counts. |
 | `mobile_lidar` | Whether LiDAR was enabled, sensor positions, emitted rays, successful hits, dropped rays, misses, attenuated rays and hit counts by class. |
 | `point_sources` | Aggregate split between `surface_sampling` and `mobile_lidar`, plus mode: `surface_only`, `additive` or `lidar_only`. |
 | `config` | Full resolved config after defaults. Use this to confirm actual sampling and LiDAR parameters. |

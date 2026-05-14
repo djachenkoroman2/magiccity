@@ -12,6 +12,7 @@ from .geometry import BBox, Building, Point, Rect, stable_rng, terrain_height
 from .roads import InfiniteLinePrimitive, PolylinePrimitive, RingPrimitive, SegmentPrimitive
 from .roofs import default_flat_roof
 from .trees import tree_ray_hits
+from .vehicles import vehicle_ray_hits
 
 
 @dataclass(frozen=True)
@@ -212,6 +213,11 @@ def _trace_ray(
 
     for tree in getattr(scene, "trees", ()):
         for distance, class_name in tree_ray_hits(config, tree, origin, direction):
+            x, y, z = _point_on_ray(origin, direction, distance)
+            hits.append(RayHit(distance, class_name, x, y, z))
+
+    for vehicle in getattr(scene, "vehicles", ()):
+        for distance, class_name in vehicle_ray_hits(config, vehicle, origin, direction):
             x, y, z = _point_on_ray(origin, direction, distance)
             hits.append(RayHit(distance, class_name, x, y, z))
 

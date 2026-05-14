@@ -8,13 +8,15 @@ import yaml
 
 from .catalogs import (
     BIOME_DEFINITIONS,
-    DEFAULT_MIXED_TREE_WEIGHTS,
     DEFAULT_MIXED_FENCE_WEIGHTS,
     DEFAULT_MIXED_FOOTPRINT_WEIGHTS,
     DEFAULT_MIXED_ROOF_WEIGHTS,
+    DEFAULT_MIXED_TREE_WEIGHTS,
+    DEFAULT_MIXED_VEHICLE_WEIGHTS,
     DEFAULT_ROAD_PROFILE_BIOME_WEIGHTS,
     DEFAULT_ROAD_PROFILE_MODEL_WEIGHTS,
     DEFAULT_TREE_BIOME_DENSITY_MULTIPLIERS,
+    DEFAULT_VEHICLE_BIOME_DENSITY_MULTIPLIERS,
     FENCE_DEFINITIONS,
     FENCE_MODEL_ALIASES,
     FOOTPRINT_DEFINITIONS,
@@ -24,6 +26,8 @@ from .catalogs import (
     ROOF_MODEL_ALIASES,
     TREE_CROWN_ALIASES,
     TREE_CROWN_DEFINITIONS,
+    VEHICLE_TYPE_ALIASES,
+    VEHICLE_TYPE_DEFINITIONS,
     validate_catalogs,
 )
 
@@ -56,6 +60,14 @@ SUPPORTED_FENCE_FOUNDATION_MODES = {"auto", "always", "never"}
 SUPPORTED_TREE_CROWN_SHAPES = set(TREE_CROWN_DEFINITIONS) | {"mixed"}
 
 SUPPORTED_CONCRETE_TREE_CROWN_SHAPES = SUPPORTED_TREE_CROWN_SHAPES - {"mixed"}
+
+SUPPORTED_VEHICLE_TYPES = set(VEHICLE_TYPE_DEFINITIONS) | {"mixed"}
+
+SUPPORTED_CONCRETE_VEHICLE_TYPES = SUPPORTED_VEHICLE_TYPES - {"mixed"}
+
+SUPPORTED_VEHICLE_PLACEMENT_MODES = {"road", "parking", "industrial_yard"}
+
+SUPPORTED_VEHICLE_SIDE_OF_ROAD = {"left", "right", "both"}
 
 SUPPORTED_MOBILE_LIDAR_TRAJECTORIES = {"centerline", "line", "road"}
 
@@ -283,6 +295,37 @@ class TreesConfig:
 
 
 @dataclass(frozen=True)
+class VehiclesConfig:
+    enabled: bool = False
+    density_per_km: float = 10.0
+    parking_density_per_ha: float = 12.0
+    min_spacing_m: float = 8.0
+    placement_modes: tuple[str, ...] = ("road", "parking", "industrial_yard")
+    vehicle_type: str = "mixed"
+    weights: dict[str, float] = field(default_factory=lambda: dict(DEFAULT_MIXED_VEHICLE_WEIGHTS))
+    biome_density_multipliers: dict[str, float] = field(
+        default_factory=lambda: dict(DEFAULT_VEHICLE_BIOME_DENSITY_MULTIPLIERS)
+    )
+    length_m: float | None = None
+    width_m: float | None = None
+    height_m: float | None = None
+    wheel_radius_m: float | None = None
+    clearance_m: float = 0.7
+    orientation_jitter_degrees: float = 3.0
+    building_clearance_m: float = 1.0
+    fence_clearance_m: float = 0.6
+    tree_clearance_m: float = 1.5
+    tile_margin_clearance_m: float = 1.0
+    allow_road_medians: bool = False
+    allowed_road_profiles: tuple[str, ...] = ()
+    lane_offset_m: float | None = None
+    parked_ratio: float = 0.35
+    side_of_road: str = "both"
+    sample_spacing_m: float = 0.75
+    max_points_per_vehicle: int = 500
+
+
+@dataclass(frozen=True)
 class MobileLidarConfig:
     enabled: bool = False
     output_mode: str = "additive"
@@ -328,6 +371,7 @@ class CityGenConfig:
     parcels: ParcelsConfig = ParcelsConfig()
     fences: FencesConfig = FencesConfig()
     trees: TreesConfig = TreesConfig()
+    vehicles: VehiclesConfig = VehiclesConfig()
     mobile_lidar: MobileLidarConfig = MobileLidarConfig()
     worldgen: WorldgenConfig = WorldgenConfig()
     tiles: tuple[TileConfig, ...] = ()
@@ -364,6 +408,7 @@ def load_config(path: str | Path) -> CityGenConfig:
         parcels=_parcels_config(_section(raw, "parcels")),
         fences=_fences_config(_section(raw, "fences")),
         trees=_trees_config(_section(raw, "trees")),
+        vehicles=_vehicles_config(_section(raw, "vehicles")),
         mobile_lidar=_mobile_lidar_config(_section(raw, "mobile_lidar")),
         worldgen=_worldgen_config(_section(raw, "worldgen")),
         tiles=tiles,
@@ -1030,6 +1075,142 @@ def _tree_biome_density_multipliers(raw: Any) -> dict[str, float]:
     return multipliers
 
 
+def _vehicles_config(raw: dict[str, Any]) -> VehiclesConfig:
+    supported = {
+        "enabled",
+        "density_per_km",
+        "parking_density_per_ha",
+        "min_spacing_m",
+        "placement_modes",
+        "vehicle_type",
+        "weights",
+        "biome_density_multipliers",
+        "length_m",
+        "width_m",
+        "height_m",
+        "wheel_radius_m",
+        "clearance_m",
+        "orientation_jitter_degrees",
+        "building_clearance_m",
+        "fence_clearance_m",
+        "tree_clearance_m",
+        "tile_margin_clearance_m",
+        "allow_road_medians",
+        "allowed_road_profiles",
+        "lane_offset_m",
+        "parked_ratio",
+        "side_of_road",
+        "sample_spacing_m",
+        "max_points_per_vehicle",
+    }
+    for key in raw:
+        if key not in supported:
+            fields = ", ".join(sorted(supported))
+            raise ConfigError(f"Unsupported vehicles.{key}. Supported fields: {fields}.")
+
+    defaults = VehiclesConfig()
+    vehicle_type = _normalize_vehicle_type(_str(raw, "vehicle_type", defaults.vehicle_type))
+    return VehiclesConfig(
+        enabled=_bool(raw, "enabled", defaults.enabled),
+        density_per_km=_float(raw, "density_per_km", defaults.density_per_km),
+        parking_density_per_ha=_float(raw, "parking_density_per_ha", defaults.parking_density_per_ha),
+        min_spacing_m=_float(raw, "min_spacing_m", defaults.min_spacing_m),
+        placement_modes=_vehicle_placement_modes(raw.get("placement_modes"), defaults.placement_modes),
+        vehicle_type=vehicle_type,
+        weights=_vehicle_weights(raw.get("weights"), vehicle_type),
+        biome_density_multipliers=_vehicle_biome_density_multipliers(raw.get("biome_density_multipliers")),
+        length_m=_optional_float(raw, "length_m"),
+        width_m=_optional_float(raw, "width_m"),
+        height_m=_optional_float(raw, "height_m"),
+        wheel_radius_m=_optional_float(raw, "wheel_radius_m"),
+        clearance_m=_float(raw, "clearance_m", defaults.clearance_m),
+        orientation_jitter_degrees=_float(
+            raw,
+            "orientation_jitter_degrees",
+            defaults.orientation_jitter_degrees,
+        ),
+        building_clearance_m=_float(raw, "building_clearance_m", defaults.building_clearance_m),
+        fence_clearance_m=_float(raw, "fence_clearance_m", defaults.fence_clearance_m),
+        tree_clearance_m=_float(raw, "tree_clearance_m", defaults.tree_clearance_m),
+        tile_margin_clearance_m=_float(raw, "tile_margin_clearance_m", defaults.tile_margin_clearance_m),
+        allow_road_medians=_bool(raw, "allow_road_medians", defaults.allow_road_medians),
+        allowed_road_profiles=_str_tuple(raw, "allowed_road_profiles", defaults.allowed_road_profiles),
+        lane_offset_m=_optional_float(raw, "lane_offset_m"),
+        parked_ratio=_float(raw, "parked_ratio", defaults.parked_ratio),
+        side_of_road=_str(raw, "side_of_road", defaults.side_of_road),
+        sample_spacing_m=_float(raw, "sample_spacing_m", defaults.sample_spacing_m),
+        max_points_per_vehicle=_int(raw, "max_points_per_vehicle", defaults.max_points_per_vehicle),
+    )
+
+
+def _vehicle_weights(raw: Any, vehicle_type: str) -> dict[str, float]:
+    if raw is None:
+        return dict(DEFAULT_MIXED_VEHICLE_WEIGHTS) if vehicle_type == "mixed" else {}
+    if not isinstance(raw, dict):
+        raise ConfigError("vehicles.weights must be a mapping.")
+
+    weights: dict[str, float] = {}
+    for key, value in raw.items():
+        if not isinstance(key, str):
+            raise ConfigError("vehicles.weights keys must be strings.")
+        canonical = _normalize_vehicle_type(key)
+        if canonical == "mixed":
+            raise ConfigError("vehicles.weights cannot contain 'mixed'.")
+        if isinstance(value, bool):
+            raise ConfigError(f"vehicles.weights.{key} must be a number.")
+        try:
+            weight = float(value)
+        except (TypeError, ValueError) as exc:
+            raise ConfigError(f"vehicles.weights.{key} must be a number.") from exc
+        weights[canonical] = weight
+    return weights
+
+
+def _vehicle_biome_density_multipliers(raw: Any) -> dict[str, float]:
+    if raw is None:
+        return dict(DEFAULT_VEHICLE_BIOME_DENSITY_MULTIPLIERS)
+    if not isinstance(raw, dict):
+        raise ConfigError("vehicles.biome_density_multipliers must be a mapping.")
+
+    multipliers = dict(DEFAULT_VEHICLE_BIOME_DENSITY_MULTIPLIERS)
+    for biome, value in raw.items():
+        if not isinstance(biome, str):
+            raise ConfigError("vehicles.biome_density_multipliers keys must be strings.")
+        if isinstance(value, bool):
+            raise ConfigError(f"vehicles.biome_density_multipliers.{biome} must be a number.")
+        try:
+            multipliers[biome] = float(value)
+        except (TypeError, ValueError) as exc:
+            raise ConfigError(f"vehicles.biome_density_multipliers.{biome} must be a number.") from exc
+    return multipliers
+
+
+def _vehicle_placement_modes(raw: Any, default: tuple[str, ...]) -> tuple[str, ...]:
+    if raw is None:
+        return default
+    if isinstance(raw, str):
+        values = (raw,)
+    elif isinstance(raw, (list, tuple)):
+        values = tuple(raw)
+    else:
+        raise ConfigError("vehicles.placement_modes must be a string or list of strings.")
+    if not values:
+        raise ConfigError("vehicles.placement_modes must contain at least one mode.")
+
+    modes: list[str] = []
+    for index, value in enumerate(values):
+        if not isinstance(value, str):
+            raise ConfigError(f"vehicles.placement_modes[{index}] must be a string.")
+        if value == "mixed":
+            for mode in ("road", "parking", "industrial_yard"):
+                if mode not in modes:
+                    modes.append(mode)
+            continue
+        if value not in modes:
+            modes.append(value)
+    return tuple(modes)
+
+
 def _mobile_lidar_config(raw: dict[str, Any]) -> MobileLidarConfig:
     supported = {
         "enabled",
@@ -1170,6 +1351,10 @@ def _validate(cfg: CityGenConfig) -> None:
         ("trees.crown_radius_m", cfg.trees.crown_radius_m),
         ("trees.crown_segments", cfg.trees.crown_segments),
         ("trees.sample_spacing_m", cfg.trees.sample_spacing_m),
+        ("vehicles.min_spacing_m", cfg.vehicles.min_spacing_m),
+        ("vehicles.clearance_m", cfg.vehicles.clearance_m),
+        ("vehicles.sample_spacing_m", cfg.vehicles.sample_spacing_m),
+        ("vehicles.max_points_per_vehicle", cfg.vehicles.max_points_per_vehicle),
         ("mobile_lidar.sensor_height_m", cfg.mobile_lidar.sensor_height_m),
         ("mobile_lidar.position_step_m", cfg.mobile_lidar.position_step_m),
         ("mobile_lidar.min_range_m", cfg.mobile_lidar.min_range_m),
@@ -1360,6 +1545,65 @@ def _validate(cfg: CityGenConfig) -> None:
             raise ConfigError(f"Unsupported trees.biome_density_multipliers.{biome}. Supported biomes: {supported}.")
         if multiplier < 0:
             raise ConfigError(f"trees.biome_density_multipliers.{biome} must be >= 0.")
+    if cfg.vehicles.density_per_km < 0:
+        raise ConfigError("vehicles.density_per_km must be >= 0.")
+    if cfg.vehicles.parking_density_per_ha < 0:
+        raise ConfigError("vehicles.parking_density_per_ha must be >= 0.")
+    if cfg.vehicles.building_clearance_m < 0:
+        raise ConfigError("vehicles.building_clearance_m must be >= 0.")
+    if cfg.vehicles.fence_clearance_m < 0:
+        raise ConfigError("vehicles.fence_clearance_m must be >= 0.")
+    if cfg.vehicles.tree_clearance_m < 0:
+        raise ConfigError("vehicles.tree_clearance_m must be >= 0.")
+    if cfg.vehicles.tile_margin_clearance_m < 0:
+        raise ConfigError("vehicles.tile_margin_clearance_m must be >= 0.")
+    if cfg.vehicles.orientation_jitter_degrees < 0:
+        raise ConfigError("vehicles.orientation_jitter_degrees must be >= 0.")
+    if cfg.vehicles.lane_offset_m is not None and cfg.vehicles.lane_offset_m < 0:
+        raise ConfigError("vehicles.lane_offset_m must be >= 0.")
+    for field_name, value in (
+        ("length_m", cfg.vehicles.length_m),
+        ("width_m", cfg.vehicles.width_m),
+        ("height_m", cfg.vehicles.height_m),
+        ("wheel_radius_m", cfg.vehicles.wheel_radius_m),
+    ):
+        if value is not None and value <= 0:
+            raise ConfigError(f"vehicles.{field_name} must be positive.")
+    if cfg.vehicles.vehicle_type not in SUPPORTED_VEHICLE_TYPES:
+        supported = ", ".join(sorted(SUPPORTED_VEHICLE_TYPES))
+        raise ConfigError(f"Unsupported vehicles.vehicle_type='{cfg.vehicles.vehicle_type}'. Supported types: {supported}.")
+    for mode in cfg.vehicles.placement_modes:
+        if mode not in SUPPORTED_VEHICLE_PLACEMENT_MODES:
+            supported = ", ".join(sorted(SUPPORTED_VEHICLE_PLACEMENT_MODES))
+            raise ConfigError(f"vehicles.placement_modes contains unsupported mode '{mode}'. Supported modes: {supported}.")
+    if not cfg.vehicles.placement_modes:
+        raise ConfigError("vehicles.placement_modes must contain at least one mode.")
+    if cfg.vehicles.side_of_road not in SUPPORTED_VEHICLE_SIDE_OF_ROAD:
+        supported = ", ".join(sorted(SUPPORTED_VEHICLE_SIDE_OF_ROAD))
+        raise ConfigError(f"vehicles.side_of_road must be one of: {supported}.")
+    if not 0 <= cfg.vehicles.parked_ratio <= 1:
+        raise ConfigError("vehicles.parked_ratio must be between 0 and 1.")
+    for profile_name in cfg.vehicles.allowed_road_profiles:
+        if profile_name not in cfg.roads.profiles.definitions:
+            supported = ", ".join(sorted(cfg.roads.profiles.definitions))
+            raise ConfigError(
+                f"vehicles.allowed_road_profiles contains undefined profile '{profile_name}'. "
+                f"Supported profiles: {supported}."
+            )
+    for name, weight in cfg.vehicles.weights.items():
+        if name not in SUPPORTED_CONCRETE_VEHICLE_TYPES:
+            supported = ", ".join(sorted(SUPPORTED_CONCRETE_VEHICLE_TYPES))
+            raise ConfigError(f"Unsupported vehicles.weights key='{name}'. Supported vehicle types: {supported}.")
+        if weight < 0:
+            raise ConfigError(f"vehicles.weights.{name} must be >= 0.")
+    if cfg.vehicles.vehicle_type == "mixed" and sum(cfg.vehicles.weights.values()) <= 0:
+        raise ConfigError("vehicles.weights must have a positive sum for vehicle_type='mixed'.")
+    for biome, multiplier in cfg.vehicles.biome_density_multipliers.items():
+        if biome not in SUPPORTED_BIOMES:
+            supported = ", ".join(sorted(SUPPORTED_BIOMES))
+            raise ConfigError(f"Unsupported vehicles.biome_density_multipliers.{biome}. Supported biomes: {supported}.")
+        if multiplier < 0:
+            raise ConfigError(f"vehicles.biome_density_multipliers.{biome} must be >= 0.")
     if cfg.mobile_lidar.output_mode not in SUPPORTED_MOBILE_LIDAR_OUTPUT_MODES:
         supported = ", ".join(sorted(SUPPORTED_MOBILE_LIDAR_OUTPUT_MODES))
         raise ConfigError(f"mobile_lidar.output_mode must be one of: {supported}.")
@@ -1549,3 +1793,7 @@ def _normalize_fence_model(value: str) -> str:
 
 def _normalize_tree_crown_shape(value: str) -> str:
     return TREE_CROWN_ALIASES.get(value, value)
+
+
+def _normalize_vehicle_type(value: str) -> str:
+    return VEHICLE_TYPE_ALIASES.get(value, value)

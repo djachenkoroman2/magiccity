@@ -59,6 +59,9 @@
                                 <a href="trees.html" class="nav-link">Деревья</a>
                             </li>
                             <li class="nav-item">
+                                <a href="vehicles.html" class="nav-link">Транспорт</a>
+                            </li>
+                            <li class="nav-item">
                                 <a href="sampling.html" class="nav-link">Sampling pipeline</a>
                             </li>
                             <li class="nav-item">
@@ -158,6 +161,10 @@
               <ul class="nav flex-column">
               </ul>
             </li>
+            <li class="nav-item" data-bs-level="2"><a href="#vehicles" class="nav-link">vehicles</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
             <li class="nav-item" data-bs-level="2"><a href="#mobile_lidar" class="nav-link">mobile_lidar</a>
               <ul class="nav flex-column">
               </ul>
@@ -190,7 +197,7 @@
                     <div class="col-md-9" role="main">
 
 <h1 id="_1">Справочник по конфигурации</h1>
-<p>Этот документ является справочником по YAML-конфигам <code>citygen</code>, построенным от исходного кода. Источник истины: <code>CityGenConfig</code> и вложенные значения по умолчанию dataclass-ов в <code>citygen/config.py</code>, логика валидатора, каталоги в <code>citygen/catalogs.py</code>, runtime-код дорог/parcels/ограждений/деревьев/зданий и экспорт metadata.</p>
+<p>Этот документ является справочником по YAML-конфигам <code>citygen</code>, построенным от исходного кода. Источник истины: <code>CityGenConfig</code> и вложенные значения по умолчанию dataclass-ов в <code>citygen/config.py</code>, логика валидатора, каталоги в <code>citygen/catalogs.py</code>, runtime-код дорог/parcels/ограждений/деревьев/транспорта/зданий и экспорт metadata.</p>
 <p><code>configs/*.yaml</code> остаются примерами запуска и проверочными конфигами. Они не являются источником схемы.</p>
 <p>Связанные тематические документы:</p>
 <ul>
@@ -200,6 +207,7 @@
 <li><code>doc/parcels.md</code> — block/parcel subdivision и oriented parcels;</li>
 <li><code>doc/fences.md</code> — ограждения участков, типы заборов, ворота, фундаменты и metadata;</li>
 <li><code>doc/trees.md</code> — деревья, формы крон, biome-aware плотность, placement clearance, sampling и LiDAR;</li>
+<li><code>doc/vehicles.md</code> — транспорт, типы, road/parking/yard placement, sampling, LiDAR и metadata;</li>
 <li><code>doc/sampling.md</code> — стадии sampling pipeline, плотности точек, mobile LiDAR, semantic class/RGB и metadata;</li>
 <li><code>doc/building_footprints.md</code> — идентификаторы footprints, aliases и семплирование;</li>
 <li><code>doc/building_roofs.md</code> — идентификаторы roofs, aliases и функции высоты;</li>
@@ -213,7 +221,7 @@
 <p>Для multi-tile конфига <code>--out</code> должен быть директорией или может быть пропущен:</p>
 <pre><code class="language-bash">uv run citygen --config path/to/multi_tile_config.yaml --out outputs/multi_tile
 </code></pre>
-<p>CLI по умолчанию показывает preflight-сводку, progress по стадиям pipeline, внутренний progress стадии <code>sampling</code> и итоговый summary. <code>sampling</code> печатает line-based диагностику по <code>tile_surfaces</code>, <code>buildings</code>, <code>fences</code>, <code>trees</code> и <code>mobile LiDAR rays</code>, если соответствующие подэтапы участвуют в генерации. Для скриптов можно оставить только финальные пути:</p>
+<p>CLI по умолчанию показывает preflight-сводку, progress по стадиям pipeline, внутренний progress стадии <code>sampling</code> и итоговый summary. <code>sampling</code> печатает line-based диагностику по <code>tile_surfaces</code>, <code>buildings</code>, <code>fences</code>, <code>trees</code>, <code>vehicles</code> и <code>mobile LiDAR rays</code>, если соответствующие подэтапы участвуют в генерации. Для скриптов можно оставить только финальные пути:</p>
 <pre><code class="language-bash">uv run citygen --config configs/mvp.yaml --out outputs/mvp_tile.ply --quiet
 </code></pre>
 <p>Для диагностики доступны расширенные counters по стадиям и отдельные <code>item_done</code>-строки внутри <code>sampling</code>:</p>
@@ -227,7 +235,7 @@
 <li>Все размеры и расстояния задаются в метрах.</li>
 <li>Горизонтальные координаты сцены: <code>x</code> и <code>y</code>; высота: <code>z</code>.</li>
 <li>Булевы значения пишутся как <code>true</code> или <code>false</code>.</li>
-<li>Текущий загрузчик читает описанные ниже поля. Секции <code>terrain</code>, <code>parcels</code>, <code>fences</code>, <code>trees</code>, <code>mobile_lidar</code> и <code>worldgen</code> валидируют имена параметров строго, чтобы опечатки в новых слоях не проходили молча.</li>
+<li>Текущий загрузчик читает описанные ниже поля. Секции <code>terrain</code>, <code>parcels</code>, <code>fences</code>, <code>trees</code>, <code>vehicles</code>, <code>mobile_lidar</code> и <code>worldgen</code> валидируют имена параметров строго, чтобы опечатки в новых слоях не проходили молча.</li>
 </ul>
 <p>Минимальный валидный конфиг:</p>
 <pre><code class="language-yaml">seed: 7
@@ -379,6 +387,44 @@ trees:
   tile_margin_clearance_m: 1
   allow_road_medians: false
   sample_spacing_m: 1
+vehicles:
+  enabled: false
+  density_per_km: 10
+  parking_density_per_ha: 12
+  min_spacing_m: 8
+  placement_modes:
+    - road
+    - parking
+    - industrial_yard
+  vehicle_type: mixed
+  weights:
+    car: 0.55
+    truck: 0.18
+    bus: 0.10
+    emergency: 0.07
+    tractor: 0.10
+  biome_density_multipliers:
+    downtown: 1.25
+    residential: 0.85
+    industrial: 0.75
+    suburb: 0.65
+  length_m: null
+  width_m: null
+  height_m: null
+  wheel_radius_m: null
+  clearance_m: 0.7
+  orientation_jitter_degrees: 3
+  building_clearance_m: 1
+  fence_clearance_m: 0.6
+  tree_clearance_m: 1.5
+  tile_margin_clearance_m: 1
+  allow_road_medians: false
+  allowed_road_profiles: []
+  lane_offset_m: null
+  parked_ratio: 0.35
+  side_of_road: both
+  sample_spacing_m: 0.75
+  max_points_per_vehicle: 500
 mobile_lidar:
   enabled: false
   output_mode: additive
@@ -498,6 +544,13 @@ worldgen:
 <td>нет</td>
 <td>см. секцию <code>trees</code></td>
 <td>Опционально добавляет деревья на естественном грунте.</td>
+</tr>
+<tr>
+<td><code>vehicles</code></td>
+<td>mapping</td>
+<td>нет</td>
+<td>см. секцию <code>vehicles</code></td>
+<td>Опционально добавляет транспорт на проезжей части, parking pockets и industrial yards.</td>
 </tr>
 <tr>
 <td><code>mobile_lidar</code></td>
@@ -2118,6 +2171,193 @@ distance &lt;= width_m / 2 + sidewalk_width_m      -&gt; sidewalk
 <p>Alias-значения форм крон: <code>sphere</code>/<code>spherical</code> -&gt; <code>round</code>, <code>oval</code> -&gt; <code>ellipsoid</code>, <code>conical</code>/<code>evergreen</code> -&gt; <code>cone</code>, <code>narrow</code>/<code>poplar</code> -&gt; <code>columnar</code>, <code>wide</code>/<code>canopy</code> -&gt; <code>umbrella</code>.</p>
 <p>Деревья ставятся только на natural ground: не на дорогах, не на тротуарах, не на medians без явного <code>allow_road_medians</code>, не внутри зданий, не в clearance вокруг зданий и fences, и не за границами crop bbox. Основание берет <code>z</code> из <code>terrain_height</code>. Sampling добавляет semantic classes <code>tree_trunk</code> и <code>tree_crown</code>, а metadata получает <code>tree_counts</code>, <code>supported_tree_crown_shapes</code> и counters в <code>object_feature_counts</code>.</p>
 <p>Подробный тематический справочник по деревьям находится в <code>doc/trees.md</code>.</p>
+<h2 id="vehicles"><code>vehicles</code></h2>
+<p>Секция <code>vehicles</code> включает независимый слой транспорта. По умолчанию он выключен, поэтому старые конфиги и PLY-результаты не меняются, пока не задано <code>vehicles.enabled: true</code>.</p>
+<pre><code class="language-yaml">vehicles:
+  enabled: true
+  density_per_km: 32
+  parking_density_per_ha: 24
+  min_spacing_m: 7
+  placement_modes: mixed
+  vehicle_type: mixed
+  weights:
+    car: 0.55
+    truck: 0.18
+    bus: 0.10
+    emergency: 0.07
+    tractor: 0.10
+  sample_spacing_m: 1
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Параметр</th>
+<th>Тип</th>
+<th>По умолчанию</th>
+<th>Возможные значения</th>
+<th>Действие</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>enabled</code></td>
+<td>boolean</td>
+<td><code>false</code></td>
+<td><code>true</code>, <code>false</code></td>
+<td>Включает генерацию транспорта.</td>
+</tr>
+<tr>
+<td><code>density_per_km</code></td>
+<td>number</td>
+<td><code>10.0</code></td>
+<td><code>&gt;= 0</code></td>
+<td>Базовая плотность road vehicles на километр дорожных primitives до biome multiplier.</td>
+</tr>
+<tr>
+<td><code>parking_density_per_ha</code></td>
+<td>number</td>
+<td><code>12.0</code></td>
+<td><code>&gt;= 0</code></td>
+<td>Базовая плотность стоящего транспорта в parking/yard зонах внутри buildable parcels.</td>
+</tr>
+<tr>
+<td><code>min_spacing_m</code></td>
+<td>number</td>
+<td><code>8.0</code></td>
+<td><code>&gt; 0</code></td>
+<td>Минимальная дистанция между принятыми транспортными средствами.</td>
+</tr>
+<tr>
+<td><code>placement_modes</code></td>
+<td>string или list</td>
+<td><code>road</code>, <code>parking</code>, <code>industrial_yard</code></td>
+<td><code>road</code>, <code>parking</code>, <code>industrial_yard</code>, <code>mixed</code></td>
+<td>Где разрешено размещать транспорт. <code>mixed</code> раскрывается во все поддержанные режимы.</td>
+</tr>
+<tr>
+<td><code>vehicle_type</code></td>
+<td>string</td>
+<td><code>mixed</code></td>
+<td><code>car</code>, <code>truck</code>, <code>bus</code>, <code>emergency</code>, <code>tractor</code>, <code>mixed</code></td>
+<td>Конкретный тип или weighted selector.</td>
+</tr>
+<tr>
+<td><code>weights</code></td>
+<td>mapping</td>
+<td>встроенная смесь</td>
+<td>типы транспорта, значения <code>&gt;= 0</code></td>
+<td>Веса выбора типа при <code>vehicle_type: mixed</code>.</td>
+</tr>
+<tr>
+<td><code>biome_density_multipliers</code></td>
+<td>mapping</td>
+<td><code>downtown: 1.25</code>, <code>residential: 0.85</code>, <code>industrial: 0.75</code>, <code>suburb: 0.65</code></td>
+<td>known biome ids, значения <code>&gt;= 0</code></td>
+<td>Множители плотности; <code>0</code> отключает транспорт в биоме.</td>
+</tr>
+<tr>
+<td><code>length_m</code>, <code>width_m</code>, <code>height_m</code>, <code>wheel_radius_m</code></td>
+<td>number или null</td>
+<td><code>null</code></td>
+<td><code>null</code> или <code>&gt; 0</code></td>
+<td>Глобальное переопределение габаритов catalog default для выбранных типов.</td>
+</tr>
+<tr>
+<td><code>clearance_m</code></td>
+<td>number</td>
+<td><code>0.7</code></td>
+<td><code>&gt; 0</code></td>
+<td>Базовый зазор для road lane offset и placement-проверок.</td>
+</tr>
+<tr>
+<td><code>orientation_jitter_degrees</code></td>
+<td>number</td>
+<td><code>3.0</code></td>
+<td><code>&gt;= 0</code></td>
+<td>Детерминированное отклонение orientation от оси дороги или участка.</td>
+</tr>
+<tr>
+<td><code>building_clearance_m</code></td>
+<td>number</td>
+<td><code>1.0</code></td>
+<td><code>&gt;= 0</code></td>
+<td>Отступ от footprints зданий.</td>
+</tr>
+<tr>
+<td><code>fence_clearance_m</code></td>
+<td>number</td>
+<td><code>0.6</code></td>
+<td><code>&gt;= 0</code></td>
+<td>Отступ от fence segments/foundations.</td>
+</tr>
+<tr>
+<td><code>tree_clearance_m</code></td>
+<td>number</td>
+<td><code>1.5</code></td>
+<td><code>&gt;= 0</code></td>
+<td>Отступ от деревьев.</td>
+</tr>
+<tr>
+<td><code>tile_margin_clearance_m</code></td>
+<td>number</td>
+<td><code>1.0</code></td>
+<td><code>&gt;= 0</code></td>
+<td>Отступ от crop bbox тайла.</td>
+</tr>
+<tr>
+<td><code>allow_road_medians</code></td>
+<td>boolean</td>
+<td><code>false</code></td>
+<td><code>true</code>, <code>false</code></td>
+<td>Разрешает размещение на <code>road_median</code>; по умолчанию medians запрещены.</td>
+</tr>
+<tr>
+<td><code>allowed_road_profiles</code></td>
+<td>list</td>
+<td><code>[]</code></td>
+<td>имена profiles</td>
+<td>Если список непустой, road placement работает только на этих road profiles.</td>
+</tr>
+<tr>
+<td><code>lane_offset_m</code></td>
+<td>number или null</td>
+<td><code>null</code></td>
+<td><code>null</code> или <code>&gt;= 0</code></td>
+<td>Явный боковой offset от median/оси; <code>null</code> выбирает допустимый offset внутри carriageway.</td>
+</tr>
+<tr>
+<td><code>parked_ratio</code></td>
+<td>number</td>
+<td><code>0.35</code></td>
+<td><code>0..1</code></td>
+<td>Доля parking-кандидатов внутри industrial parcels, когда одновременно включены <code>parking</code> и <code>industrial_yard</code>.</td>
+</tr>
+<tr>
+<td><code>side_of_road</code></td>
+<td>string</td>
+<td><code>both</code></td>
+<td><code>left</code>, <code>right</code>, <code>both</code></td>
+<td>Сторона дороги для road placement.</td>
+</tr>
+<tr>
+<td><code>sample_spacing_m</code></td>
+<td>number</td>
+<td><code>0.75</code></td>
+<td><code>&gt; 0</code></td>
+<td>Шаг точек корпуса, колес и окон.</td>
+</tr>
+<tr>
+<td><code>max_points_per_vehicle</code></td>
+<td>integer</td>
+<td><code>500</code></td>
+<td><code>&gt; 0</code></td>
+<td>Верхний предел surface points на одно транспортное средство.</td>
+</tr>
+</tbody>
+</table>
+<p>Catalog types: <code>car</code>, <code>truck</code>, <code>bus</code>, <code>emergency</code>, <code>tractor</code>. Aliases: <code>sedan</code>, <code>hatchback</code>, <code>taxi</code> -&gt; <code>car</code>; <code>van</code>, <code>lorry</code>, <code>delivery</code> -&gt; <code>truck</code>; <code>coach</code> -&gt; <code>bus</code>; <code>firetruck</code>, <code>ambulance</code>, <code>service</code> -&gt; <code>emergency</code>; <code>utility</code>, <code>farm_tractor</code> -&gt; <code>tractor</code>.</p>
+<p>Road vehicles размещаются только на <code>road</code>/carriageway и получают orientation вдоль road primitive. Parking и industrial yard vehicles размещаются внутри buildable parcels только на <code>ground</code>, то есть не на sidewalks, medians или обычном natural ground вне явной parking/yard зоны. Все типы проверяют здания, fences, trees, соседний транспорт и границу crop bbox. Sampling добавляет semantic classes <code>vehicle_body</code>, <code>vehicle_wheel</code>, <code>vehicle_window</code>; mobile LiDAR трассирует корпус как oriented box obstacle.</p>
+<p>Подробный тематический справочник по транспорту находится в <code>doc/vehicles.md</code>.</p>
 <h2 id="mobile_lidar"><code>mobile_lidar</code></h2>
 <p>Секция <code>mobile_lidar</code> включает опциональный режим мобильного LiDAR-сканирования. В этом режиме точки создаются не по регулярному surface sampling, а по фактическим попаданиям лучей из движущегося сенсора.</p>
 <pre><code class="language-yaml">mobile_lidar:
@@ -2483,13 +2723,28 @@ distance &lt;= width_m / 2 + sidewalk_width_m      -&gt; sidewalk
 <td><code>tree_crown</code></td>
 <td><code>54, 128, 70</code></td>
 </tr>
+<tr>
+<td><code>11</code></td>
+<td><code>vehicle_body</code></td>
+<td><code>52, 93, 142</code></td>
+</tr>
+<tr>
+<td><code>12</code></td>
+<td><code>vehicle_wheel</code></td>
+<td><code>28, 30, 33</code></td>
+</tr>
+<tr>
+<td><code>13</code></td>
+<td><code>vehicle_window</code></td>
+<td><code>98, 148, 172</code></td>
+</tr>
 </tbody>
 </table>
 <p>Для каждого PLY также пишется metadata-файл рядом с ним:</p>
 <pre><code class="language-text">outputs/example.ply
 outputs/example.metadata.json
 </code></pre>
-<p>Metadata содержит <code>seed</code>, bbox тайла, количество точек, распределение классов, mapping классов, RGB-палитру <code>class_colors</code>, использованные модели дорог, <code>road_profile_counts</code>, <code>road_profile_counts_by_biome</code>, <code>road_widths</code>, <code>road_median</code>, counts по биомам, <code>building_counts</code>, <code>parcel_counts</code>, <code>fence_counts</code>, <code>tree_counts</code>, <code>mobile_lidar</code>, <code>point_sources</code>, <code>parcel_building_alignment</code>, <code>building_orientations</code>, <code>block_geometry</code>, <code>parcel_geometry</code>, списки поддержанных типов footprint/roof/fence/tree crowns и полный конфиг после применения значений по умолчанию.</p>
+<p>Metadata содержит <code>seed</code>, bbox тайла, количество точек, распределение классов, mapping классов, RGB-палитру <code>class_colors</code>, использованные модели дорог, <code>road_profile_counts</code>, <code>road_profile_counts_by_biome</code>, <code>road_widths</code>, <code>road_median</code>, counts по биомам, <code>building_counts</code>, <code>parcel_counts</code>, <code>fence_counts</code>, <code>tree_counts</code>, <code>vehicle_counts</code>, <code>mobile_lidar</code>, <code>point_sources</code>, <code>parcel_building_alignment</code>, <code>building_orientations</code>, <code>block_geometry</code>, <code>parcel_geometry</code>, списки поддержанных типов footprint/roof/fence/tree crowns/vehicle types и полный конфиг после применения значений по умолчанию.</p>
 <h2 id="worldgen"><code>worldgen</code></h2>
 <p>Секция <code>worldgen</code> опциональна и управляет флагами валидации catalogs/worldgen. Она не меняет runtime-распределение сцены.</p>
 <pre><code class="language-yaml">worldgen:
@@ -2824,6 +3079,54 @@ outputs/example.metadata.json
 <td>multipliers должны ссылаться на поддержанные биомы</td>
 </tr>
 <tr>
+<td>Неизвестный ключ в <code>vehicles</code></td>
+<td>имена параметров <code>vehicles</code> валидируются строго</td>
+</tr>
+<tr>
+<td><code>vehicles.density_per_km</code> или <code>parking_density_per_ha &lt; 0</code></td>
+<td>плотности не могут быть отрицательными</td>
+</tr>
+<tr>
+<td><code>vehicles.min_spacing_m</code>, <code>clearance_m</code>, <code>sample_spacing_m</code> или <code>max_points_per_vehicle &lt;= 0</code></td>
+<td>spacing, clearance и point cap должны быть положительными</td>
+</tr>
+<tr>
+<td><code>vehicles.length_m</code>, <code>width_m</code>, <code>height_m</code>, <code>wheel_radius_m &lt;= 0</code></td>
+<td>габариты при явном переопределении должны быть положительными</td>
+</tr>
+<tr>
+<td><code>vehicles.vehicle_type</code> неизвестен</td>
+<td>поддерживаются <code>car</code>, <code>truck</code>, <code>bus</code>, <code>emergency</code>, <code>tractor</code>, <code>mixed</code> и aliases</td>
+</tr>
+<tr>
+<td><code>vehicles.placement_modes</code> содержит неизвестный режим</td>
+<td>поддерживаются <code>road</code>, <code>parking</code>, <code>industrial_yard</code>, <code>mixed</code></td>
+</tr>
+<tr>
+<td><code>vehicles.side_of_road</code> неизвестен</td>
+<td>поддерживаются <code>left</code>, <code>right</code>, <code>both</code></td>
+</tr>
+<tr>
+<td><code>vehicles.parked_ratio</code> вне <code>0..1</code></td>
+<td>доля стоящего транспорта должна быть в допустимом диапазоне</td>
+</tr>
+<tr>
+<td><code>vehicles.allowed_road_profiles</code> содержит неизвестный profile</td>
+<td>profiles должны существовать в <code>roads.profiles.definitions</code></td>
+</tr>
+<tr>
+<td><code>vehicles.weights.*</code> содержит неизвестный тип или отрицательный вес</td>
+<td>веса должны ссылаться на поддержанные типы транспорта</td>
+</tr>
+<tr>
+<td><code>vehicles.vehicle_type: mixed</code> и сумма weights <code>&lt;= 0</code></td>
+<td>для mixed нужна положительная сумма весов</td>
+</tr>
+<tr>
+<td><code>vehicles.biome_density_multipliers.*</code> содержит неизвестный биом или отрицательное значение</td>
+<td>multipliers должны ссылаться на поддержанные биомы</td>
+</tr>
+<tr>
 <td>Неизвестный ключ в <code>mobile_lidar</code></td>
 <td>имена параметров <code>mobile_lidar</code> валидируются строго</td>
 </tr>
@@ -2917,6 +3220,10 @@ outputs/example.metadata.json
 <tr>
 <td><code>configs/demo_trees.yaml</code></td>
 <td>Опциональный слой деревьев: mixed кроны, biome-aware density, natural-ground placement и tree classes.</td>
+</tr>
+<tr>
+<td><code>configs/demo_vehicles.yaml</code></td>
+<td>Опциональный слой транспорта: road vehicles, parking/yard placement, mixed vehicle types и vehicle classes.</td>
 </tr>
 <tr>
 <td><code>configs/demo_parcel_alignment.yaml</code></td>

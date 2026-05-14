@@ -18,6 +18,7 @@ WORLDGEN_STAGES = (
     "objects",
     "fences",
     "trees",
+    "vehicles",
     "sampling",
     "export_ply",
     "export_metadata",
@@ -91,6 +92,20 @@ class TreeCrownDefinition:
 
 
 @dataclass(frozen=True)
+class VehicleTypeDefinition:
+    id: str
+    title: str
+    description: str
+    length_m: float
+    width_m: float
+    height_m: float
+    wheel_radius_m: float
+    body_color: tuple[int, int, int]
+    allowed_placement_modes: tuple[str, ...]
+    tags: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
 class SemanticClassDefinition:
     id: str
     class_id: int
@@ -121,6 +136,7 @@ class WorldgenCatalogs:
     roof_types: dict[str, RoofDefinition]
     fence_types: dict[str, FenceDefinition]
     tree_crown_types: dict[str, TreeCrownDefinition]
+    vehicle_types: dict[str, VehicleTypeDefinition]
     semantic_classes: dict[str, SemanticClassDefinition]
 
 
@@ -187,7 +203,13 @@ BIOME_DEFINITIONS: dict[str, BiomeDefinition] = {
         setback_scale=0.65,
         preferred_road_model="radial_ring",
         road_profile_weights=DEFAULT_ROAD_PROFILE_BIOME_WEIGHTS["downtown"],
-        object_weights={"building": 1.0, "road_network": 1.0, "parcel_blocks": 0.8, "tree": 0.15},
+        object_weights={
+            "building": 1.0,
+            "road_network": 1.0,
+            "parcel_blocks": 0.8,
+            "tree": 0.15,
+            "vehicle": 1.25,
+        },
     ),
     "residential": BiomeDefinition(
         id="residential",
@@ -201,7 +223,13 @@ BIOME_DEFINITIONS: dict[str, BiomeDefinition] = {
         setback_scale=1.0,
         preferred_road_model="grid",
         road_profile_weights=DEFAULT_ROAD_PROFILE_BIOME_WEIGHTS["residential"],
-        object_weights={"building": 1.0, "road_network": 1.0, "parcel_blocks": 1.0, "tree": 0.75},
+        object_weights={
+            "building": 1.0,
+            "road_network": 1.0,
+            "parcel_blocks": 1.0,
+            "tree": 0.75,
+            "vehicle": 0.85,
+        },
     ),
     "industrial": BiomeDefinition(
         id="industrial",
@@ -215,7 +243,13 @@ BIOME_DEFINITIONS: dict[str, BiomeDefinition] = {
         setback_scale=0.85,
         preferred_road_model="linear",
         road_profile_weights=DEFAULT_ROAD_PROFILE_BIOME_WEIGHTS["industrial"],
-        object_weights={"building": 0.85, "road_network": 1.0, "parcel_blocks": 0.7, "tree": 0.05},
+        object_weights={
+            "building": 0.85,
+            "road_network": 1.0,
+            "parcel_blocks": 0.7,
+            "tree": 0.05,
+            "vehicle": 0.9,
+        },
     ),
     "suburb": BiomeDefinition(
         id="suburb",
@@ -229,7 +263,13 @@ BIOME_DEFINITIONS: dict[str, BiomeDefinition] = {
         setback_scale=1.45,
         preferred_road_model="organic",
         road_profile_weights=DEFAULT_ROAD_PROFILE_BIOME_WEIGHTS["suburb"],
-        object_weights={"building": 0.55, "road_network": 1.0, "parcel_blocks": 0.9, "tree": 1.25},
+        object_weights={
+            "building": 0.55,
+            "road_network": 1.0,
+            "parcel_blocks": 0.9,
+            "tree": 1.25,
+            "vehicle": 0.6,
+        },
     ),
 }
 
@@ -438,6 +478,99 @@ DEFAULT_TREE_BIOME_DENSITY_MULTIPLIERS = {
     "suburb": 1.25,
 }
 
+VEHICLE_TYPE_DEFINITIONS: dict[str, VehicleTypeDefinition] = {
+    "car": VehicleTypeDefinition(
+        "car",
+        "Car",
+        "Passenger car or taxi-sized vehicle.",
+        4.5,
+        1.8,
+        1.55,
+        0.34,
+        (44, 83, 130),
+        ("road", "parking"),
+        ("passenger", "urban", "parked"),
+    ),
+    "truck": VehicleTypeDefinition(
+        "truck",
+        "Truck",
+        "Light truck, van, or medium delivery vehicle.",
+        7.2,
+        2.35,
+        2.65,
+        0.45,
+        (141, 92, 52),
+        ("road", "parking", "industrial_yard"),
+        ("freight", "industrial", "utility"),
+    ),
+    "bus": VehicleTypeDefinition(
+        "bus",
+        "Bus",
+        "Urban or suburban bus with elongated body.",
+        11.8,
+        2.55,
+        3.2,
+        0.48,
+        (198, 160, 46),
+        ("road",),
+        ("public_transport", "downtown"),
+    ),
+    "emergency": VehicleTypeDefinition(
+        "emergency",
+        "Emergency",
+        "Fire, ambulance, or service emergency vehicle.",
+        6.4,
+        2.3,
+        2.75,
+        0.44,
+        (174, 44, 42),
+        ("road", "parking", "industrial_yard"),
+        ("service", "emergency"),
+    ),
+    "tractor": VehicleTypeDefinition(
+        "tractor",
+        "Tractor",
+        "Agricultural or utility tractor-like vehicle.",
+        4.8,
+        2.2,
+        2.55,
+        0.55,
+        (68, 112, 64),
+        ("parking", "industrial_yard"),
+        ("utility", "industrial", "rural"),
+    ),
+}
+
+VEHICLE_TYPE_ALIASES = {
+    "sedan": "car",
+    "hatchback": "car",
+    "taxi": "car",
+    "van": "truck",
+    "lorry": "truck",
+    "delivery": "truck",
+    "coach": "bus",
+    "firetruck": "emergency",
+    "ambulance": "emergency",
+    "service": "emergency",
+    "utility": "tractor",
+    "farm_tractor": "tractor",
+}
+
+DEFAULT_MIXED_VEHICLE_WEIGHTS = {
+    "car": 0.55,
+    "truck": 0.18,
+    "bus": 0.10,
+    "emergency": 0.07,
+    "tractor": 0.10,
+}
+
+DEFAULT_VEHICLE_BIOME_DENSITY_MULTIPLIERS = {
+    "downtown": 1.25,
+    "residential": 0.85,
+    "industrial": 0.75,
+    "suburb": 0.65,
+}
+
 SEMANTIC_CLASS_DEFINITIONS: dict[str, SemanticClassDefinition] = {
     "ground": SemanticClassDefinition("ground", 1, (107, 132, 85), "Terrain surface."),
     "road": SemanticClassDefinition("road", 2, (47, 50, 54), "Road carriageway surface."),
@@ -454,6 +587,9 @@ SEMANTIC_CLASS_DEFINITIONS: dict[str, SemanticClassDefinition] = {
     ),
     "tree_trunk": SemanticClassDefinition("tree_trunk", 9, (111, 78, 46), "Tree trunk points."),
     "tree_crown": SemanticClassDefinition("tree_crown", 10, (54, 128, 70), "Tree crown points."),
+    "vehicle_body": SemanticClassDefinition("vehicle_body", 11, (52, 93, 142), "Vehicle body points."),
+    "vehicle_wheel": SemanticClassDefinition("vehicle_wheel", 12, (28, 30, 33), "Vehicle wheel points."),
+    "vehicle_window": SemanticClassDefinition("vehicle_window", 13, (98, 148, 172), "Vehicle window points."),
 }
 
 OBJECT_FEATURE_DEFINITIONS: dict[str, ObjectFeatureDefinition] = {
@@ -600,6 +736,47 @@ OBJECT_FEATURE_DEFINITIONS: dict[str, ObjectFeatureDefinition] = {
         "trees",
         False,
     ),
+    "vehicle": ObjectFeatureDefinition(
+        "vehicle",
+        "Vehicle",
+        "object",
+        "Optional biome-aware vehicles placed on carriageways, parking pockets, and industrial yards.",
+        "vehicles",
+        ("vehicle_body", "vehicle_wheel", "vehicle_window"),
+        "vehicles",
+        False,
+        ("urban", "industrial", "suburban"),
+    ),
+    "vehicle_body": ObjectFeatureDefinition(
+        "vehicle_body",
+        "Vehicle Body",
+        "surface",
+        "Sampled oriented-box vehicle body points.",
+        "sampling",
+        ("vehicle_body",),
+        "vehicles",
+        False,
+    ),
+    "vehicle_wheel": ObjectFeatureDefinition(
+        "vehicle_wheel",
+        "Vehicle Wheel",
+        "surface",
+        "Sampled simplified cylindrical vehicle wheel points.",
+        "sampling",
+        ("vehicle_wheel",),
+        "vehicles",
+        False,
+    ),
+    "vehicle_window": ObjectFeatureDefinition(
+        "vehicle_window",
+        "Vehicle Window",
+        "surface",
+        "Sampled window patches on vehicle bodies.",
+        "sampling",
+        ("vehicle_window",),
+        "vehicles",
+        False,
+    ),
 }
 
 DEFAULT_CATALOGS = WorldgenCatalogs(
@@ -611,6 +788,7 @@ DEFAULT_CATALOGS = WorldgenCatalogs(
     roof_types=ROOF_DEFINITIONS,
     fence_types=FENCE_DEFINITIONS,
     tree_crown_types=TREE_CROWN_DEFINITIONS,
+    vehicle_types=VEHICLE_TYPE_DEFINITIONS,
     semantic_classes=SEMANTIC_CLASS_DEFINITIONS,
 )
 
@@ -630,6 +808,7 @@ def catalog_summary(catalogs: WorldgenCatalogs = DEFAULT_CATALOGS) -> dict[str, 
         "roof_types": sorted(catalogs.roof_types),
         "fence_types": sorted(catalogs.fence_types),
         "tree_crown_types": sorted(catalogs.tree_crown_types),
+        "vehicle_types": sorted(catalogs.vehicle_types),
         "semantic_classes": sorted(catalogs.semantic_classes),
     }
 
@@ -663,6 +842,7 @@ def validate_catalogs(catalogs: WorldgenCatalogs = DEFAULT_CATALOGS) -> list[str
     _validate_key_matches(catalogs.roof_types, "roof type", issues)
     _validate_key_matches(catalogs.fence_types, "fence type", issues)
     _validate_key_matches(catalogs.tree_crown_types, "tree crown type", issues)
+    _validate_key_matches(catalogs.vehicle_types, "vehicle type", issues)
     _validate_key_matches(catalogs.semantic_classes, "semantic class", issues)
 
     for biome in catalogs.biomes.values():
@@ -696,6 +876,7 @@ def validate_catalogs(catalogs: WorldgenCatalogs = DEFAULT_CATALOGS) -> list[str
     _validate_weights(DEFAULT_MIXED_ROOF_WEIGHTS, catalogs.roof_types, "DEFAULT_MIXED_ROOF_WEIGHTS", issues)
     _validate_weights(DEFAULT_MIXED_FENCE_WEIGHTS, catalogs.fence_types, "DEFAULT_MIXED_FENCE_WEIGHTS", issues)
     _validate_weights(DEFAULT_MIXED_TREE_WEIGHTS, catalogs.tree_crown_types, "DEFAULT_MIXED_TREE_WEIGHTS", issues)
+    _validate_weights(DEFAULT_MIXED_VEHICLE_WEIGHTS, catalogs.vehicle_types, "DEFAULT_MIXED_VEHICLE_WEIGHTS", issues)
 
     for feature in catalogs.object_features.values():
         if feature.stage not in WORLDGEN_STAGES:

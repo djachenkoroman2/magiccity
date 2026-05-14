@@ -2,9 +2,9 @@
 
 Этот документ перечисляет generated object / feature ids из `citygen.catalogs.OBJECT_FEATURE_DEFINITIONS`. Он нужен как расширяемый справочник: при добавлении нового feature id тесты требуют обновить этот файл.
 
-Подробные справочники по связанным слоям: `doc/configuration_reference.md`, `doc/roads.md`, `doc/parcels.md`, `doc/fences.md`, `doc/trees.md`, `doc/building_footprints.md`, `doc/building_roofs.md`, `doc/biomes.md`.
+Подробные справочники по связанным слоям: `doc/configuration_reference.md`, `doc/roads.md`, `doc/parcels.md`, `doc/fences.md`, `doc/trees.md`, `doc/vehicles.md`, `doc/building_footprints.md`, `doc/building_roofs.md`, `doc/biomes.md`.
 
-`mobile_lidar` не добавляет новый catalog feature id и не вводит новые semantic classes. Он добавляет альтернативный источник точек для уже существующих классов (`ground`, `road`, `sidewalk`, `road_median`, `building_facade`, `building_roof`, `fence`, `fence_foundation`, `tree_trunk`, `tree_crown`) и отдельную diagnostics-секцию в metadata.
+`mobile_lidar` не добавляет новый catalog feature id и не вводит новые semantic classes. Он добавляет альтернативный источник точек для уже существующих классов (`ground`, `road`, `sidewalk`, `road_median`, `building_facade`, `building_roof`, `fence`, `fence_foundation`, `tree_trunk`, `tree_crown`, `vehicle_body`, `vehicle_wheel`, `vehicle_window`) и отдельную diagnostics-секцию в metadata.
 
 ## Сводная таблица
 
@@ -24,6 +24,10 @@
 | `tree` | `trees` | `trees` | `tree_trunk`, `tree_crown` | Опциональное дерево, размещенное на natural ground с учетом биома и clearances. |
 | `tree_trunk` | `sampling` | `trees` | `tree_trunk` | Точки цилиндрической поверхности ствола. |
 | `tree_crown` | `sampling` | `trees` | `tree_crown` | Точки поверхности кроны выбранной формы. |
+| `vehicle` | `vehicles` | `vehicles` | `vehicle_body`, `vehicle_wheel`, `vehicle_window` | Опциональный транспорт на carriageway, parking pockets и industrial yards. |
+| `vehicle_body` | `sampling` | `vehicles` | `vehicle_body` | Точки корпуса транспортного средства. |
+| `vehicle_wheel` | `sampling` | `vehicles` | `vehicle_wheel` | Точки упрощенных колес. |
+| `vehicle_window` | `sampling` | `vehicles` | `vehicle_window` | Точки оконных patches. |
 
 ## Рельеф
 
@@ -189,6 +193,52 @@ Mobile LiDAR может попадать в стволы и кроны. Огра
 
 Подробности конфигурации и aliases описаны в `doc/trees.md`.
 
+## Транспорт
+
+`vehicle` включается через `vehicles.enabled: true` и строится на отдельной стадии `vehicles`, после `trees` и до surface sampling. Road placement использует road primitives/profiles и ставит транспорт на `road`; parking и industrial yard placement используют buildable parcels как простую MVP-аппроксимацию площадок и требуют surface kind `ground`.
+
+Поддерживаемые типы:
+
+- `car`;
+- `truck`;
+- `bus`;
+- `emergency`;
+- `tractor`.
+
+Связанные features:
+
+- `vehicle_body` создает точки semantic class `vehicle_body`;
+- `vehicle_wheel` создает точки semantic class `vehicle_wheel`;
+- `vehicle_window` создает точки semantic class `vehicle_window`;
+- `vehicle_type: mixed` выбирает тип по `vehicles.weights`;
+- плотность регулируется `vehicles.density_per_km`, `vehicles.parking_density_per_ha` и `vehicles.biome_density_multipliers`.
+
+Metadata:
+
+- `vehicle_counts.total`;
+- `vehicle_counts.by_type`;
+- `vehicle_counts.by_placement_mode`;
+- `vehicle_counts.by_biome`;
+- `vehicle_counts.dimensions_m`;
+- `vehicle_counts.body_points`, `wheel_points`, `window_points`;
+- `supported_vehicle_types`;
+- `vehicle_catalog`;
+- `vehicle_aliases`;
+- `object_feature_counts.vehicle`;
+- `object_feature_counts.vehicle_body`;
+- `object_feature_counts.vehicle_wheel`;
+- `object_feature_counts.vehicle_window`;
+- `class_counts.vehicle_body`;
+- `class_counts.vehicle_wheel`;
+- `class_counts.vehicle_window`;
+- `class_colors.vehicle_body`;
+- `class_colors.vehicle_wheel`;
+- `class_colors.vehicle_window`.
+
+Mobile LiDAR может попадать в транспорт. Ограничение MVP: корпус работает как oriented box obstacle и возвращает `vehicle_body`; колеса/окна пока видны через surface sampling, но не являются отдельными LiDAR-объектами.
+
+Подробности конфигурации и aliases описаны в `doc/vehicles.md`.
+
 ## Footprints зданий
 
 `building_footprint` поддерживает:
@@ -253,6 +303,9 @@ Semantic class ids стабильны и описаны в catalog `SEMANTIC_CLA
 - `fence`: id `7`;
 - `fence_foundation`: id `8`;
 - `tree_trunk`: id `9`;
-- `tree_crown`: id `10`.
+- `tree_crown`: id `10`;
+- `vehicle_body`: id `11`;
+- `vehicle_wheel`: id `12`;
+- `vehicle_window`: id `13`.
 
 Новые semantic classes можно добавлять только с новым id; существующие id менять нельзя.

@@ -59,6 +59,9 @@
                                 <a href="trees.html" class="nav-link">Деревья</a>
                             </li>
                             <li class="nav-item">
+                                <a href="vehicles.html" class="nav-link">Транспорт</a>
+                            </li>
+                            <li class="nav-item">
                                 <a href="sampling.html" class="nav-link active" aria-current="page">Sampling pipeline</a>
                             </li>
                             <li class="nav-item">
@@ -85,7 +88,7 @@
                             </a>
                         </li>
                             <li class="nav-item">
-                                <a rel="prev" href="trees.html" class="nav-link">
+                                <a rel="prev" href="vehicles.html" class="nav-link">
                                     <i class="fa fa-arrow-left"></i> Previous
                                 </a>
                             </li>
@@ -142,6 +145,10 @@
               <ul class="nav flex-column">
               </ul>
             </li>
+            <li class="nav-item" data-bs-level="2"><a href="#vehicles" class="nav-link">Vehicles</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
             <li class="nav-item" data-bs-level="2"><a href="#mobile-lidar-mode" class="nav-link">Mobile LiDAR mode</a>
               <ul class="nav flex-column">
               </ul>
@@ -193,9 +200,10 @@
 <p><code>sampling</code> превращает уже построенную сцену <code>Scene</code> в список точек <code>Point</code>, которые затем экспортируются в PLY и агрегируются в metadata. Это последняя runtime-стадия генерации перед <code>export_ply</code> и <code>export_metadata</code>.</p>
 <p>Источник истины по реализации:</p>
 <ul>
-<li><code>citygen/sampling.py</code> - surface sampling рельефа, дорог, зданий, деревьев и объединение с mobile LiDAR;</li>
+<li><code>citygen/sampling.py</code> - surface sampling рельефа, дорог, зданий, деревьев, транспорта и объединение с mobile LiDAR;</li>
 <li><code>citygen/fences.py</code> - sampling ограждений и фундаментов;</li>
 <li><code>citygen/trees.py</code> - sampling стволов/крон и helper-ы для LiDAR-пересечений;</li>
+<li><code>citygen/vehicles.py</code> - sampling корпуса/колес/окон и helper-ы для LiDAR-пересечений транспорта;</li>
 <li><code>citygen/mobile_lidar.py</code> - ray sampling мобильного LiDAR;</li>
 <li><code>citygen/export.py</code> - PLY-поля, metadata и диагностические агрегаты;</li>
 <li><code>citygen/config.py</code> - значения по умолчанию и валидация параметров.</li>
@@ -204,7 +212,7 @@
 <p>Вход <code>sampling</code>:</p>
 <ul>
 <li>resolved <code>CityGenConfig</code> после применения defaults и валидации;</li>
-<li><code>Scene</code> из <code>generate_scene(config)</code>: bbox тайла, work bbox с margin, дорожная сеть, здания, parcels, fences, trees, biome counts и worldgen context.</li>
+<li><code>Scene</code> из <code>generate_scene(config)</code>: bbox тайла, work bbox с margin, дорожная сеть, здания, parcels, fences, trees, vehicles, biome counts и worldgen context.</li>
 </ul>
 <p>Выход <code>sampling</code>:</p>
 <ul>
@@ -213,7 +221,7 @@
 <li>semantic class и RGB назначаются из <code>POINT_CLASSES</code>;</li>
 <li>PLY-поля <code>red/green/blue</code> и <code>class</code> записываются только если включены <code>output.include_rgb</code> и <code>output.include_class</code>.</li>
 </ul>
-<p><code>sampling</code> не создает дорожную сеть, parcels, здания, fences или trees. Эти объекты должны быть уже построены на предыдущих стадиях <code>roads</code>, <code>parcels</code>, <code>objects</code>, <code>fences</code> и <code>trees</code>. На стадии sampling они только превращаются в точки.</p>
+<p><code>sampling</code> не создает дорожную сеть, parcels, здания, fences, trees или vehicles. Эти объекты должны быть уже построены на предыдущих стадиях <code>roads</code>, <code>parcels</code>, <code>objects</code>, <code>fences</code>, <code>trees</code> и <code>vehicles</code>. На стадии sampling они только превращаются в точки.</p>
 <h2 id="_2">Порядок выполнения</h2>
 <p>Основная точка входа:</p>
 <pre><code class="language-python">sample_scene(config, scene)
@@ -233,6 +241,7 @@
 <li><code>_sample_building</code> для каждого здания - крыши и фасады.</li>
 <li><code>sample_fence_segment</code> для каждого fence segment - тело ограждения и, если нужен, фундамент.</li>
 <li><code>sample_tree</code> для каждого дерева - ствол и крона.</li>
+<li><code>sample_vehicle</code> для каждого транспортного средства - корпус, колеса и окна.</li>
 <li><code>_crop_points(points, scene.bbox)</code> - финальная обрезка по границам тайла.</li>
 </ol>
 <h2 id="surface-sampling">Стадии surface sampling</h2>
@@ -252,7 +261,7 @@
 <td><code>generate_scene</code>, <code>WorldgenContext</code></td>
 <td><code>CityGenConfig</code></td>
 <td><code>Scene</code> с <code>bbox</code> и <code>work_bbox</code></td>
-<td><code>tile.size_m</code>, <code>tile.margin_m</code>, <code>roads</code>, <code>buildings</code>, <code>parcels</code>, <code>fences</code>, <code>trees</code></td>
+<td><code>tile.size_m</code>, <code>tile.margin_m</code>, <code>roads</code>, <code>buildings</code>, <code>parcels</code>, <code>fences</code>, <code>trees</code>, <code>vehicles</code></td>
 </tr>
 <tr>
 <td>Tile surfaces</td>
@@ -288,6 +297,13 @@
 <td><code>Tree</code></td>
 <td><code>tree_trunk</code>, <code>tree_crown</code> points</td>
 <td><code>trees.sample_spacing_m</code>, <code>trees.crown_shape</code>, <code>trees.crown_segments</code></td>
+</tr>
+<tr>
+<td>Vehicles</td>
+<td><code>sample_vehicle</code></td>
+<td><code>Vehicle</code></td>
+<td><code>vehicle_body</code>, <code>vehicle_wheel</code>, <code>vehicle_window</code> points</td>
+<td><code>vehicles.sample_spacing_m</code>, <code>vehicles.max_points_per_vehicle</code>, vehicle catalog dimensions</td>
 </tr>
 <tr>
 <td>Mobile LiDAR</td>
@@ -377,6 +393,19 @@ fences:
 <li>точки ствола получают semantic class <code>tree_trunk</code>, точки кроны — <code>tree_crown</code>.</li>
 </ul>
 <p>Размещение деревьев не происходит в sampling. Оно уже проверило natural ground, road/sidewalk/median clearance, footprints зданий, fences, границы тайла, biome density multipliers и <code>min_spacing_m</code>.</p>
+<h2 id="vehicles">Vehicles</h2>
+<p>Транспорт генерируется до sampling на стадии <code>vehicles</code>. Surface sampling получает готовые <code>Vehicle</code> instances и не меняет placement.</p>
+<p>Для каждого транспортного средства:</p>
+<ul>
+<li><code>base_z</code> уже вычислен через <code>terrain_height</code> в точке установки;</li>
+<li>корпус семплируется как oriented box в world-space;</li>
+<li>колеса семплируются как упрощенные диски/кольца;</li>
+<li>окна семплируются как patches на боках и торцах корпуса;</li>
+<li><code>vehicles.sample_spacing_m</code> задает шаг точек;</li>
+<li><code>vehicles.max_points_per_vehicle</code> ограничивает число точек на объект;</li>
+<li>точки получают semantic classes <code>vehicle_body</code>, <code>vehicle_wheel</code>, <code>vehicle_window</code>.</li>
+</ul>
+<p>Размещение транспорта не происходит в sampling. Оно уже проверило road/parking/industrial_yard surface, road profiles, sidewalks/medians, здания, fences, trees, границы тайла, biome density multipliers, type weights и <code>min_spacing_m</code>.</p>
 <h2 id="mobile-lidar-mode">Mobile LiDAR mode</h2>
 <p>Mobile LiDAR is not a second value of <code>sampling.mode</code>. It is controlled by the separate <code>mobile_lidar</code> section, while <code>sampling.mode</code> must still be <code>surface</code>.</p>
 <p>When enabled, <code>sample_mobile_lidar</code>:</p>
@@ -386,7 +415,7 @@ fences:
 <li>Computes vertical angles from <code>vertical_center_degrees</code>, <code>vertical_fov_degrees</code> and <code>vertical_channels</code>.</li>
 <li>Emits one ray for every position, horizontal offset and vertical channel.</li>
 <li>Applies deterministic drop probability and optional angle jitter per ray.</li>
-<li>Traces the ray against terrain, roads, sidewalks, medians, building facades, building roofs, trees and, when occlusions are enabled, fences.</li>
+<li>Traces the ray against terrain, roads, sidewalks, medians, building facades, building roofs, trees, vehicles and, when occlusions are enabled, fences.</li>
 <li>Keeps the nearest hit when <code>occlusions_enabled: true</code>.</li>
 <li>Applies distance attenuation and optional range noise.</li>
 <li>Assigns the semantic class of the hit surface.</li>
@@ -449,6 +478,7 @@ fences:
 <li>нет настроек <code>max_points</code>, <code>per_class_density</code>, <code>drop_probability</code> для surface sampling или явного point budget;</li>
 <li>отдельная плотность fence-точек находится в <code>fences.sample_spacing_m</code>;</li>
 <li>отдельная плотность tree-точек находится в <code>trees.sample_spacing_m</code>;</li>
+<li>отдельная плотность vehicle-точек находится в <code>vehicles.sample_spacing_m</code>, а cap - в <code>vehicles.max_points_per_vehicle</code>;</li>
 <li>настройки лучей LiDAR находятся в <code>mobile_lidar.*</code>.</li>
 </ul>
 <h3 id="related-settings-that-affect-sampled-points">Related settings that affect sampled points</h3>
@@ -497,6 +527,11 @@ fences:
 <td>Добавляет <code>tree_trunk</code> и <code>tree_crown</code> points и влияет на LiDAR-окклюзии.</td>
 </tr>
 <tr>
+<td><code>vehicles</code></td>
+<td><code>enabled</code>, <code>density_per_km</code>, <code>parking_density_per_ha</code>, <code>vehicle_type</code>, <code>placement_modes</code>, <code>sample_spacing_m</code>, clearances</td>
+<td>Добавляет <code>vehicle_body</code>, <code>vehicle_wheel</code>, <code>vehicle_window</code> points и влияет на LiDAR-окклюзии.</td>
+</tr>
+<tr>
 <td><code>mobile_lidar</code></td>
 <td>все поля секции</td>
 <td>Добавляет ray-sampled точки или заменяет surface output при <code>output_mode: lidar_only</code>.</td>
@@ -521,7 +556,7 @@ fences:
 <tr>
 <td>Surface only</td>
 <td><code>mobile_lidar.enabled: false</code></td>
-<td>Регулярно сэмплированные поверхности: ground, roads, sidewalks, medians, roofs, facades, fences, trees.</td>
+<td>Регулярно сэмплированные поверхности: ground, roads, sidewalks, medians, roofs, facades, fences, trees, vehicles.</td>
 </tr>
 <tr>
 <td>Surface + LiDAR</td>
@@ -649,16 +684,18 @@ sampling:
 <li>buildings добавляют roof points по площади footprint и facade points по периметру и высоте;</li>
 <li>fences добавляют точки по длине сегментов и высоте;</li>
 <li>trees добавляют точки по высоте стволов и поверхности крон; число деревьев зависит от плотности, биомов и clearances;</li>
+<li>vehicles добавляют точки корпуса, колес и окон; число объектов зависит от road/parking density, биомов, road profiles, parcels и clearances;</li>
 <li>LiDAR добавляет максимум <code>sensor_positions * horizontal_steps * vertical_channels</code> лучей, но drop, misses, attenuation and occlusions уменьшают число итоговых точек;</li>
 <li>crop по bbox тайла может удалить точки, построенные в расширенной work area.</li>
 </ul>
-<p><code>sampling.jitter_ratio</code> меняет координаты surface points, но не должен заметно менять количество точек. <code>seed</code> влияет на jitter, thinning, buildings, fences, trees, road details and LiDAR randomness. При одинаковом <code>seed</code> и одинаковом resolved config результат детерминирован.</p>
+<p><code>sampling.jitter_ratio</code> меняет координаты surface points, но не должен заметно менять количество точек. <code>seed</code> влияет на jitter, thinning, buildings, fences, trees, vehicles, road details and LiDAR randomness. При одинаковом <code>seed</code> и одинаковом resolved config результат детерминирован.</p>
 <p>Самые дорогие настройки:</p>
 <ul>
 <li>маленький <code>min(ground_spacing_m, road_spacing_m)</code> на большом <code>tile.size_m</code>;</li>
 <li>маленький <code>building_spacing_m</code> при большом количестве высоких зданий;</li>
 <li>маленький <code>fences.sample_spacing_m</code> при плотных parcels;</li>
 <li>маленький <code>trees.sample_spacing_m</code> при высокой <code>trees.density_per_ha</code>;</li>
+<li>маленький <code>vehicles.sample_spacing_m</code> при высокой <code>vehicles.density_per_km</code> или <code>parking_density_per_ha</code>;</li>
 <li>маленький <code>mobile_lidar.horizontal_step_degrees</code>, большой <code>vertical_channels</code>, маленький <code>position_step_m</code> и маленький <code>ray_step_m</code>.</li>
 </ul>
 <h2 id="semantic-class-rgb">Semantic class и RGB</h2>
@@ -733,6 +770,24 @@ sampling:
 <td><code>54, 128, 70</code></td>
 <td>tree crown surface or LiDAR crown hit</td>
 </tr>
+<tr>
+<td><code>11</code></td>
+<td><code>vehicle_body</code></td>
+<td><code>52, 93, 142</code></td>
+<td>vehicle body surface or LiDAR oriented-box hit</td>
+</tr>
+<tr>
+<td><code>12</code></td>
+<td><code>vehicle_wheel</code></td>
+<td><code>28, 30, 33</code></td>
+<td>vehicle wheel surface sampling</td>
+</tr>
+<tr>
+<td><code>13</code></td>
+<td><code>vehicle_window</code></td>
+<td><code>98, 148, 172</code></td>
+<td>vehicle window surface sampling</td>
+</tr>
 </tbody>
 </table>
 <p>PLY export may omit RGB or class fields, but metadata still contains <code>class_counts</code> and <code>class_mapping</code> because internal <code>Point</code> objects always carry color and class id.</p>
@@ -742,6 +797,7 @@ sampling:
 <pre><code class="language-text">tile 1/1 (x=0, y=0) sampling tile_surfaces: 100%|██████████| 171/171 row, pts=21263, ground=8409, hardscape=12854
 tile 1/1 (x=0, y=0) sampling buildings: 100%|██████████| 8/8 building, pts=5221, roof=837, facade=4384
 tile 1/1 (x=0, y=0) sampling trees: 100%|██████████| 58/58 tree, total_tree_points=3797, total_trunk_points=1680, total_crown_points=2117
+tile 1/1 (x=0, y=0) sampling vehicles: 100%|██████████| 14/14 vehicle, total_vehicle_points=4200, total_body_points=2600, total_wheel_points=900, total_window_points=700
 tile 1/1 (x=0, y=0) sampling mobile LiDAR rays: 100%|██████████| 17856/17856 ray, hits=14302, dropped=360, missed=2871, attenuated=323, pts=14302
 </code></pre>
 <p>When stdout or stderr is not a TTY, dynamic bars are disabled and the same structured events are rendered as stable lines suitable for logs and tests:</p>
@@ -749,10 +805,11 @@ tile 1/1 (x=0, y=0) sampling mobile LiDAR rays: 100%|█████████
 citygen: tile 1/1 (x=0, y=0) sampling tile_surfaces progress - rows=33, total_rows=129, grid_samples=4257, total_grid_samples=16641, points=3798, class_counts={ground=1875, road=1296, sidewalk=627}
 citygen: tile 1/1 (x=0, y=0) sampling buildings done - buildings=24, points=5221, roof_points=837, facade_points=4384
 citygen: tile 1/1 (x=0, y=0) sampling trees done - trees=58, points=3797, trunk_points=1680, crown_points=2117
-citygen: tile 1/1 (x=0, y=0) sampling surface_total done - tile_surface_points=21263, building_points=5221, fence_points=0, cropped_tree_points=3797, surface_points_before_crop=30281, surface_points=30281
+citygen: tile 1/1 (x=0, y=0) sampling vehicles done - vehicles=14, points=4200, body_points=2600, wheel_points=900, window_points=700
+citygen: tile 1/1 (x=0, y=0) sampling surface_total done - tile_surface_points=21263, building_points=5221, fence_points=0, cropped_tree_points=3797, cropped_vehicle_points=4200, surface_points_before_crop=34481, surface_points=34481
 </code></pre>
 <p>With <code>mobile_lidar.enabled: true</code>, the ray sampler is reported as a <code>sampling</code> substage while the CLI still keeps the high-level mobile LiDAR stage boundary:</p>
-<pre><code class="language-text">citygen: tile 1/1 (x=0, y=0) stage 8/10 mobile LiDAR started
+<pre><code class="language-text">citygen: tile 1/1 (x=0, y=0) stage 9/11 mobile LiDAR started
 citygen: tile 1/1 (x=0, y=0) sampling mobile LiDAR rays progress - positions=8, total_positions=31, processed_rays=4608, emitted_rays=4608, total_rays=17856, successful_hits=3721, dropped_rays=94, missed_rays=712, attenuated_rays=81, lidar_points=3721
 citygen: tile 1/1 (x=0, y=0) sampling mobile LiDAR rays done - sensor_positions=31, processed_rays=17856, total_rays=17856, emitted_rays=17856, successful_hits=14302, dropped_rays=360, missed_rays=2871, attenuated_rays=323, lidar_points=14302
 </code></pre>
@@ -787,9 +844,14 @@ citygen: tile 1/1 (x=0, y=0) sampling mobile LiDAR rays done - sensor_positions=
 <td><code>trees</code>, <code>points</code>, <code>trunk_points</code>, <code>crown_points</code>; in <code>--verbose</code>, per-tree <code>item_done</code> also includes <code>tree_id</code>, <code>total_trunk_points</code> and <code>total_crown_points</code></td>
 </tr>
 <tr>
+<td><code>vehicles</code></td>
+<td>Only when generated vehicles exist</td>
+<td><code>vehicles</code>, <code>points</code>, <code>body_points</code>, <code>wheel_points</code>, <code>window_points</code>; in <code>--verbose</code>, per-vehicle <code>item_done</code> also includes <code>vehicle_id</code>, <code>total_body_points</code>, <code>total_wheel_points</code> and <code>total_window_points</code></td>
+</tr>
+<tr>
 <td><code>surface_total</code></td>
 <td>End of surface sampling before LiDAR merge</td>
-<td><code>tile_surface_points</code>, <code>building_points</code>, <code>fence_points</code>, <code>ground_points</code>, <code>hardscape_points</code>, <code>cropped_building_points</code>, <code>cropped_fence_points</code>, <code>cropped_tree_points</code>, <code>surface_points_before_crop</code>, <code>surface_points</code>, <code>class_counts</code></td>
+<td><code>tile_surface_points</code>, <code>building_points</code>, <code>fence_points</code>, <code>ground_points</code>, <code>hardscape_points</code>, <code>cropped_building_points</code>, <code>cropped_fence_points</code>, <code>cropped_tree_points</code>, <code>cropped_vehicle_points</code>, <code>surface_points_before_crop</code>, <code>surface_points</code>, <code>class_counts</code></td>
 </tr>
 <tr>
 <td><code>mobile_lidar_rays</code></td>
@@ -800,10 +862,10 @@ citygen: tile 1/1 (x=0, y=0) sampling mobile LiDAR rays done - sensor_positions=
 </table>
 <p>Verbosity rules:</p>
 <ul>
-<li>default interactive mode shows compact <code>tqdm</code> bars for <code>tile_surfaces</code>, <code>buildings</code>, <code>fences</code>, <code>trees</code> and <code>mobile_lidar_rays</code>;</li>
+<li>default interactive mode shows compact <code>tqdm</code> bars for <code>tile_surfaces</code>, <code>buildings</code>, <code>fences</code>, <code>trees</code>, <code>vehicles</code> and <code>mobile_lidar_rays</code>;</li>
 <li>default non-TTY mode prints compact started/progress/done lines for sampling substages;</li>
 <li><code>--quiet</code> suppresses progress bars and intermediate progress lines, keeping only final <code>Wrote ...</code> paths;</li>
-<li><code>--verbose</code> shows extra counters in tqdm postfixes and, in non-TTY mode, prints more detailed item-level diagnostics for buildings, fence segments, trees and LiDAR sensor positions.</li>
+<li><code>--verbose</code> shows extra counters in tqdm postfixes and, in non-TTY mode, prints more detailed item-level diagnostics for buildings, fence segments, trees, vehicles and LiDAR sensor positions.</li>
 </ul>
 <p>The <code>tqdm</code> dependency is used only by the CLI reporting layer. Sampling code emits structured progress events and remains usable from Python without CLI formatting.</p>
 <h2 id="metadata-and-diagnostics">Metadata and diagnostics</h2>
@@ -834,11 +896,15 @@ citygen: tile 1/1 (x=0, y=0) sampling mobile LiDAR rays done - sensor_positions=
 </tr>
 <tr>
 <td><code>object_feature_counts</code></td>
-<td>Counts grouped by feature ids such as <code>terrain_surface</code>, <code>road_surface</code>, <code>road_sidewalk</code>, <code>road_median</code>, <code>building_roof</code>, <code>parcel_fence</code>, <code>fence_foundation</code>, <code>tree</code>, <code>tree_trunk</code>, <code>tree_crown</code>.</td>
+<td>Counts grouped by feature ids such as <code>terrain_surface</code>, <code>road_surface</code>, <code>road_sidewalk</code>, <code>road_median</code>, <code>building_roof</code>, <code>parcel_fence</code>, <code>fence_foundation</code>, <code>tree</code>, <code>tree_trunk</code>, <code>tree_crown</code>, <code>vehicle</code>, <code>vehicle_body</code>, <code>vehicle_wheel</code>, <code>vehicle_window</code>.</td>
 </tr>
 <tr>
 <td><code>tree_counts</code></td>
 <td>Total trees, counts by crown shape and biome, height stats, trunk/crown point counts.</td>
+</tr>
+<tr>
+<td><code>vehicle_counts</code></td>
+<td>Total vehicles, counts by type, placement mode and biome, dimension stats, body/wheel/window point counts.</td>
 </tr>
 <tr>
 <td><code>mobile_lidar</code></td>

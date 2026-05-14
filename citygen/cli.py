@@ -23,6 +23,7 @@ STAGE_LABELS = {
     "objects": "buildings/objects",
     "fences": "fences",
     "trees": "trees",
+    "vehicles": "vehicles",
     "sampling": "sampling",
     "mobile_lidar": "mobile LiDAR",
     "writing_ply": "writing PLY",
@@ -33,7 +34,7 @@ PROGRESS_SUBSTAGE_LABELS = {
     "mobile_lidar_rays": "mobile LiDAR rays",
 }
 
-_TQDM_SUBSTAGES = {"tile_surfaces", "buildings", "fences", "trees", "mobile_lidar_rays"}
+_TQDM_SUBSTAGES = {"tile_surfaces", "buildings", "fences", "trees", "vehicles", "mobile_lidar_rays"}
 
 
 @dataclass
@@ -373,7 +374,7 @@ def _resolve_single_output_path(out: str | None, tile_x: int, tile_y: int) -> Pa
 
 
 def _stage_total(config: CityGenConfig) -> int:
-    total = 9
+    total = 10
     if config.mobile_lidar.enabled:
         total += 1
     return total
@@ -428,6 +429,7 @@ def _print_tile_summary(result: TileRunResult, verbosity: int) -> None:
         print(f"  parcels: {_small_mapping(metadata.get('parcel_counts', {}))}")
         print(f"  fences: {_small_mapping(metadata.get('fence_counts', {}))}")
         print(f"  trees: {_small_mapping(metadata.get('tree_counts', {}))}")
+        print(f"  vehicles: {_small_mapping(metadata.get('vehicle_counts', {}))}")
         print(f"  mobile_lidar: {_lidar_summary(metadata.get('mobile_lidar', {}))}")
     _print_written_lines(result)
 
@@ -486,6 +488,7 @@ def _subsystem_summary(config: CityGenConfig) -> str:
             f"parcels={_on_off(config.parcels.enabled)}",
             f"fences={_on_off(config.fences.enabled)}:{config.fences.mode}",
             f"trees={_on_off(config.trees.enabled)}:{config.trees.crown_shape}",
+            f"vehicles={_on_off(config.vehicles.enabled)}:{config.vehicles.vehicle_type}",
             f"mobile_lidar={_on_off(config.mobile_lidar.enabled)}:{config.mobile_lidar.output_mode}",
             f"sampling={config.sampling.mode}",
             f"output={config.output.format}/rgb={_on_off(config.output.include_rgb)}/class={_on_off(config.output.include_class)}",
@@ -520,6 +523,7 @@ def _cost_driver_summary(config: CityGenConfig, tile_configs: tuple[CityGenConfi
         f"margin_m={_format_number(config.tile.margin_m)}, "
         f"min_surface_spacing_m={_format_number(min(config.sampling.ground_spacing_m, config.sampling.road_spacing_m))}, "
         f"trees_density_per_ha={_format_number(config.trees.density_per_ha) if config.trees.enabled else 'off'}, "
+        f"vehicles_density_per_km={_format_number(config.vehicles.density_per_km) if config.vehicles.enabled else 'off'}, "
         f"{lidar_summary}"
     )
 
@@ -542,7 +546,7 @@ def _format_progress_details(details: dict[str, Any] | None, verbosity: int) -> 
         return ""
     hidden = {"substage", "event"}
     if verbosity < 2:
-        hidden.update({"building_id", "segment_id", "tree_id", "hit_counts_by_class"})
+        hidden.update({"building_id", "segment_id", "tree_id", "vehicle_id", "hit_counts_by_class"})
     visible = {key: value for key, value in details.items() if key not in hidden}
     return _format_details(visible, verbosity)
 
@@ -561,6 +565,8 @@ def _progress_total(substage: str, details: dict[str, Any]) -> int:
         return _int_detail(details, "fence_segments")
     if substage == "trees":
         return _int_detail(details, "trees")
+    if substage == "vehicles":
+        return _int_detail(details, "vehicles")
     if substage == "mobile_lidar_rays":
         return _int_detail(details, "total_rays")
     return 0
@@ -579,6 +585,8 @@ def _progress_current(substage: str, event: str, details: dict[str, Any], total:
         return _int_detail(details, "segment", default=0)
     if substage == "trees":
         return _int_detail(details, "tree", default=0)
+    if substage == "vehicles":
+        return _int_detail(details, "vehicle", default=0)
     if substage == "mobile_lidar_rays":
         return _int_detail(details, "processed_rays", "emitted_rays", default=0)
     return 0
@@ -599,6 +607,8 @@ def _progress_unit(substage: str) -> str:
         return "segment"
     if substage == "trees":
         return "tree"
+    if substage == "vehicles":
+        return "vehicle"
     if substage == "mobile_lidar_rays":
         return "ray"
     return "item"
@@ -616,6 +626,8 @@ def _tqdm_postfix(substage: str, details: dict[str, Any], verbosity: int) -> dic
         return _postfix(details, ("total_fence_points", "total_fence_body_points", "total_foundation_points"))
     if substage == "trees":
         return _postfix(details, ("total_tree_points", "total_trunk_points", "total_crown_points"))
+    if substage == "vehicles":
+        return _postfix(details, ("total_vehicle_points", "total_body_points", "total_wheel_points", "total_window_points"))
     if substage == "mobile_lidar_rays":
         keys = ("successful_hits", "dropped_rays", "missed_rays", "attenuated_rays", "lidar_points")
         return _postfix(details, keys)
@@ -648,6 +660,13 @@ def _short_counter_name(key: str) -> str:
         "foundation_points": "foundation",
         "total_fence_body_points": "fence",
         "total_foundation_points": "foundation",
+        "total_vehicle_points": "pts",
+        "body_points": "body",
+        "wheel_points": "wheel",
+        "window_points": "window",
+        "total_body_points": "body",
+        "total_wheel_points": "wheel",
+        "total_window_points": "window",
         "successful_hits": "hits",
         "dropped_rays": "dropped",
         "missed_rays": "missed",
