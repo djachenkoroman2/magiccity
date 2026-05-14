@@ -6,7 +6,7 @@ tile:
   margin_m: 72
 terrain:
   base_height_m: 0
-  height_noise_m: 3.8
+  height_noise_m: 6.0
 urban_fields:
   enabled: true
   center_x: 720
