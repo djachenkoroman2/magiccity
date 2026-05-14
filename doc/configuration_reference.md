@@ -6,6 +6,7 @@
 
 Связанные тематические документы:
 
+- `doc/terrain.md` — шум высоты, горы, холмы, овраги и потребители `terrain_height`;
 - `doc/roads.md` — модели дорог, primitives, профили и surface-классы;
 - `doc/biomes.md` — `urban_fields`, классификация биомов и влияние биомов;
 - `doc/parcels.md` — block/parcel subdivision и oriented parcels;
@@ -49,7 +50,7 @@ uv run citygen --config configs/mvp.yaml --out outputs/mvp_tile.ply --verbose
 - Все размеры и расстояния задаются в метрах.
 - Горизонтальные координаты сцены: `x` и `y`; высота: `z`.
 - Булевы значения пишутся как `true` или `false`.
-- Текущий загрузчик читает описанные ниже поля. Секции `parcels`, `fences`, `mobile_lidar` и `worldgen` валидируют имена параметров строго, чтобы опечатки в новых слоях не проходили молча.
+- Текущий загрузчик читает описанные ниже поля. Секции `terrain`, `parcels`, `fences`, `mobile_lidar` и `worldgen` валидируют имена параметров строго, чтобы опечатки в новых слоях не проходили молча.
 
 Минимальный валидный конфиг:
 
@@ -69,6 +70,9 @@ tile:
 terrain:
   base_height_m: 0
   height_noise_m: 1.5
+  mountains: []
+  hills: []
+  ravines: []
 urban_fields:
   enabled: false
   center_x: 0
@@ -315,14 +319,36 @@ tiles:
 terrain:
   base_height_m: 0
   height_noise_m: 1.5
+  mountains:
+    - center_x: 120
+      center_y: 160
+      height_m: 140
+      radius_m: 220
+  hills:
+    - center_x: 420
+      center_y: 320
+      height_m: 28
+      radius_m: 180
+  ravines:
+    - center_x: 260
+      center_y: 300
+      length_m: 360
+      width_m: 55
+      depth_m: 18
+      angle_degrees: 25
 ```
 
 | Параметр | Тип | По умолчанию | Возможные значения | Действие |
 | --- | --- | --- | --- | --- |
 | `base_height_m` | number | `0.0` | любое число | Базовая высота поверхности по оси Z. Поднимает или опускает весь рельеф. |
-| `height_noise_m` | number | `1.5` | любое число; обычно `>= 0` | Амплитуда процедурного шума высоты. `0` дает плоскую поверхность на `base_height_m`. |
+| `height_noise_m` | number | `1.5` | `>= 0` | Амплитуда процедурного шума высоты. `0` отключает шум, но не отключает `mountains`, `hills` и `ravines`. |
+| `mountains` | list | `[]` | элементы с `center_x`, `center_y`, `height_m > 0`, `radius_m > 0` | Высокие радиальные поднятия рельефа с более резким профилем. |
+| `hills` | list | `[]` | элементы с `center_x`, `center_y`, `height_m > 0`, `radius_m > 0` | Более мягкие радиальные поднятия рельефа. |
+| `ravines` | list | `[]` | элементы с `center_x`, `center_y`, `length_m > 0`, `width_m > 0`, `depth_m > 0`, опционально `angle_degrees` | Линейные понижения рельефа, повернутые на `angle_degrees`. |
 
 Высота рельефа зависит от `seed`, координат `x/y` и настроек `terrain`. Она используется для точек земли, дорог, тротуаров и базовой высоты зданий.
+
+Подробное описание форм рельефа и вложенных полей см. в `doc/terrain.md`.
 
 ## `urban_fields`
 

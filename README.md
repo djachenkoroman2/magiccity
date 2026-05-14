@@ -8,6 +8,7 @@ MagicCity — MVP CLI-генератора синтетической город
 
 - детерминированная генерация по `seed`;
 - координатная модель для одного тайла и multi-tile запусков;
+- процедурный рельеф с шумом высоты, горами, холмами и оврагами;
 - дорожные primitives и модели дорог: `grid`, `radial_ring`, `radial`, `linear`, `organic`, `mixed`, `free`;
 - дорожные профили: `local`, `collector`, `arterial`, `boulevard`, включая `road_median`;
 - `urban_fields` и биомы: `downtown`, `residential`, `industrial`, `suburb`;
@@ -28,6 +29,7 @@ MagicCity — MVP CLI-генератора синтетической город
 | Документ | Назначение |
 | --- | --- |
 | `doc/configuration_reference.md` | Полный YAML-справочник: значения по умолчанию, правила валидации, примеры. |
+| `doc/terrain.md` | Рельеф: шум высоты, горы, холмы, овраги и потребители `terrain_height`. |
 | `doc/roads.md` | Модели дорог, primitives, профили, surface-классы и метаданные. |
 | `doc/biomes.md` | `urban_fields`, классификация биомов и их влияние на генерацию. |
 | `doc/parcels.md` | Кварталы и parcels, ориентированное разбиение и зоны застройки. |
@@ -148,7 +150,7 @@ Wrote metadata to outputs/mvp_tile.metadata.json
 | `configs/demo_parcel_fences.yaml` | Разные ограждения участков, воротные разрывы и фундаменты. |
 | `configs/demo_parcel_alignment.yaml` | Выравнивание зданий по parcels на смешанных дорогах/profiles. |
 | `configs/demo_oriented_parcels.yaml` | Ориентированное разбиение blocks/parcels и выровненные здания. |
-| `configs/demo_universal_showcase.yaml` | Большой демонстрационный сценарий: mixed roads, profiles, биомы, parcels, footprints, roofs. |
+| `configs/demo_universal_showcase.yaml` | Большой демонстрационный сценарий: mixed terrain, roads, profiles, биомы, parcels, footprints, roofs. |
 
 Примеры:
 

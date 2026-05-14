@@ -6,7 +6,7 @@ import math
 import random
 from typing import TYPE_CHECKING
 
-from .config import TerrainConfig
+from .config import TerrainConfig, TerrainRavineConfig
 
 if TYPE_CHECKING:
     from .footprints import BuildingFootprint
@@ -224,14 +224,92 @@ def angle_delta_degrees(a: float, b: float) -> float:
 
 
 def terrain_height(seed: int, terrain: TerrainConfig, x: float, y: float) -> float:
+    height = terrain.base_height_m
     amp = terrain.height_noise_m
-    if amp == 0:
-        return terrain.base_height_m
-    phase_a = (seed % 997) * 0.013
-    phase_b = (seed % 431) * 0.019
-    low = math.sin(x * 0.031 + phase_a) * math.cos(y * 0.027 - phase_b)
-    high = math.sin((x + y) * 0.071 + phase_b) * 0.35
-    return terrain.base_height_m + amp * (0.75 * low + 0.25 * high)
+    if amp != 0:
+        phase_a = (seed % 997) * 0.013
+        phase_b = (seed % 431) * 0.019
+        low = math.sin(x * 0.031 + phase_a) * math.cos(y * 0.027 - phase_b)
+        high = math.sin((x + y) * 0.071 + phase_b) * 0.35
+        height += amp * (0.75 * low + 0.25 * high)
+
+    for mountain in terrain.mountains:
+        height += _terrain_peak_offset(
+            mountain.center_x,
+            mountain.center_y,
+            mountain.height_m,
+            mountain.radius_m,
+            x,
+            y,
+            1.65,
+        )
+    for hill in terrain.hills:
+        height += _terrain_peak_offset(
+            hill.center_x,
+            hill.center_y,
+            hill.height_m,
+            hill.radius_m,
+            x,
+            y,
+            0.85,
+        )
+    for ravine in terrain.ravines:
+        height -= _terrain_ravine_depth(ravine, x, y)
+    return height
+
+
+def _terrain_peak_offset(
+    center_x: float,
+    center_y: float,
+    height_m: float,
+    radius_m: float,
+    x: float,
+    y: float,
+    sharpness: float,
+) -> float:
+    if radius_m <= 0:
+        return 0.0
+    distance = math.hypot(x - center_x, y - center_y)
+    falloff = _smooth_radial_falloff(distance, radius_m) ** sharpness
+    return height_m * falloff
+
+
+def _terrain_ravine_depth(ravine: TerrainRavineConfig, x: float, y: float) -> float:
+    if ravine.length_m <= 0 or ravine.width_m <= 0:
+        return 0.0
+
+    angle = math.radians(ravine.angle_degrees)
+    cos_a = math.cos(angle)
+    sin_a = math.sin(angle)
+    dx = x - ravine.center_x
+    dy = y - ravine.center_y
+    along = dx * cos_a + dy * sin_a
+    across = -dx * sin_a + dy * cos_a
+
+    half_width = ravine.width_m * 0.5
+    cross_t = abs(across) / half_width
+    if cross_t >= 1.0:
+        return 0.0
+
+    half_length = ravine.length_m * 0.5
+    overrun = max(0.0, abs(along) - half_length)
+    if overrun >= half_width:
+        return 0.0
+
+    cross_profile = (1.0 - _smoothstep(cross_t)) ** 1.15
+    end_profile = 1.0 if overrun == 0 else 1.0 - _smoothstep(overrun / half_width)
+    return ravine.depth_m * cross_profile * end_profile
+
+
+def _smooth_radial_falloff(distance: float, radius: float) -> float:
+    if distance >= radius:
+        return 0.0
+    return 1.0 - _smoothstep(distance / radius)
+
+
+def _smoothstep(value: float) -> float:
+    t = min(1.0, max(0.0, value))
+    return t * t * (3.0 - 2.0 * t)
 
 
 def tile_bbox(tile_x: int, tile_y: int, size_m: float) -> BBox:

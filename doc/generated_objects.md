@@ -24,7 +24,7 @@
 
 ## Рельеф
 
-`terrain_surface` создается на стадии `sampling` по `terrain.base_height_m`, `terrain.height_noise_m` и детерминированной функции высоты рельефа. Точки получают semantic class `ground`.
+`terrain_surface` создается на стадии `sampling` по `terrain.base_height_m`, `terrain.height_noise_m`, `terrain.mountains`, `terrain.hills`, `terrain.ravines` и детерминированной функции высоты рельефа. Точки получают semantic class `ground`.
 
 Metadata:
 

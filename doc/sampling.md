@@ -173,7 +173,7 @@ Notes:
 | Секция | Параметры | Как влияет на итоговое облако |
 | --- | --- | --- |
 | `tile` | `x`, `y`, `size_m`, `margin_m` | `size_m` задает финальную область crop. `margin_m` расширяет рабочую область генерации сцены, но итоговые точки обрезаются по bbox тайла. |
-| `terrain` | `base_height_m`, `height_noise_m` | Определяет `z` для ground/road/sidewalk/median, базу зданий, fence base и высоту сенсора LiDAR над землей. |
+| `terrain` | `base_height_m`, `height_noise_m`, `mountains`, `hills`, `ravines` | Определяет `z` для ground/road/sidewalk/median, базу зданий, fence base и высоту сенсора LiDAR над землей. |
 | `roads` | `model`, `spacing_m`, `width_m`, `sidewalk_width_m`, profiles | Меняет распределение surface classes. При profiles может появляться `road_median`. |
 | `buildings` | `enabled`, height, footprints, roofs | Определяет, есть ли roof/facade точки, где стоят здания и какую высоту имеют roof surfaces. |
 | `parcels` | `enabled`, parcel geometry | Косвенно меняет здания и является условием для fences. |

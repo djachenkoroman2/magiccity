@@ -41,6 +41,9 @@
                                 <a href="configuration_reference.html" class="nav-link active" aria-current="page">Конфигурация</a>
                             </li>
                             <li class="nav-item">
+                                <a href="terrain.html" class="nav-link">Рельеф</a>
+                            </li>
+                            <li class="nav-item">
                                 <a href="roads.html" class="nav-link">Дороги</a>
                             </li>
                             <li class="nav-item">
@@ -84,7 +87,7 @@
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a rel="next" href="roads.html" class="nav-link">
+                                <a rel="next" href="terrain.html" class="nav-link">
                                     Next <i class="fa fa-arrow-right"></i>
                                 </a>
                             </li>
@@ -184,6 +187,7 @@
 <p><code>configs/*.yaml</code> остаются примерами запуска и проверочными конфигами. Они не являются источником схемы.</p>
 <p>Связанные тематические документы:</p>
 <ul>
+<li><code>doc/terrain.md</code> — шум высоты, горы, холмы, овраги и потребители <code>terrain_height</code>;</li>
 <li><code>doc/roads.md</code> — модели дорог, primitives, профили и surface-классы;</li>
 <li><code>doc/biomes.md</code> — <code>urban_fields</code>, классификация биомов и влияние биомов;</li>
 <li><code>doc/parcels.md</code> — block/parcel subdivision и oriented parcels;</li>
@@ -215,7 +219,7 @@
 <li>Все размеры и расстояния задаются в метрах.</li>
 <li>Горизонтальные координаты сцены: <code>x</code> и <code>y</code>; высота: <code>z</code>.</li>
 <li>Булевы значения пишутся как <code>true</code> или <code>false</code>.</li>
-<li>Текущий загрузчик читает описанные ниже поля. Секции <code>parcels</code>, <code>fences</code>, <code>mobile_lidar</code> и <code>worldgen</code> валидируют имена параметров строго, чтобы опечатки в новых слоях не проходили молча.</li>
+<li>Текущий загрузчик читает описанные ниже поля. Секции <code>terrain</code>, <code>parcels</code>, <code>fences</code>, <code>mobile_lidar</code> и <code>worldgen</code> валидируют имена параметров строго, чтобы опечатки в новых слоях не проходили молча.</li>
 </ul>
 <p>Минимальный валидный конфиг:</p>
 <pre><code class="language-yaml">seed: 7
@@ -230,6 +234,9 @@ tile:
 terrain:
   base_height_m: 0
   height_noise_m: 1.5
+  mountains: []
+  hills: []
+  ravines: []
 urban_fields:
   enabled: false
   center_x: 0
@@ -641,6 +648,23 @@ max_y = min_y + tile.size_m
 <pre><code class="language-yaml">terrain:
   base_height_m: 0
   height_noise_m: 1.5
+  mountains:
+    - center_x: 120
+      center_y: 160
+      height_m: 140
+      radius_m: 220
+  hills:
+    - center_x: 420
+      center_y: 320
+      height_m: 28
+      radius_m: 180
+  ravines:
+    - center_x: 260
+      center_y: 300
+      length_m: 360
+      width_m: 55
+      depth_m: 18
+      angle_degrees: 25
 </code></pre>
 <table>
 <thead>
@@ -664,12 +688,34 @@ max_y = min_y + tile.size_m
 <td><code>height_noise_m</code></td>
 <td>number</td>
 <td><code>1.5</code></td>
-<td>любое число; обычно <code>&gt;= 0</code></td>
-<td>Амплитуда процедурного шума высоты. <code>0</code> дает плоскую поверхность на <code>base_height_m</code>.</td>
+<td><code>&gt;= 0</code></td>
+<td>Амплитуда процедурного шума высоты. <code>0</code> отключает шум, но не отключает <code>mountains</code>, <code>hills</code> и <code>ravines</code>.</td>
+</tr>
+<tr>
+<td><code>mountains</code></td>
+<td>list</td>
+<td><code>[]</code></td>
+<td>элементы с <code>center_x</code>, <code>center_y</code>, <code>height_m &gt; 0</code>, <code>radius_m &gt; 0</code></td>
+<td>Высокие радиальные поднятия рельефа с более резким профилем.</td>
+</tr>
+<tr>
+<td><code>hills</code></td>
+<td>list</td>
+<td><code>[]</code></td>
+<td>элементы с <code>center_x</code>, <code>center_y</code>, <code>height_m &gt; 0</code>, <code>radius_m &gt; 0</code></td>
+<td>Более мягкие радиальные поднятия рельефа.</td>
+</tr>
+<tr>
+<td><code>ravines</code></td>
+<td>list</td>
+<td><code>[]</code></td>
+<td>элементы с <code>center_x</code>, <code>center_y</code>, <code>length_m &gt; 0</code>, <code>width_m &gt; 0</code>, <code>depth_m &gt; 0</code>, опционально <code>angle_degrees</code></td>
+<td>Линейные понижения рельефа, повернутые на <code>angle_degrees</code>.</td>
 </tr>
 </tbody>
 </table>
 <p>Высота рельефа зависит от <code>seed</code>, координат <code>x/y</code> и настроек <code>terrain</code>. Она используется для точек земли, дорог, тротуаров и базовой высоты зданий.</p>
+<p>Подробное описание форм рельефа и вложенных полей см. в <code>doc/terrain.md</code>.</p>
 <h2 id="urban_fields"><code>urban_fields</code></h2>
 <p>Секция <code>urban_fields</code> включает плавные городские поля и выбор биома в каждой точке мира.</p>
 <pre><code class="language-yaml">urban_fields:

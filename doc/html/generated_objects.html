@@ -41,6 +41,9 @@
                                 <a href="configuration_reference.html" class="nav-link">Конфигурация</a>
                             </li>
                             <li class="nav-item">
+                                <a href="terrain.html" class="nav-link">Рельеф</a>
+                            </li>
+                            <li class="nav-item">
                                 <a href="roads.html" class="nav-link">Дороги</a>
                             </li>
                             <li class="nav-item">
@@ -251,7 +254,7 @@
 </tbody>
 </table>
 <h2 id="_2">Рельеф</h2>
-<p><code>terrain_surface</code> создается на стадии <code>sampling</code> по <code>terrain.base_height_m</code>, <code>terrain.height_noise_m</code> и детерминированной функции высоты рельефа. Точки получают semantic class <code>ground</code>.</p>
+<p><code>terrain_surface</code> создается на стадии <code>sampling</code> по <code>terrain.base_height_m</code>, <code>terrain.height_noise_m</code>, <code>terrain.mountains</code>, <code>terrain.hills</code>, <code>terrain.ravines</code> и детерминированной функции высоты рельефа. Точки получают semantic class <code>ground</code>.</p>
 <p>Metadata:</p>
 <ul>
 <li><code>class_counts.ground</code>;</li>

@@ -41,6 +41,9 @@
                                 <a href="configuration_reference.html" class="nav-link">Конфигурация</a>
                             </li>
                             <li class="nav-item">
+                                <a href="terrain.html" class="nav-link">Рельеф</a>
+                            </li>
+                            <li class="nav-item">
                                 <a href="roads.html" class="nav-link">Дороги</a>
                             </li>
                             <li class="nav-item">
@@ -157,7 +160,7 @@
 <p>Конфиг включает:</p>
 <ul>
 <li>большой тайл <code>tile.size_m: 2000</code>;</li>
-<li>заметный, но умеренный рельеф через <code>terrain.height_noise_m</code>;</li>
+<li>разнообразный рельеф через <code>terrain.height_noise_m</code>, <code>terrain.mountains</code>, <code>terrain.hills</code> и <code>terrain.ravines</code>;</li>
 <li><code>urban_fields.enabled: true</code>;</li>
 <li><code>roads.model: mixed</code>;</li>
 <li><code>roads.profiles.enabled: true</code> с <code>local</code>, <code>collector</code>, <code>arterial</code>, <code>boulevard</code>;</li>
@@ -220,6 +223,7 @@
 </ul>
 <h2 id="_4">Что означают важные секции</h2>
 <p><code>urban_fields</code> задает плавные поля города. В этом showcase центр смещен относительно тайла, чтобы получить неоднородную карту биомов.</p>
+<p><code>terrain</code> сочетает базовый шум поверхности с двумя высокими горными поднятиями, несколькими мягкими холмами и двумя диагональными оврагами. Эти формы влияют на землю, дороги, тротуары, основания зданий и лучи mobile LiDAR при его включении.</p>
 <p><code>roads.model: mixed</code> выбирает effective road network по биому. Текущий mixed-режим строит подсети <code>grid</code>, <code>radial_ring</code>, <code>linear</code> и <code>organic</code>; <code>radial</code> и <code>free</code> остаются поддержанными моделями дорог, но не входят в набор предпочтительных моделей для биомов.</p>
 <p><code>roads.profiles.enabled: true</code> назначает road primitives разные поперечные профили. В showcase включены узкие локальные улицы, collector roads, arterial roads и boulevards с широким median.</p>
 <p><code>buildings.footprint.model: mixed</code> выбирает форму здания по weights. Конфиг задает положительные веса для всех поддержанных типов footprints.</p>

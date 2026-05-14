@@ -12,6 +12,7 @@ hooks:
 nav:
   - Главная: index.md
   - Конфигурация: configuration_reference.md
+  - Рельеф: terrain.md
   - Дороги: roads.md
   - Биомы: biomes.md
   - Parcels: parcels.md

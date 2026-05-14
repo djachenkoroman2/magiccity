@@ -41,6 +41,9 @@
                                 <a href="configuration_reference.html" class="nav-link">Конфигурация</a>
                             </li>
                             <li class="nav-item">
+                                <a href="terrain.html" class="nav-link">Рельеф</a>
+                            </li>
+                            <li class="nav-item">
                                 <a href="roads.html" class="nav-link">Дороги</a>
                             </li>
                             <li class="nav-item">
@@ -436,7 +439,7 @@ fences:
 </tr>
 <tr>
 <td><code>terrain</code></td>
-<td><code>base_height_m</code>, <code>height_noise_m</code></td>
+<td><code>base_height_m</code>, <code>height_noise_m</code>, <code>mountains</code>, <code>hills</code>, <code>ravines</code></td>
 <td>Определяет <code>z</code> для ground/road/sidewalk/median, базу зданий, fence base и высоту сенсора LiDAR над землей.</td>
 </tr>
 <tr>
@@ -674,11 +677,21 @@ sampling:
 <p>PLY export may omit RGB or class fields, but metadata still contains <code>class_counts</code> and <code>class_mapping</code> because internal <code>Point</code> objects always carry color and class id.</p>
 <h2 id="cli-progress-during-sampling">CLI progress during sampling</h2>
 <p>When generation is started through <code>citygen</code>, <code>sample_scene</code> receives a progress callback from the CLI. The callback is diagnostic only: it does not create RNG calls, does not change point order and does not write extra fields to PLY or metadata.</p>
-<p>The output is intentionally line-based instead of a dynamic progress bar, so it stays readable in logs and smoke tests:</p>
+<p>In an interactive terminal, the CLI uses <code>tqdm</code> progress bars for long <code>sampling</code> substages and writes them to <code>stderr</code>. This keeps normal summaries and <code>Wrote ...</code> lines on <code>stdout</code>, while still showing a live progress bar:</p>
+<pre><code class="language-text">tile 1/1 (x=0, y=0) sampling tile_surfaces: 100%|██████████| 171/171 row, pts=21263, ground=8409, hardscape=12854
+tile 1/1 (x=0, y=0) sampling buildings: 100%|██████████| 8/8 building, pts=5221, roof=837, facade=4384
+tile 1/1 (x=0, y=0) sampling mobile LiDAR rays: 100%|██████████| 17856/17856 ray, hits=14302, dropped=360, missed=2871, attenuated=323, pts=14302
+</code></pre>
+<p>When stdout or stderr is not a TTY, dynamic bars are disabled and the same structured events are rendered as stable lines suitable for logs and tests:</p>
 <pre><code class="language-text">citygen: tile 1/1 (x=0, y=0) sampling tile_surfaces started - grid_rows=129, grid_columns=129, grid_samples=16641, spacing_m=1.5
 citygen: tile 1/1 (x=0, y=0) sampling tile_surfaces progress - rows=33, total_rows=129, grid_samples=4257, total_grid_samples=16641, points=3798, class_counts={ground=1875, road=1296, sidewalk=627}
 citygen: tile 1/1 (x=0, y=0) sampling buildings done - buildings=24, points=5221, roof_points=837, facade_points=4384
 citygen: tile 1/1 (x=0, y=0) sampling surface_total done - tile_surface_points=21263, building_points=5221, fence_points=0, surface_points_before_crop=26484, surface_points=26484
+</code></pre>
+<p>With <code>mobile_lidar.enabled: true</code>, the ray sampler is reported as a <code>sampling</code> substage while the CLI still keeps the high-level mobile LiDAR stage boundary:</p>
+<pre><code class="language-text">citygen: tile 1/1 (x=0, y=0) stage 7/9 mobile LiDAR started
+citygen: tile 1/1 (x=0, y=0) sampling mobile LiDAR rays progress - positions=8, total_positions=31, processed_rays=4608, emitted_rays=4608, total_rays=17856, successful_hits=3721, dropped_rays=94, missed_rays=712, attenuated_rays=81, lidar_points=3721
+citygen: tile 1/1 (x=0, y=0) sampling mobile LiDAR rays done - sensor_positions=31, processed_rays=17856, total_rays=17856, emitted_rays=17856, successful_hits=14302, dropped_rays=360, missed_rays=2871, attenuated_rays=323, lidar_points=14302
 </code></pre>
 <p>Progress substages:</p>
 <table>
@@ -693,36 +706,38 @@ citygen: tile 1/1 (x=0, y=0) sampling surface_total done - tile_surface_points=2
 <tr>
 <td><code>tile_surfaces</code></td>
 <td>Always during surface sampling</td>
-<td><code>grid_rows</code>, <code>grid_columns</code>, <code>grid_samples</code>, <code>rows</code>, <code>total_rows</code>, <code>points</code>, <code>class_counts</code></td>
+<td><code>grid_rows</code>, <code>grid_columns</code>, <code>grid_samples</code>, <code>rows</code>, <code>total_rows</code>, <code>points</code>, <code>ground_points</code>, <code>hardscape_points</code>, <code>road_points</code>, <code>sidewalk_points</code>, <code>road_median_points</code>, <code>class_counts</code></td>
 </tr>
 <tr>
 <td><code>buildings</code></td>
 <td>Always, including the zero-buildings case</td>
-<td><code>buildings</code>, <code>points</code>, <code>roof_points</code>, <code>facade_points</code>; in <code>--verbose</code>, per-building <code>item_done</code> also includes <code>building_id</code></td>
+<td><code>buildings</code>, <code>points</code>, <code>roof_points</code>, <code>facade_points</code>; in <code>--verbose</code>, per-building <code>item_done</code> also includes <code>building_id</code>, <code>total_roof_points</code> and <code>total_facade_points</code></td>
 </tr>
 <tr>
 <td><code>fences</code></td>
 <td>Only when generated fence segments exist</td>
-<td><code>fence_segments</code>, <code>points</code>, <code>fence_points</code>, <code>foundation_points</code>; in <code>--verbose</code>, per-segment <code>item_done</code> also includes <code>segment_id</code></td>
+<td><code>fence_segments</code>, <code>points</code>, <code>fence_points</code>, <code>foundation_points</code>; in <code>--verbose</code>, per-segment <code>item_done</code> also includes <code>segment_id</code>, <code>total_fence_body_points</code> and <code>total_foundation_points</code></td>
 </tr>
 <tr>
 <td><code>surface_total</code></td>
 <td>End of surface sampling before LiDAR merge</td>
-<td><code>tile_surface_points</code>, <code>building_points</code>, <code>fence_points</code>, <code>surface_points_before_crop</code>, <code>surface_points</code>, <code>class_counts</code></td>
+<td><code>tile_surface_points</code>, <code>building_points</code>, <code>fence_points</code>, <code>ground_points</code>, <code>hardscape_points</code>, <code>cropped_building_points</code>, <code>cropped_fence_points</code>, <code>surface_points_before_crop</code>, <code>surface_points</code>, <code>class_counts</code></td>
 </tr>
 <tr>
-<td><code>mobile LiDAR rays</code></td>
-<td>Only when <code>mobile_lidar.enabled: true</code></td>
-<td><code>sensor_positions</code>, <code>processed_rays</code>, <code>total_rays</code>, <code>successful_hits</code>, <code>dropped_rays</code>, <code>missed_rays</code>, <code>attenuated_rays</code>, <code>lidar_points</code></td>
+<td><code>mobile_lidar_rays</code></td>
+<td>Only when <code>mobile_lidar.enabled: true</code>; printed as <code>sampling mobile LiDAR rays</code></td>
+<td><code>sensor_positions</code>, <code>processed_rays</code>, <code>emitted_rays</code>, <code>total_rays</code>, <code>successful_hits</code>, <code>dropped_rays</code>, <code>missed_rays</code>, <code>attenuated_rays</code>, <code>lidar_points</code></td>
 </tr>
 </tbody>
 </table>
 <p>Verbosity rules:</p>
 <ul>
-<li>default mode prints compact started/progress/done lines for sampling substages;</li>
-<li><code>--quiet</code> suppresses sampling progress and keeps only final <code>Wrote ...</code> paths;</li>
-<li><code>--verbose</code> prints extra counters and <code>item_done</code> lines for individual buildings, fence segments and LiDAR sensor positions.</li>
+<li>default interactive mode shows compact <code>tqdm</code> bars for <code>tile_surfaces</code>, <code>buildings</code>, <code>fences</code> and <code>mobile_lidar_rays</code>;</li>
+<li>default non-TTY mode prints compact started/progress/done lines for sampling substages;</li>
+<li><code>--quiet</code> suppresses progress bars and intermediate progress lines, keeping only final <code>Wrote ...</code> paths;</li>
+<li><code>--verbose</code> shows extra counters in tqdm postfixes and, in non-TTY mode, prints more detailed item-level diagnostics for buildings, fence segments and LiDAR sensor positions.</li>
 </ul>
+<p>The <code>tqdm</code> dependency is used only by the CLI reporting layer. Sampling code emits structured progress events and remains usable from Python without CLI formatting.</p>
 <h2 id="metadata-and-diagnostics">Metadata and diagnostics</h2>
 <p>After <code>write_metadata</code>, the JSON file contains several fields useful for sampling diagnostics:</p>
 <table>

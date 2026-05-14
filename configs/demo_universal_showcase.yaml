@@ -7,6 +7,41 @@ tile:
 terrain:
   base_height_m: 0
   height_noise_m: 6.0
+  mountains:
+    - center_x: 210
+      center_y: 230
+      height_m: 180
+      radius_m: 260
+    - center_x: 410
+      center_y: 105
+      height_m: 125
+      radius_m: 190
+  hills:
+    - center_x: 930
+      center_y: 260
+      height_m: 34
+      radius_m: 210
+    - center_x: 1040
+      center_y: 720
+      height_m: 26
+      radius_m: 180
+    - center_x: 560
+      center_y: 1030
+      height_m: 22
+      radius_m: 240
+  ravines:
+    - center_x: 690
+      center_y: 450
+      length_m: 760
+      width_m: 110
+      depth_m: 42
+      angle_degrees: 34
+    - center_x: 300
+      center_y: 920
+      length_m: 520
+      width_m: 85
+      depth_m: 28
+      angle_degrees: -18
 urban_fields:
   enabled: true
   center_x: 720

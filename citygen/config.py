@@ -63,9 +63,30 @@ class TileConfig:
 
 
 @dataclass(frozen=True)
+class TerrainPeakConfig:
+    center_x: float
+    center_y: float
+    height_m: float
+    radius_m: float
+
+
+@dataclass(frozen=True)
+class TerrainRavineConfig:
+    center_x: float
+    center_y: float
+    length_m: float
+    width_m: float
+    depth_m: float
+    angle_degrees: float = 0.0
+
+
+@dataclass(frozen=True)
 class TerrainConfig:
     base_height_m: float = 0.0
     height_noise_m: float = 1.5
+    mountains: tuple[TerrainPeakConfig, ...] = ()
+    hills: tuple[TerrainPeakConfig, ...] = ()
+    ravines: tuple[TerrainRavineConfig, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -379,11 +400,78 @@ def _tiles_config(raw: Any, base_tile: TileConfig) -> tuple[TileConfig, ...]:
 
 
 def _terrain_config(raw: dict[str, Any]) -> TerrainConfig:
+    supported = {
+        "base_height_m",
+        "height_noise_m",
+        "mountains",
+        "hills",
+        "ravines",
+    }
+    for key in raw:
+        if key not in supported:
+            fields = ", ".join(sorted(supported))
+            raise ConfigError(f"Unsupported terrain.{key}. Supported fields: {fields}.")
+
     defaults = TerrainConfig()
     return TerrainConfig(
         base_height_m=_float(raw, "base_height_m", defaults.base_height_m),
         height_noise_m=_float(raw, "height_noise_m", defaults.height_noise_m),
+        mountains=_terrain_peaks(raw.get("mountains"), "terrain.mountains"),
+        hills=_terrain_peaks(raw.get("hills"), "terrain.hills"),
+        ravines=_terrain_ravines(raw.get("ravines"), "terrain.ravines"),
     )
+
+
+def _terrain_peaks(raw: Any, label: str) -> tuple[TerrainPeakConfig, ...]:
+    if raw is None:
+        return ()
+    if not isinstance(raw, list):
+        raise ConfigError(f"{label} must be a list.")
+
+    peaks: list[TerrainPeakConfig] = []
+    for index, item in enumerate(raw):
+        item_label = f"{label}[{index}]"
+        if not isinstance(item, dict):
+            raise ConfigError(f"{item_label} must be a mapping.")
+        _validate_supported_keys(item, item_label, {"center_x", "center_y", "height_m", "radius_m"})
+        peaks.append(
+            TerrainPeakConfig(
+                center_x=_required_float(item, "center_x", item_label),
+                center_y=_required_float(item, "center_y", item_label),
+                height_m=_required_float(item, "height_m", item_label),
+                radius_m=_required_float(item, "radius_m", item_label),
+            )
+        )
+    return tuple(peaks)
+
+
+def _terrain_ravines(raw: Any, label: str) -> tuple[TerrainRavineConfig, ...]:
+    if raw is None:
+        return ()
+    if not isinstance(raw, list):
+        raise ConfigError(f"{label} must be a list.")
+
+    ravines: list[TerrainRavineConfig] = []
+    for index, item in enumerate(raw):
+        item_label = f"{label}[{index}]"
+        if not isinstance(item, dict):
+            raise ConfigError(f"{item_label} must be a mapping.")
+        _validate_supported_keys(
+            item,
+            item_label,
+            {"angle_degrees", "center_x", "center_y", "depth_m", "length_m", "width_m"},
+        )
+        ravines.append(
+            TerrainRavineConfig(
+                center_x=_required_float(item, "center_x", item_label),
+                center_y=_required_float(item, "center_y", item_label),
+                length_m=_required_float(item, "length_m", item_label),
+                width_m=_required_float(item, "width_m", item_label),
+                depth_m=_required_float(item, "depth_m", item_label),
+                angle_degrees=_float(item, "angle_degrees", 0.0),
+            )
+        )
+    return tuple(ravines)
 
 
 def _roads_config(raw: dict[str, Any]) -> RoadsConfig:
@@ -900,6 +988,25 @@ def _validate(cfg: CityGenConfig) -> None:
         if tile.margin_m <= 0:
             raise ConfigError("tile.margin_m must be positive.")
 
+    if cfg.terrain.height_noise_m < 0:
+        raise ConfigError("terrain.height_noise_m must be >= 0.")
+    for label, peaks in (
+        ("terrain.mountains", cfg.terrain.mountains),
+        ("terrain.hills", cfg.terrain.hills),
+    ):
+        for index, peak in enumerate(peaks):
+            if peak.height_m <= 0:
+                raise ConfigError(f"{label}[{index}].height_m must be positive.")
+            if peak.radius_m <= 0:
+                raise ConfigError(f"{label}[{index}].radius_m must be positive.")
+    for index, ravine in enumerate(cfg.terrain.ravines):
+        if ravine.length_m <= 0:
+            raise ConfigError(f"terrain.ravines[{index}].length_m must be positive.")
+        if ravine.width_m <= 0:
+            raise ConfigError(f"terrain.ravines[{index}].width_m must be positive.")
+        if ravine.depth_m <= 0:
+            raise ConfigError(f"terrain.ravines[{index}].depth_m must be positive.")
+
     positive_fields = [
         ("roads.spacing_m", cfg.roads.spacing_m),
         ("roads.width_m", cfg.roads.width_m),
@@ -1205,6 +1312,25 @@ def _float(raw: dict[str, Any], key: str, default: float) -> float:
         return float(value)
     except (TypeError, ValueError) as exc:
         raise ConfigError(f"{key} must be a number.") from exc
+
+
+def _required_float(raw: dict[str, Any], key: str, label: str) -> float:
+    if key not in raw:
+        raise ConfigError(f"Missing required number field: {label}.{key}")
+    value = raw[key]
+    if isinstance(value, bool):
+        raise ConfigError(f"{label}.{key} must be a number.")
+    try:
+        return float(value)
+    except (TypeError, ValueError) as exc:
+        raise ConfigError(f"{label}.{key} must be a number.") from exc
+
+
+def _validate_supported_keys(raw: dict[str, Any], label: str, supported: set[str]) -> None:
+    for key in raw:
+        if key not in supported:
+            fields = ", ".join(sorted(supported))
+            raise ConfigError(f"Unsupported {label}.{key}. Supported fields: {fields}.")
 
 
 def _str(raw: dict[str, Any], key: str, default: str) -> str:

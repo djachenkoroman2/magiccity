@@ -29,6 +29,66 @@ class ConfigTests(unittest.TestCase):
             with self.assertRaises(ConfigError):
                 load_config(path)
 
+    def test_loads_terrain_features(self) -> None:
+        config = _config_from_text(
+            """
+seed: 7
+terrain:
+  base_height_m: 2
+  height_noise_m: 0
+  mountains:
+    - center_x: 10
+      center_y: 20
+      height_m: 120
+      radius_m: 80
+  hills:
+    - center_x: 30
+      center_y: 40
+      height_m: 24
+      radius_m: 140
+  ravines:
+    - center_x: 50
+      center_y: 60
+      length_m: 300
+      width_m: 30
+      depth_m: 18
+      angle_degrees: 35
+"""
+        )
+
+        self.assertEqual(config.terrain.base_height_m, 2.0)
+        self.assertEqual(config.terrain.mountains[0].height_m, 120.0)
+        self.assertEqual(config.terrain.hills[0].radius_m, 140.0)
+        self.assertEqual(config.terrain.ravines[0].angle_degrees, 35.0)
+
+    def test_invalid_terrain_features_are_error(self) -> None:
+        with self.assertRaises(ConfigError):
+            _config_from_text(
+                """
+seed: 7
+terrain:
+  mountains:
+    - center_x: 0
+      center_y: 0
+      height_m: 20
+      radius_m: 0
+"""
+            )
+
+        with self.assertRaises(ConfigError):
+            _config_from_text(
+                """
+seed: 7
+terrain:
+  ravines:
+    - center_x: 0
+      center_y: 0
+      length_m: 100
+      width_m: 20
+      depth_m: -5
+"""
+            )
+
     def test_loads_footprint_config(self) -> None:
         config = _config_from_text(
             """

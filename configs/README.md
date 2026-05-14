@@ -14,7 +14,7 @@
 | `demo_parcel_fences.yaml` | Ограждения участков: mixed/частичные стороны, ворота и фундаменты. |
 | `demo_parcel_alignment.yaml` | Выравнивание зданий по parcels на смешанных дорогах. |
 | `demo_oriented_parcels.yaml` | Oriented block/parcel subdivision. |
-| `demo_universal_showcase.yaml` | Большой интеграционный showcase; справочник: `../doc/universal_showcase.md`. |
+| `demo_universal_showcase.yaml` | Большой интеграционный showcase с горами, холмами, оврагами, mixed roads/profiles и parcels; справочник: `../doc/universal_showcase.md`. |
 
 Пример запуска:
 

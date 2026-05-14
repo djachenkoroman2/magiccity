@@ -2,11 +2,12 @@
 
 MagicCity — процедурный генератор городских point clouds. `citygen` строит детерминированные городские тайлы из YAML-конфигов и экспортирует ASCII PLY вместе с JSON-файлом metadata.
 
-Документация описывает runtime-модели, конфиги, дороги, биомы, parcels, ограждения, mobile LiDAR, здания, sampling, catalogs и metadata. Координатная конвенция проекта: горизонтальная плоскость `x/y`, высота `z`.
+Документация описывает runtime-модели, конфиги, рельеф, дороги, биомы, parcels, ограждения, mobile LiDAR, здания, sampling, catalogs и metadata. Координатная конвенция проекта: горизонтальная плоскость `x/y`, высота `z`.
 
 ## Разделы
 
 - [Справочник по конфигурации](configuration_reference.md) — YAML-схема, значения по умолчанию, валидация и примеры.
+- [Рельеф](terrain.md) — `terrain_height`, шум высоты, горы, холмы, овраги и их влияние на surface sampling.
 - [Дороги](roads.md) — road primitives, модели дорог, road profiles и surface-классы.
 - [Биомы](biomes.md) — `urban_fields`, классификация районов и влияние биомов на дороги/здания.
 - [Parcels](parcels.md) — blocks/parcels, oriented subdivision, buildable areas и placement зданий.

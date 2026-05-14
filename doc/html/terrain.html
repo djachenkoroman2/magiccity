@@ -4,11 +4,11 @@
         <meta charset="utf-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <meta name="description" content="None">
+        
         
         
         <link rel="shortcut icon" href="img/favicon.ico">
-        <title>Документация MagicCity</title>
+        <title>Рельеф - Документация MagicCity</title>
         <link href="css/bootstrap.min.css" rel="stylesheet">
         <link href="css/fontawesome.min.css" rel="stylesheet">
         <link href="css/brands.min.css" rel="stylesheet">
@@ -21,7 +21,7 @@
         <script>hljs.highlightAll();</script> 
     </head>
 
-    <body class="homepage">
+    <body>
         <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
             <div class="container">
                 <a class="navbar-brand" href="index.html">Документация MagicCity</a>
@@ -35,13 +35,13 @@
                         <!-- Main navigation -->
                         <ul class="nav navbar-nav">
                             <li class="nav-item">
-                                <a href="index.html" class="nav-link active" aria-current="page">Главная</a>
+                                <a href="index.html" class="nav-link">Главная</a>
                             </li>
                             <li class="nav-item">
                                 <a href="configuration_reference.html" class="nav-link">Конфигурация</a>
                             </li>
                             <li class="nav-item">
-                                <a href="terrain.html" class="nav-link">Рельеф</a>
+                                <a href="terrain.html" class="nav-link active" aria-current="page">Рельеф</a>
                             </li>
                             <li class="nav-item">
                                 <a href="roads.html" class="nav-link">Дороги</a>
@@ -82,12 +82,12 @@
                             </a>
                         </li>
                             <li class="nav-item">
-                                <a rel="prev" class="nav-link disabled">
+                                <a rel="prev" href="configuration_reference.html" class="nav-link">
                                     <i class="fa fa-arrow-left"></i> Previous
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a rel="next" href="configuration_reference.html" class="nav-link">
+                                <a rel="next" href="roads.html" class="nav-link">
                                     Next <i class="fa fa-arrow-right"></i>
                                 </a>
                             </li>
@@ -109,13 +109,25 @@
     <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
         <ul class="nav flex-column">
             
-            <li class="nav-item" data-bs-level="1"><a href="#magiccity" class="nav-link">Документация MagicCity</a>
+            <li class="nav-item" data-bs-level="1"><a href="#_1" class="nav-link">Рельеф</a>
               <ul class="nav flex-column">
-            <li class="nav-item" data-bs-level="2"><a href="#_1" class="nav-link">Разделы</a>
+            <li class="nav-item" data-bs-level="2"><a href="#yaml" class="nav-link">YAML</a>
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-bs-level="2"><a href="#_2" class="nav-link">Быстрые команды</a>
+            <li class="nav-item" data-bs-level="2"><a href="#_2" class="nav-link">Поля</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#_3" class="nav-link">Горы и холмы</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#_4" class="nav-link">Овраги</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#showcase-" class="nav-link">Showcase-конфиг</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -126,31 +138,195 @@
 </div></div>
                     <div class="col-md-9" role="main">
 
-<h1 id="magiccity">Документация MagicCity</h1>
-<p>MagicCity — процедурный генератор городских point clouds. <code>citygen</code> строит детерминированные городские тайлы из YAML-конфигов и экспортирует ASCII PLY вместе с JSON-файлом metadata.</p>
-<p>Документация описывает runtime-модели, конфиги, рельеф, дороги, биомы, parcels, ограждения, mobile LiDAR, здания, sampling, catalogs и metadata. Координатная конвенция проекта: горизонтальная плоскость <code>x/y</code>, высота <code>z</code>.</p>
-<h2 id="_1">Разделы</h2>
-<ul>
-<li><a href="configuration_reference.html">Справочник по конфигурации</a> — YAML-схема, значения по умолчанию, валидация и примеры.</li>
-<li><a href="terrain.html">Рельеф</a> — <code>terrain_height</code>, шум высоты, горы, холмы, овраги и их влияние на surface sampling.</li>
-<li><a href="roads.html">Дороги</a> — road primitives, модели дорог, road profiles и surface-классы.</li>
-<li><a href="biomes.html">Биомы</a> — <code>urban_fields</code>, классификация районов и влияние биомов на дороги/здания.</li>
-<li><a href="parcels.html">Parcels</a> — blocks/parcels, oriented subdivision, buildable areas и placement зданий.</li>
-<li><a href="fences.html">Ограждения</a> — заборы по границам parcels, типы материалов, высота, ворота и фундаменты.</li>
-<li><a href="sampling.html">Sampling pipeline</a> — стадии surface sampling, mobile LiDAR, настройки плотности, semantic class/RGB и metadata.</li>
-<li><a href="building_footprints.html">Footprints зданий</a> — поддержанные footprint types, aliases, геометрия и clearance.</li>
-<li><a href="building_roofs.html">Крыши зданий</a> — roof types, aliases, функции высоты и sampling.</li>
-<li><a href="generated_objects.html">Генерируемые объекты</a> — object feature ids, semantic classes и metadata counts.</li>
-<li><a href="worldgen_catalogs.html">Worldgen catalogs</a> — catalogs, стадии пайплайна и правила добавления ids.</li>
-<li><a href="universal_showcase.html">Universal showcase</a> — большой демонстрационный сценарий и поля metadata для проверки.</li>
-</ul>
-<h2 id="_2">Быстрые команды</h2>
-<p>Собрать HTML-документацию:</p>
-<pre><code class="language-bash">uv run mkdocs build --clean
+<h1 id="_1">Рельеф</h1>
+<p><code>terrain</code> задает процедурную функцию высоты поверхности. Все расчеты идут в координатах проекта: горизонтальная плоскость <code>x/y</code>, высота <code>z</code>.</p>
+<p>Высота в точке складывается из базовой высоты, детерминированного шума, поднятий гор/холмов и вычитания оврагов:</p>
+<pre><code class="language-text">z = base_height_m + noise + mountains + hills - ravines
 </code></pre>
-<p>После сборки главная HTML-страница находится здесь:</p>
-<pre><code class="language-text">doc/html/index.html
-</code></pre></div>
+<p>Эта функция используется для точек земли, дорог, тротуаров, road medians, базовой высоты зданий, оснований fences и пересечений лучей mobile LiDAR с землей.</p>
+<h2 id="yaml">YAML</h2>
+<pre><code class="language-yaml">terrain:
+  base_height_m: 0
+  height_noise_m: 6
+  mountains:
+    - center_x: 210
+      center_y: 230
+      height_m: 180
+      radius_m: 260
+  hills:
+    - center_x: 930
+      center_y: 260
+      height_m: 34
+      radius_m: 210
+  ravines:
+    - center_x: 690
+      center_y: 450
+      length_m: 760
+      width_m: 110
+      depth_m: 42
+      angle_degrees: 34
+</code></pre>
+<h2 id="_2">Поля</h2>
+<table>
+<thead>
+<tr>
+<th>Параметр</th>
+<th>Тип</th>
+<th>По умолчанию</th>
+<th>Валидация</th>
+<th>Действие</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>base_height_m</code></td>
+<td>number</td>
+<td><code>0.0</code></td>
+<td>любое число</td>
+<td>Смещает весь рельеф по оси <code>z</code>.</td>
+</tr>
+<tr>
+<td><code>height_noise_m</code></td>
+<td>number</td>
+<td><code>1.5</code></td>
+<td><code>&gt;= 0</code></td>
+<td>Амплитуда базового процедурного шума. <code>0</code> отключает только шум.</td>
+</tr>
+<tr>
+<td><code>mountains</code></td>
+<td>list</td>
+<td><code>[]</code></td>
+<td>список объектов поднятия</td>
+<td>Высокие радиальные поднятия с более резким профилем.</td>
+</tr>
+<tr>
+<td><code>hills</code></td>
+<td>list</td>
+<td><code>[]</code></td>
+<td>список объектов поднятия</td>
+<td>Мягкие радиальные поднятия.</td>
+</tr>
+<tr>
+<td><code>ravines</code></td>
+<td>list</td>
+<td><code>[]</code></td>
+<td>список объектов оврага</td>
+<td>Линейные понижения с гладким поперечным профилем и затуханием на концах.</td>
+</tr>
+</tbody>
+</table>
+<p>Секция <code>terrain</code> валидирует имена параметров строго: неизвестное поле считается ошибкой конфига.</p>
+<h2 id="_3">Горы и холмы</h2>
+<p>Элементы <code>mountains</code> и <code>hills</code> имеют одинаковую схему:</p>
+<table>
+<thead>
+<tr>
+<th>Поле</th>
+<th>Тип</th>
+<th>Обязательное</th>
+<th>Валидация</th>
+<th>Действие</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>center_x</code></td>
+<td>number</td>
+<td>да</td>
+<td>любое число</td>
+<td>X-координата центра поднятия.</td>
+</tr>
+<tr>
+<td><code>center_y</code></td>
+<td>number</td>
+<td>да</td>
+<td>любое число</td>
+<td>Y-координата центра поднятия.</td>
+</tr>
+<tr>
+<td><code>height_m</code></td>
+<td>number</td>
+<td>да</td>
+<td><code>&gt; 0</code></td>
+<td>Максимальная добавочная высота в центре.</td>
+</tr>
+<tr>
+<td><code>radius_m</code></td>
+<td>number</td>
+<td>да</td>
+<td><code>&gt; 0</code></td>
+<td>Радиус влияния поднятия. За радиусом вклад равен нулю.</td>
+</tr>
+</tbody>
+</table>
+<p><code>mountains</code> используют более резкий falloff, поэтому подходят для высоких горных массивов и пиков. <code>hills</code> используют более мягкий falloff и лучше подходят для плавных холмов.</p>
+<h2 id="_4">Овраги</h2>
+<p>Элементы <code>ravines</code> описывают повернутую линейную впадину:</p>
+<table>
+<thead>
+<tr>
+<th>Поле</th>
+<th>Тип</th>
+<th>Обязательное</th>
+<th>По умолчанию</th>
+<th>Валидация</th>
+<th>Действие</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>center_x</code></td>
+<td>number</td>
+<td>да</td>
+<td>нет</td>
+<td>любое число</td>
+<td>X-координата центра оврага.</td>
+</tr>
+<tr>
+<td><code>center_y</code></td>
+<td>number</td>
+<td>да</td>
+<td>нет</td>
+<td>любое число</td>
+<td>Y-координата центра оврага.</td>
+</tr>
+<tr>
+<td><code>length_m</code></td>
+<td>number</td>
+<td>да</td>
+<td>нет</td>
+<td><code>&gt; 0</code></td>
+<td>Длина центральной части оврага вдоль оси.</td>
+</tr>
+<tr>
+<td><code>width_m</code></td>
+<td>number</td>
+<td>да</td>
+<td>нет</td>
+<td><code>&gt; 0</code></td>
+<td>Полная ширина оврага поперек оси.</td>
+</tr>
+<tr>
+<td><code>depth_m</code></td>
+<td>number</td>
+<td>да</td>
+<td>нет</td>
+<td><code>&gt; 0</code></td>
+<td>Максимальная глубина в центральной линии.</td>
+</tr>
+<tr>
+<td><code>angle_degrees</code></td>
+<td>number</td>
+<td>нет</td>
+<td><code>0.0</code></td>
+<td>любое число</td>
+<td>Поворот оси оврага в градусах.</td>
+</tr>
+</tbody>
+</table>
+<p>При <code>angle_degrees: 0</code> овраг вытянут вдоль оси <code>x</code>. Положительные значения поворачивают его против часовой стрелки в плоскости <code>x/y</code>.</p>
+<h2 id="showcase-">Showcase-конфиг</h2>
+<p><code>configs/demo_universal_showcase.yaml</code> содержит пример с двумя высокими горами, тремя холмами и двумя диагональными оврагами. Это удобно для проверки того, что рельеф виден в земле, дорожных поверхностях, основаниях зданий и LiDAR-пересечениях.</p></div>
             </div>
         </div>
 
@@ -229,8 +405,3 @@
 
     </body>
 </html>
-
-<!--
-MkDocs version : 1.6.1
-Build Date UTC : 2026-05-14 17:08:58.021233+00:00
--->

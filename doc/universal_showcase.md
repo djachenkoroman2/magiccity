@@ -20,7 +20,7 @@
 Конфиг включает:
 
 - большой тайл `tile.size_m: 2000`;
-- заметный, но умеренный рельеф через `terrain.height_noise_m`;
+- разнообразный рельеф через `terrain.height_noise_m`, `terrain.mountains`, `terrain.hills` и `terrain.ravines`;
 - `urban_fields.enabled: true`;
 - `roads.model: mixed`;
 - `roads.profiles.enabled: true` с `local`, `collector`, `arterial`, `boulevard`;
@@ -96,6 +96,8 @@ jq '{
 ## Что означают важные секции
 
 `urban_fields` задает плавные поля города. В этом showcase центр смещен относительно тайла, чтобы получить неоднородную карту биомов.
+
+`terrain` сочетает базовый шум поверхности с двумя высокими горными поднятиями, несколькими мягкими холмами и двумя диагональными оврагами. Эти формы влияют на землю, дороги, тротуары, основания зданий и лучи mobile LiDAR при его включении.
 
 `roads.model: mixed` выбирает effective road network по биому. Текущий mixed-режим строит подсети `grid`, `radial_ring`, `linear` и `organic`; `radial` и `free` остаются поддержанными моделями дорог, но не входят в набор предпочтительных моделей для биомов.
 
