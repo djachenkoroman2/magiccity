@@ -13,6 +13,7 @@ from .geometry import BBox, Building, OrientedRect, Rect, normalize_degrees, sta
 from .parcels import Block, Parcel, build_blocks_and_parcels, parcel_counts
 from .roads import RoadNetworkLike, build_road_network
 from .roofs import build_roof, select_roof_kind
+from .trees import Tree, build_trees, tree_counts
 from .worldgen import WorldgenContext, create_worldgen_context, pipeline_stage_ids
 
 
@@ -32,6 +33,8 @@ class Scene:
     parcel_counts: dict
     fences: tuple[FenceSegment, ...]
     fence_counts: dict
+    trees: tuple[Tree, ...]
+    tree_counts: dict
     context: WorldgenContext
     worldgen_stages: tuple[str, ...]
 
@@ -108,6 +111,21 @@ def generate_scene(config: CityGenConfig, progress: ProgressCallback | None = No
         },
     )
 
+    _emit_progress(progress, "trees", "started")
+    trees = build_trees(config, bbox, road_network, buildings, fences)
+    tree_summary = tree_counts(trees)
+    _emit_progress(
+        progress,
+        "trees",
+        "done",
+        {
+            "trees": tree_summary["total"],
+            "enabled": config.trees.enabled,
+            "by_crown_shape": tree_summary["by_crown_shape"],
+            "by_biome": tree_summary["by_biome"],
+        },
+    )
+
     biome_step = max(32.0, config.tile.size_m / 8.0)
     biome_counts = sample_biome_counts(config.seed, config.urban_fields, bbox, biome_step)
     return Scene(
@@ -122,6 +140,8 @@ def generate_scene(config: CityGenConfig, progress: ProgressCallback | None = No
         parcel_counts=parcel_counts(blocks, parcels, buildings),
         fences=fences,
         fence_counts=fence_summary,
+        trees=trees,
+        tree_counts=tree_summary,
         context=context,
         worldgen_stages=pipeline_stage_ids(),
     )

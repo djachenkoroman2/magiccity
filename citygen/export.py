@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from .classes import CLASS_BY_ID, class_mapping
+from .classes import CLASS_BY_ID, POINT_CLASSES, class_mapping
 from .catalogs import biome_catalog_summary, catalog_summary, worldgen_summary
 from .config import CityGenConfig
 from .fences import FENCE_TYPES
@@ -14,6 +14,7 @@ from .generator import Scene
 from .geometry import Point, angle_delta_degrees, normalize_degrees
 from .mobile_lidar import sample_mobile_lidar
 from .roofs import ROOF_KINDS
+from .trees import TREE_CROWN_SHAPES
 
 
 def write_ply(
@@ -94,6 +95,7 @@ def write_metadata(path: str | Path, config: CityGenConfig, scene: Scene, points
             CLASS_BY_ID[class_id].name: count for class_id, count in sorted(counts.items())
         },
         "class_mapping": class_mapping(),
+        "class_colors": _class_colors(),
         "worldgen": worldgen_summary(),
         "catalogs": catalog_summary(scene.context.catalogs),
         "biome_catalog": biome_catalog_summary(scene.context.catalogs),
@@ -125,6 +127,7 @@ def write_metadata(path: str | Path, config: CityGenConfig, scene: Scene, points
         },
         "parcel_counts": scene.parcel_counts,
         "fence_counts": scene.fence_counts,
+        "tree_counts": _tree_counts_with_points(scene, points),
         "parcel_building_alignment": _parcel_building_alignment(config, scene),
         "building_orientations": _building_orientation_summary(scene),
         "block_geometry": _block_geometry_summary(config, scene),
@@ -132,6 +135,7 @@ def write_metadata(path: str | Path, config: CityGenConfig, scene: Scene, points
         "supported_footprint_types": list(FOOTPRINT_KINDS),
         "supported_roof_types": list(ROOF_KINDS),
         "supported_fence_types": list(FENCE_TYPES),
+        "supported_tree_crown_shapes": list(TREE_CROWN_SHAPES),
         "mobile_lidar": lidar_result.metadata,
         "point_sources": _point_source_counts(config, scene, points, lidar_result.points),
         "config": config.to_dict(),
@@ -162,7 +166,22 @@ def _object_feature_counts(scene: Scene, points: list[Point]) -> dict[str, int]:
         "building_roof": class_name_counts.get("building_roof", 0),
         "parcel_fence": scene.fence_counts.get("segments", 0),
         "fence_foundation": class_name_counts.get("fence_foundation", 0),
+        "tree": scene.tree_counts.get("total", 0),
+        "tree_trunk": class_name_counts.get("tree_trunk", 0),
+        "tree_crown": class_name_counts.get("tree_crown", 0),
     }
+
+
+def _class_colors() -> dict[str, list[int]]:
+    return {name: list(spec.color) for name, spec in POINT_CLASSES.items()}
+
+
+def _tree_counts_with_points(scene: Scene, points: list[Point]) -> dict[str, Any]:
+    counts = dict(scene.tree_counts)
+    class_counts = Counter(point.class_id for point in points)
+    counts["trunk_points"] = class_counts.get(POINT_CLASSES["tree_trunk"].id, 0)
+    counts["crown_points"] = class_counts.get(POINT_CLASSES["tree_crown"].id, 0)
+    return counts
 
 
 def _parcel_building_alignment(config: CityGenConfig, scene: Scene) -> dict[str, Any]:

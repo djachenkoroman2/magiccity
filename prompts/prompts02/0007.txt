@@ -1,1 +1,1 @@
-в файл configs/demo_universal_showcase.yaml необходимо добавить разный рельеф: холмы и овраги
+в файл configs/demo_universal_showcase.yaml необходимо добавить разный рельеф: высокие горы,  холмы и овраги

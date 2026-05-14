@@ -362,6 +362,92 @@ fences:
 """
             )
 
+    def test_loads_tree_config_with_defaults_and_aliases(self) -> None:
+        config = _config_from_text(
+            """
+seed: 7
+trees:
+  enabled: true
+  density_per_ha: 22
+  min_spacing_m: 6
+  height_m: 9
+  height_jitter_m: 0.5
+  trunk_radius_m: 0.25
+  trunk_height_ratio: 0.4
+  crown_shape: sphere
+  crown_radius_m: 3
+  crown_height_ratio: 0.6
+  crown_segments: 10
+  weights:
+    round: 1
+    conical: 2
+  biome_density_multipliers:
+    residential: 0
+    suburb: 2
+  road_clearance_m: 1
+  building_clearance_m: 2
+  fence_clearance_m: 0.5
+  tile_margin_clearance_m: 1
+  allow_road_medians: true
+  sample_spacing_m: 0.8
+"""
+        )
+
+        self.assertTrue(config.trees.enabled)
+        self.assertEqual(config.trees.crown_shape, "round")
+        self.assertEqual(config.trees.weights["cone"], 2.0)
+        self.assertEqual(config.trees.biome_density_multipliers["residential"], 0.0)
+        self.assertEqual(config.trees.biome_density_multipliers["suburb"], 2.0)
+        self.assertTrue(config.trees.allow_road_medians)
+
+    def test_invalid_tree_config_is_error(self) -> None:
+        invalid_configs = [
+            """
+seed: 7
+trees:
+  density_per_ha: -1
+""",
+            """
+seed: 7
+trees:
+  min_spacing_m: 0
+""",
+            """
+seed: 7
+trees:
+  crown_shape: impossible
+""",
+            """
+seed: 7
+trees:
+  crown_shape: mixed
+  weights:
+    round: 0
+    cone: 0
+""",
+            """
+seed: 7
+trees:
+  weights:
+    round: -1
+""",
+            """
+seed: 7
+trees:
+  biome_density_multipliers:
+    tundra: 1
+""",
+            """
+seed: 7
+trees:
+  unknown_field: true
+""",
+        ]
+        for text in invalid_configs:
+            with self.subTest(text=text):
+                with self.assertRaises(ConfigError):
+                    _config_from_text(text)
+
     def test_loads_mobile_lidar_config(self) -> None:
         config = _config_from_text(
             """

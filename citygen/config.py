@@ -8,11 +8,13 @@ import yaml
 
 from .catalogs import (
     BIOME_DEFINITIONS,
+    DEFAULT_MIXED_TREE_WEIGHTS,
     DEFAULT_MIXED_FENCE_WEIGHTS,
     DEFAULT_MIXED_FOOTPRINT_WEIGHTS,
     DEFAULT_MIXED_ROOF_WEIGHTS,
     DEFAULT_ROAD_PROFILE_BIOME_WEIGHTS,
     DEFAULT_ROAD_PROFILE_MODEL_WEIGHTS,
+    DEFAULT_TREE_BIOME_DENSITY_MULTIPLIERS,
     FENCE_DEFINITIONS,
     FENCE_MODEL_ALIASES,
     FOOTPRINT_DEFINITIONS,
@@ -20,6 +22,8 @@ from .catalogs import (
     ROAD_MODEL_DEFINITIONS,
     ROOF_DEFINITIONS,
     ROOF_MODEL_ALIASES,
+    TREE_CROWN_ALIASES,
+    TREE_CROWN_DEFINITIONS,
     validate_catalogs,
 )
 
@@ -48,6 +52,10 @@ SUPPORTED_FENCE_MODES = {"none", "partial", "perimeter"}
 SUPPORTED_FENCE_SIDES = {"front", "back", "left", "right"}
 
 SUPPORTED_FENCE_FOUNDATION_MODES = {"auto", "always", "never"}
+
+SUPPORTED_TREE_CROWN_SHAPES = set(TREE_CROWN_DEFINITIONS) | {"mixed"}
+
+SUPPORTED_CONCRETE_TREE_CROWN_SHAPES = SUPPORTED_TREE_CROWN_SHAPES - {"mixed"}
 
 SUPPORTED_MOBILE_LIDAR_TRAJECTORIES = {"centerline", "line", "road"}
 
@@ -250,6 +258,31 @@ class FencesConfig:
 
 
 @dataclass(frozen=True)
+class TreesConfig:
+    enabled: bool = False
+    density_per_ha: float = 18.0
+    min_spacing_m: float = 8.0
+    height_m: float = 7.0
+    height_jitter_m: float = 1.5
+    trunk_radius_m: float = 0.18
+    trunk_height_ratio: float = 0.42
+    crown_shape: str = "mixed"
+    crown_radius_m: float = 2.4
+    crown_height_ratio: float = 0.58
+    crown_segments: int = 12
+    weights: dict[str, float] = field(default_factory=lambda: dict(DEFAULT_MIXED_TREE_WEIGHTS))
+    biome_density_multipliers: dict[str, float] = field(
+        default_factory=lambda: dict(DEFAULT_TREE_BIOME_DENSITY_MULTIPLIERS)
+    )
+    road_clearance_m: float = 3.0
+    building_clearance_m: float = 2.0
+    fence_clearance_m: float = 1.0
+    tile_margin_clearance_m: float = 1.0
+    allow_road_medians: bool = False
+    sample_spacing_m: float = 1.0
+
+
+@dataclass(frozen=True)
 class MobileLidarConfig:
     enabled: bool = False
     output_mode: str = "additive"
@@ -294,6 +327,7 @@ class CityGenConfig:
     urban_fields: UrbanFieldsConfig = UrbanFieldsConfig()
     parcels: ParcelsConfig = ParcelsConfig()
     fences: FencesConfig = FencesConfig()
+    trees: TreesConfig = TreesConfig()
     mobile_lidar: MobileLidarConfig = MobileLidarConfig()
     worldgen: WorldgenConfig = WorldgenConfig()
     tiles: tuple[TileConfig, ...] = ()
@@ -329,6 +363,7 @@ def load_config(path: str | Path) -> CityGenConfig:
         urban_fields=_urban_fields_config(_section(raw, "urban_fields")),
         parcels=_parcels_config(_section(raw, "parcels")),
         fences=_fences_config(_section(raw, "fences")),
+        trees=_trees_config(_section(raw, "trees")),
         mobile_lidar=_mobile_lidar_config(_section(raw, "mobile_lidar")),
         worldgen=_worldgen_config(_section(raw, "worldgen")),
         tiles=tiles,
@@ -901,6 +936,100 @@ def _fence_weights(raw: Any, model: str) -> dict[str, float]:
     return weights
 
 
+def _trees_config(raw: dict[str, Any]) -> TreesConfig:
+    supported = {
+        "enabled",
+        "density_per_ha",
+        "min_spacing_m",
+        "height_m",
+        "height_jitter_m",
+        "trunk_radius_m",
+        "trunk_height_ratio",
+        "crown_shape",
+        "crown_radius_m",
+        "crown_height_ratio",
+        "crown_segments",
+        "weights",
+        "biome_density_multipliers",
+        "road_clearance_m",
+        "building_clearance_m",
+        "fence_clearance_m",
+        "tile_margin_clearance_m",
+        "allow_road_medians",
+        "sample_spacing_m",
+    }
+    for key in raw:
+        if key not in supported:
+            fields = ", ".join(sorted(supported))
+            raise ConfigError(f"Unsupported trees.{key}. Supported fields: {fields}.")
+
+    defaults = TreesConfig()
+    crown_shape = _normalize_tree_crown_shape(_str(raw, "crown_shape", defaults.crown_shape))
+    return TreesConfig(
+        enabled=_bool(raw, "enabled", defaults.enabled),
+        density_per_ha=_float(raw, "density_per_ha", defaults.density_per_ha),
+        min_spacing_m=_float(raw, "min_spacing_m", defaults.min_spacing_m),
+        height_m=_float(raw, "height_m", defaults.height_m),
+        height_jitter_m=_float(raw, "height_jitter_m", defaults.height_jitter_m),
+        trunk_radius_m=_float(raw, "trunk_radius_m", defaults.trunk_radius_m),
+        trunk_height_ratio=_float(raw, "trunk_height_ratio", defaults.trunk_height_ratio),
+        crown_shape=crown_shape,
+        crown_radius_m=_float(raw, "crown_radius_m", defaults.crown_radius_m),
+        crown_height_ratio=_float(raw, "crown_height_ratio", defaults.crown_height_ratio),
+        crown_segments=_int(raw, "crown_segments", defaults.crown_segments),
+        weights=_tree_weights(raw.get("weights"), crown_shape),
+        biome_density_multipliers=_tree_biome_density_multipliers(raw.get("biome_density_multipliers")),
+        road_clearance_m=_float(raw, "road_clearance_m", defaults.road_clearance_m),
+        building_clearance_m=_float(raw, "building_clearance_m", defaults.building_clearance_m),
+        fence_clearance_m=_float(raw, "fence_clearance_m", defaults.fence_clearance_m),
+        tile_margin_clearance_m=_float(raw, "tile_margin_clearance_m", defaults.tile_margin_clearance_m),
+        allow_road_medians=_bool(raw, "allow_road_medians", defaults.allow_road_medians),
+        sample_spacing_m=_float(raw, "sample_spacing_m", defaults.sample_spacing_m),
+    )
+
+
+def _tree_weights(raw: Any, model: str) -> dict[str, float]:
+    if raw is None:
+        return dict(DEFAULT_MIXED_TREE_WEIGHTS) if model == "mixed" else {}
+    if not isinstance(raw, dict):
+        raise ConfigError("trees.weights must be a mapping.")
+
+    weights: dict[str, float] = {}
+    for key, value in raw.items():
+        if not isinstance(key, str):
+            raise ConfigError("trees.weights keys must be strings.")
+        canonical = _normalize_tree_crown_shape(key)
+        if canonical == "mixed":
+            raise ConfigError("trees.weights cannot contain 'mixed'.")
+        if isinstance(value, bool):
+            raise ConfigError(f"trees.weights.{key} must be a number.")
+        try:
+            weight = float(value)
+        except (TypeError, ValueError) as exc:
+            raise ConfigError(f"trees.weights.{key} must be a number.") from exc
+        weights[canonical] = weight
+    return weights
+
+
+def _tree_biome_density_multipliers(raw: Any) -> dict[str, float]:
+    if raw is None:
+        return dict(DEFAULT_TREE_BIOME_DENSITY_MULTIPLIERS)
+    if not isinstance(raw, dict):
+        raise ConfigError("trees.biome_density_multipliers must be a mapping.")
+
+    multipliers = dict(DEFAULT_TREE_BIOME_DENSITY_MULTIPLIERS)
+    for biome, value in raw.items():
+        if not isinstance(biome, str):
+            raise ConfigError("trees.biome_density_multipliers keys must be strings.")
+        if isinstance(value, bool):
+            raise ConfigError(f"trees.biome_density_multipliers.{biome} must be a number.")
+        try:
+            multipliers[biome] = float(value)
+        except (TypeError, ValueError) as exc:
+            raise ConfigError(f"trees.biome_density_multipliers.{biome} must be a number.") from exc
+    return multipliers
+
+
 def _mobile_lidar_config(raw: dict[str, Any]) -> MobileLidarConfig:
     supported = {
         "enabled",
@@ -1035,6 +1164,12 @@ def _validate(cfg: CityGenConfig) -> None:
         ("fences.foundation_height_m", cfg.fences.foundation_height_m),
         ("fences.foundation_width_m", cfg.fences.foundation_width_m),
         ("fences.sample_spacing_m", cfg.fences.sample_spacing_m),
+        ("trees.min_spacing_m", cfg.trees.min_spacing_m),
+        ("trees.height_m", cfg.trees.height_m),
+        ("trees.trunk_radius_m", cfg.trees.trunk_radius_m),
+        ("trees.crown_radius_m", cfg.trees.crown_radius_m),
+        ("trees.crown_segments", cfg.trees.crown_segments),
+        ("trees.sample_spacing_m", cfg.trees.sample_spacing_m),
         ("mobile_lidar.sensor_height_m", cfg.mobile_lidar.sensor_height_m),
         ("mobile_lidar.position_step_m", cfg.mobile_lidar.position_step_m),
         ("mobile_lidar.min_range_m", cfg.mobile_lidar.min_range_m),
@@ -1190,6 +1325,41 @@ def _validate(cfg: CityGenConfig) -> None:
         raise ConfigError("fences.gate_probability must be between 0 and 1.")
     if cfg.fences.openness is not None and not 0 <= cfg.fences.openness <= 1:
         raise ConfigError("fences.openness must be between 0 and 1.")
+    if cfg.trees.density_per_ha < 0:
+        raise ConfigError("trees.density_per_ha must be >= 0.")
+    if cfg.trees.height_jitter_m < 0:
+        raise ConfigError("trees.height_jitter_m must be >= 0.")
+    if cfg.trees.road_clearance_m < 0:
+        raise ConfigError("trees.road_clearance_m must be >= 0.")
+    if cfg.trees.building_clearance_m < 0:
+        raise ConfigError("trees.building_clearance_m must be >= 0.")
+    if cfg.trees.fence_clearance_m < 0:
+        raise ConfigError("trees.fence_clearance_m must be >= 0.")
+    if cfg.trees.tile_margin_clearance_m < 0:
+        raise ConfigError("trees.tile_margin_clearance_m must be >= 0.")
+    if not 0 < cfg.trees.trunk_height_ratio < 1:
+        raise ConfigError("trees.trunk_height_ratio must be between 0 and 1.")
+    if not 0 < cfg.trees.crown_height_ratio <= 1:
+        raise ConfigError("trees.crown_height_ratio must be between 0 and 1.")
+    if cfg.trees.crown_segments < 6:
+        raise ConfigError("trees.crown_segments must be >= 6.")
+    if cfg.trees.crown_shape not in SUPPORTED_TREE_CROWN_SHAPES:
+        supported = ", ".join(sorted(SUPPORTED_TREE_CROWN_SHAPES))
+        raise ConfigError(f"Unsupported trees.crown_shape='{cfg.trees.crown_shape}'. Supported shapes: {supported}.")
+    for name, weight in cfg.trees.weights.items():
+        if name not in SUPPORTED_CONCRETE_TREE_CROWN_SHAPES:
+            supported = ", ".join(sorted(SUPPORTED_CONCRETE_TREE_CROWN_SHAPES))
+            raise ConfigError(f"Unsupported trees.weights key='{name}'. Supported crown shapes: {supported}.")
+        if weight < 0:
+            raise ConfigError(f"trees.weights.{name} must be >= 0.")
+    if cfg.trees.crown_shape == "mixed" and sum(cfg.trees.weights.values()) <= 0:
+        raise ConfigError("trees.weights must have a positive sum for crown_shape='mixed'.")
+    for biome, multiplier in cfg.trees.biome_density_multipliers.items():
+        if biome not in SUPPORTED_BIOMES:
+            supported = ", ".join(sorted(SUPPORTED_BIOMES))
+            raise ConfigError(f"Unsupported trees.biome_density_multipliers.{biome}. Supported biomes: {supported}.")
+        if multiplier < 0:
+            raise ConfigError(f"trees.biome_density_multipliers.{biome} must be >= 0.")
     if cfg.mobile_lidar.output_mode not in SUPPORTED_MOBILE_LIDAR_OUTPUT_MODES:
         supported = ", ".join(sorted(SUPPORTED_MOBILE_LIDAR_OUTPUT_MODES))
         raise ConfigError(f"mobile_lidar.output_mode must be one of: {supported}.")
@@ -1375,3 +1545,7 @@ def _normalize_roof_model(value: str) -> str:
 
 def _normalize_fence_model(value: str) -> str:
     return FENCE_MODEL_ALIASES.get(value, value)
+
+
+def _normalize_tree_crown_shape(value: str) -> str:
+    return TREE_CROWN_ALIASES.get(value, value)

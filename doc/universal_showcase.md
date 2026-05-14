@@ -2,7 +2,7 @@
 
 `configs/demo_universal_showcase.yaml` — большой интеграционный showcase для проверки основных возможностей `citygen` одним запуском. Этот документ описывает не схему YAML, а то, какие участки runtime-кода и диагностические поля metadata удобно проверять этим конфигом.
 
-Полная схема YAML описана в `doc/configuration_reference.md`; отдельные подсистемы — в `doc/roads.md`, `doc/biomes.md`, `doc/parcels.md`, `doc/fences.md`, `doc/building_footprints.md` и `doc/building_roofs.md`.
+Полная схема YAML описана в `doc/configuration_reference.md`; отдельные подсистемы — в `doc/roads.md`, `doc/biomes.md`, `doc/parcels.md`, `doc/fences.md`, `doc/trees.md`, `doc/building_footprints.md` и `doc/building_roofs.md`.
 
 Он полезен после изменений в следующих подсистемах:
 
@@ -12,6 +12,7 @@
 - геометрия крыш;
 - разбиение parcels;
 - отдельный demo `configs/demo_parcel_fences.yaml` проверяет слой ограждений;
+- отдельный demo `configs/demo_trees.yaml` проверяет слой деревьев;
 - семплирование поверхностей;
 - экспорт PLY и metadata.
 
@@ -19,7 +20,7 @@
 
 Конфиг включает:
 
-- большой тайл `tile.size_m: 2000`;
+- большой тайл `tile.size_m: 1200`;
 - разнообразный рельеф через `terrain.height_noise_m`, `terrain.mountains`, `terrain.hills` и `terrain.ravines`;
 - `urban_fields.enabled: true`;
 - `roads.model: mixed`;
@@ -29,6 +30,7 @@
 - `buildings.roof.model: mixed` со всеми поддержанными весами roofs;
 - `parcels.enabled: true` с размещением зданий внутри parcels;
 - layer `fences` в этом showcase не включен, чтобы не утяжелять большой тайл; для ограждений используется отдельный `configs/demo_parcel_fences.yaml`;
+- layer `trees` в этом showcase не включен, чтобы не утяжелять большой тайл; для деревьев используется отдельный `configs/demo_trees.yaml`;
 - layer `mobile_lidar` в этом showcase не включен; при необходимости его можно добавить в тот же YAML;
 - сводки `worldgen`/catalogs в metadata;
 - RGB и поля semantic class в PLY.
@@ -111,11 +113,13 @@ jq '{
 
 `fences` вынесен в отдельный demo `configs/demo_parcel_fences.yaml`. Этот слой строит заборы по границам parcels, добавляет воротные разрывы, фундаменты для кирпичных/каменных стен и metadata `fence_counts`.
 
+`trees` вынесен в отдельный demo `configs/demo_trees.yaml`. Этот слой строит деревья только на natural ground, смешивает формы крон по weights, учитывает biome density multipliers и добавляет metadata `tree_counts`.
+
 `worldgen` оставлен явно включенным, чтобы metadata показывала сводки catalogs/worldgen: `worldgen`, `catalogs`, `biome_catalog` и `object_feature_counts`.
 
 ## Ограничения
 
-Showcase не добавляет сущности, которых нет в текущем генераторе: машины, деревья, фонари, материалы или LAS/LAZ. В проекте есть mobile LiDAR mode, но этот showcase оставляет его выключенным ради времени генерации.
+Showcase не включает все опциональные слои сразу: fences, trees и mobile LiDAR проверяются отдельными или добавляемыми конфигами ради времени генерации. Машины, фонари, материалы и LAS/LAZ в текущем MVP не реализованы.
 
 Parcel subdivision в текущем MVP — прямоугольная road-aware аппроксимация поверх road primitives. Это не полноценная GIS-полигонализация кварталов из дорожного графа.
 
@@ -141,6 +145,12 @@ jq '.parcel_counts' outputs/demo_universal_showcase.metadata.json
 
 ```bash
 jq '.fence_counts' outputs/demo_parcel_fences.metadata.json
+```
+
+Посмотреть статистику деревьев в отдельном demo:
+
+```bash
+jq '.tree_counts' outputs/demo_trees.metadata.json
 ```
 
 Посмотреть разнообразие зданий:

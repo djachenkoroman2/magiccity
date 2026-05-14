@@ -12,6 +12,7 @@ from .generator import Scene, surface_kind
 from .geometry import Building, Point, Rect, stable_rng, terrain_height
 from .mobile_lidar import sample_mobile_lidar
 from .roofs import default_flat_roof
+from .trees import sample_tree
 
 
 ProgressCallback = Callable[[str, str, dict[str, Any] | None], None]
@@ -181,6 +182,57 @@ def _sample_surface_scene(config: CityGenConfig, scene: Scene, progress: Progres
                 },
             )
 
+    tree_points: list[Point] = []
+    if scene.trees:
+        if progress is not None:
+            _emit_sampling_progress(
+                progress,
+                "trees",
+                "started",
+                {"trees": len(scene.trees)},
+            )
+        total_trunk_points = 0
+        total_crown_points = 0
+        for tree_index, tree in enumerate(scene.trees, start=1):
+            sampled = sample_tree(config, tree)
+            tree_points.extend(sampled)
+            trunk_points = _count_points(sampled, "tree_trunk")
+            crown_points = _count_points(sampled, "tree_crown")
+            total_trunk_points += trunk_points
+            total_crown_points += crown_points
+            if progress is not None:
+                _emit_sampling_progress(
+                    progress,
+                    "trees",
+                    "item_done",
+                    {
+                        "tree": tree_index,
+                        "trees": len(scene.trees),
+                        "tree_id": tree.id,
+                        "points": len(sampled),
+                        "trunk_points": trunk_points,
+                        "crown_points": crown_points,
+                        "total_tree_points": len(tree_points),
+                        "total_trunk_points": total_trunk_points,
+                        "total_crown_points": total_crown_points,
+                    },
+                )
+        points.extend(tree_points)
+        if progress is not None:
+            _emit_sampling_progress(
+                progress,
+                "trees",
+                "done",
+                {
+                    "trees": len(scene.trees),
+                    "points": len(tree_points),
+                    "trunk_points": total_trunk_points,
+                    "crown_points": total_crown_points,
+                    "total_trunk_points": total_trunk_points,
+                    "total_crown_points": total_crown_points,
+                },
+            )
+
     cropped = _crop_points(points, scene.bbox)
     if progress is not None:
         cropped_class_counts = _class_counts(cropped)
@@ -196,6 +248,7 @@ def _sample_surface_scene(config: CityGenConfig, scene: Scene, progress: Progres
                 "hardscape_points": _hardscape_points(cropped_class_counts),
                 "cropped_building_points": _building_points(cropped_class_counts),
                 "cropped_fence_points": _fence_points(cropped_class_counts),
+                "cropped_tree_points": _tree_points(cropped_class_counts),
                 "surface_points_before_crop": len(points),
                 "surface_points": len(cropped),
                 "class_counts": cropped_class_counts,
@@ -434,6 +487,10 @@ def _building_points(counts: dict[str, int] | Counter[str]) -> int:
 
 def _fence_points(counts: dict[str, int] | Counter[str]) -> int:
     return sum(counts.get(class_name, 0) for class_name in ("fence", "fence_foundation"))
+
+
+def _tree_points(counts: dict[str, int] | Counter[str]) -> int:
+    return sum(counts.get(class_name, 0) for class_name in ("tree_trunk", "tree_crown"))
 
 
 def _emit_progress(

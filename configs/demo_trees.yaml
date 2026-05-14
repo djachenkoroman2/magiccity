@@ -1,0 +1,141 @@
+seed: 914
+tile:
+  x: 0
+  y: 0
+  size_m: 320
+  margin_m: 32
+terrain:
+  base_height_m: 0
+  height_noise_m: 2.8
+  hills:
+    - center_x: 88
+      center_y: 250
+      height_m: 12
+      radius_m: 120
+    - center_x: 245
+      center_y: 78
+      height_m: 8
+      radius_m: 95
+urban_fields:
+  enabled: true
+  center_x: 160
+  center_y: 160
+  city_radius_m: 260
+  noise_scale_m: 95
+  density_bias: 0.04
+  industrial_bias: 0.08
+  green_bias: 0.14
+roads:
+  model: mixed
+  spacing_m: 72
+  width_m: 7
+  sidewalk_width_m: 2
+  angle_degrees: 12
+  radial_count: 10
+  ring_spacing_m: 80
+  organic_wander_m: 12
+  profiles:
+    enabled: true
+    default: local
+    definitions:
+      local:
+        carriageway_width_m: 6
+        sidewalk_width_m: 1.8
+        median_width_m: 0
+      collector:
+        carriageway_width_m: 9
+        sidewalk_width_m: 2.5
+        median_width_m: 0
+      boulevard:
+        carriageway_width_m: 12
+        sidewalk_width_m: 3
+        median_width_m: 3
+    biome_weights:
+      downtown:
+        collector: 0.35
+        boulevard: 0.65
+      residential:
+        local: 0.55
+        collector: 0.40
+        boulevard: 0.05
+      industrial:
+        collector: 0.65
+        boulevard: 0.35
+      suburb:
+        local: 0.82
+        collector: 0.18
+buildings:
+  enabled: true
+  min_height_m: 6
+  max_height_m: 30
+  setback_m: 2
+  footprint_min_m: 8
+  footprint_max_m: 18
+  footprint:
+    model: mixed
+    weights:
+      rectangle: 0.45
+      square: 0.25
+      circle: 0.10
+      l_shape: 0.10
+      courtyard: 0.10
+  roof:
+    model: mixed
+    weights:
+      flat: 0.45
+      gable: 0.25
+      hip: 0.20
+      shed: 0.10
+parcels:
+  enabled: true
+  block_size_m: 96
+  block_jitter_m: 4
+  min_block_size_m: 28
+  min_parcel_width_m: 14
+  max_parcel_width_m: 34
+  min_parcel_depth_m: 18
+  max_parcel_depth_m: 44
+  parcel_setback_m: 1.2
+  split_jitter_ratio: 0.12
+  max_subdivision_depth: 3
+trees:
+  enabled: true
+  density_per_ha: 28
+  min_spacing_m: 7
+  height_m: 7.5
+  height_jitter_m: 1.8
+  trunk_radius_m: 0.18
+  trunk_height_ratio: 0.42
+  crown_shape: mixed
+  crown_radius_m: 2.5
+  crown_height_ratio: 0.62
+  crown_segments: 12
+  weights:
+    round: 0.28
+    ellipsoid: 0.22
+    cone: 0.20
+    columnar: 0.12
+    umbrella: 0.18
+  biome_density_multipliers:
+    downtown: 0.12
+    residential: 0.80
+    industrial: 0.0
+    suburb: 1.75
+  road_clearance_m: 3
+  building_clearance_m: 2.5
+  fence_clearance_m: 1
+  tile_margin_clearance_m: 1.5
+  sample_spacing_m: 1.8
+sampling:
+  mode: surface
+  ground_spacing_m: 5
+  road_spacing_m: 2.5
+  building_spacing_m: 3
+  jitter_ratio: 0.08
+output:
+  format: ply
+  include_rgb: true
+  include_class: true
+worldgen:
+  catalog_docs: true
+  strict_catalog_validation: true

@@ -2,9 +2,9 @@
 
 Этот документ перечисляет generated object / feature ids из `citygen.catalogs.OBJECT_FEATURE_DEFINITIONS`. Он нужен как расширяемый справочник: при добавлении нового feature id тесты требуют обновить этот файл.
 
-Подробные справочники по связанным слоям: `doc/configuration_reference.md`, `doc/roads.md`, `doc/parcels.md`, `doc/fences.md`, `doc/building_footprints.md`, `doc/building_roofs.md`, `doc/biomes.md`.
+Подробные справочники по связанным слоям: `doc/configuration_reference.md`, `doc/roads.md`, `doc/parcels.md`, `doc/fences.md`, `doc/trees.md`, `doc/building_footprints.md`, `doc/building_roofs.md`, `doc/biomes.md`.
 
-`mobile_lidar` не добавляет новый catalog feature id и не вводит новые semantic classes. Он добавляет альтернативный источник точек для уже существующих классов (`ground`, `road`, `sidewalk`, `road_median`, `building_facade`, `building_roof`, `fence`, `fence_foundation`) и отдельную diagnostics-секцию в metadata.
+`mobile_lidar` не добавляет новый catalog feature id и не вводит новые semantic classes. Он добавляет альтернативный источник точек для уже существующих классов (`ground`, `road`, `sidewalk`, `road_median`, `building_facade`, `building_roof`, `fence`, `fence_foundation`, `tree_trunk`, `tree_crown`) и отдельную diagnostics-секцию в metadata.
 
 ## Сводная таблица
 
@@ -19,8 +19,11 @@
 | `building` | `objects` | `buildings` | `building_facade`, `building_roof` | Здание как процедурный объект с footprint, фасадом и roof. |
 | `building_footprint` | `objects` | `buildings.footprint` | none | Геометрия плана здания и проверки clearance. |
 | `building_roof` | `objects` | `buildings.roof` | `building_roof` | Геометрия крыши и семплирование roof surface. |
-| `parcel_fence` | `objects` | `fences` | `fence` | Опциональные ограждения по границам parcels. |
-| `fence_foundation` | `objects` | `fences` | `fence_foundation` | Низкое основание под массивными или явно настроенными ограждениями. |
+| `parcel_fence` | `fences` | `fences` | `fence` | Опциональные ограждения по границам parcels. |
+| `fence_foundation` | `fences` | `fences` | `fence_foundation` | Низкое основание под массивными или явно настроенными ограждениями. |
+| `tree` | `trees` | `trees` | `tree_trunk`, `tree_crown` | Опциональное дерево, размещенное на natural ground с учетом биома и clearances. |
+| `tree_trunk` | `sampling` | `trees` | `tree_trunk` | Точки цилиндрической поверхности ствола. |
+| `tree_crown` | `sampling` | `trees` | `tree_crown` | Точки поверхности кроны выбранной формы. |
 
 ## Рельеф
 
@@ -147,6 +150,45 @@ Metadata:
 
 Ограничение MVP: fence layer работает по прямоугольным или oriented-rect parcels и не выполняет точное polygon clipping произвольных кадастровых границ.
 
+## Деревья
+
+`tree` включается через `trees.enabled: true` и строится на отдельной стадии `trees`, после зданий/parcels/fences и до surface sampling. Размещение принимает только natural ground: не road, не sidewalk, не road median без `allow_road_medians`, не footprint здания, не clearance вокруг зданий/fences и не зона за границей crop bbox тайла.
+
+Поддерживаемые формы крон:
+
+- `round`;
+- `ellipsoid`;
+- `cone`;
+- `columnar`;
+- `umbrella`.
+
+Связанные features:
+
+- `tree_trunk` создает точки semantic class `tree_trunk`;
+- `tree_crown` создает точки semantic class `tree_crown`;
+- `crown_shape: mixed` выбирает форму по `trees.weights`;
+- плотность регулируется `trees.density_per_ha` и `trees.biome_density_multipliers`.
+
+Metadata:
+
+- `tree_counts.total`;
+- `tree_counts.by_crown_shape`;
+- `tree_counts.by_biome`;
+- `tree_counts.average_height_m`, `min_height_m`, `max_height_m`;
+- `tree_counts.trunk_points`, `tree_counts.crown_points`;
+- `supported_tree_crown_shapes`;
+- `object_feature_counts.tree`;
+- `object_feature_counts.tree_trunk`;
+- `object_feature_counts.tree_crown`;
+- `class_counts.tree_trunk`;
+- `class_counts.tree_crown`;
+- `class_colors.tree_trunk`;
+- `class_colors.tree_crown`.
+
+Mobile LiDAR может попадать в стволы и кроны. Ограничение MVP: для LiDAR конические кроны трассируются эллипсоидной аппроксимацией, тогда как surface sampling остается коническим.
+
+Подробности конфигурации и aliases описаны в `doc/trees.md`.
+
 ## Footprints зданий
 
 `building_footprint` поддерживает:
@@ -209,6 +251,8 @@ Semantic class ids стабильны и описаны в catalog `SEMANTIC_CLA
 - `building_roof`: id `5`;
 - `road_median`: id `6`;
 - `fence`: id `7`;
-- `fence_foundation`: id `8`.
+- `fence_foundation`: id `8`;
+- `tree_trunk`: id `9`;
+- `tree_crown`: id `10`.
 
 Новые semantic classes можно добавлять только с новым id; существующие id менять нельзя.

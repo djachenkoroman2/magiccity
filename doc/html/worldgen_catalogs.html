@@ -56,6 +56,9 @@
                                 <a href="fences.html" class="nav-link">Ограждения</a>
                             </li>
                             <li class="nav-item">
+                                <a href="trees.html" class="nav-link">Деревья</a>
+                            </li>
+                            <li class="nav-item">
                                 <a href="sampling.html" class="nav-link">Sampling pipeline</a>
                             </li>
                             <li class="nav-item">
@@ -127,11 +130,15 @@
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-bs-level="2"><a href="#_4" class="nav-link">Взвешенные селекторы</a>
+            <li class="nav-item" data-bs-level="2"><a href="#_4" class="nav-link">Идентификаторы форм крон</a>
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-bs-level="2"><a href="#_5" class="nav-link">Метаданные</a>
+            <li class="nav-item" data-bs-level="2"><a href="#_5" class="nav-link">Взвешенные селекторы</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#_6" class="nav-link">Метаданные</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -147,7 +154,7 @@
                     <div class="col-md-9" role="main">
 
 <h1 id="worldgen-catalogs-citygen">Справочник по worldgen catalogs citygen</h1>
-<p><code>citygen</code> использует подход, похожий на Minecraft worldgen, в архитектурном смысле: генерация разбита на явные стадии, а поддержанные биомы, типы объектов, surface-классы, модели дорог, road profiles, footprints, roofs и fences описаны в registry/catalog слое.</p>
+<p><code>citygen</code> использует подход, похожий на Minecraft worldgen, в архитектурном смысле: генерация разбита на явные стадии, а поддержанные биомы, типы объектов, surface-классы, модели дорог, road profiles, footprints, roofs, fences и tree crowns описаны в registry/catalog слое.</p>
 <p>Это не voxel/block система и не runtime для data packs. Текущий MVP использует Python dataclass definitions в <code>citygen/catalogs.py</code>; они являются единым источником истины для поддержанных ids, сводок metadata и тестов покрытия документации.</p>
 <p>Смежные справочники:</p>
 <ul>
@@ -155,6 +162,7 @@
 <li><code>doc/configuration_reference.md</code> — YAML-схема конфигов, значения по умолчанию и правила валидации;</li>
 <li><code>doc/parcels.md</code> — block/parcel subdivision и oriented parcels;</li>
 <li><code>doc/fences.md</code> — fence catalog ids, генерация ограждений, ворота, фундаменты и metadata;</li>
+<li><code>doc/trees.md</code> — tree crown ids, biome-aware density, placement и sampling деревьев;</li>
 <li><code>doc/sampling.md</code> — detailed sampling pipeline, surface sampling, mobile LiDAR и metadata diagnostics;</li>
 <li><code>doc/generated_objects.md</code> — object feature ids и counts в metadata;</li>
 <li><code>doc/building_footprints.md</code> и <code>doc/building_roofs.md</code> — каталоги геометрии зданий.</li>
@@ -198,8 +206,16 @@
 <td>Размещение зданий и связанных footprint/roof features.</td>
 </tr>
 <tr>
+<td><code>fences</code></td>
+<td>Опциональное размещение fence segments и foundations по boundaries parcels.</td>
+</tr>
+<tr>
+<td><code>trees</code></td>
+<td>Опциональное размещение деревьев на natural ground с учетом биомов, дорог, зданий и fences.</td>
+</tr>
+<tr>
 <td><code>sampling</code></td>
-<td>Семплирование поверхностей рельефа, roads, sidewalks, medians, facades и roofs, плюс опциональный mobile LiDAR ray sampling.</td>
+<td>Семплирование поверхностей рельефа, roads, sidewalks, medians, facades, roofs, fences и деревьев, плюс опциональный mobile LiDAR ray sampling.</td>
 </tr>
 <tr>
 <td><code>export_ply</code></td>
@@ -224,6 +240,7 @@
 <li><code>FootprintDefinition</code></li>
 <li><code>RoofDefinition</code></li>
 <li><code>FenceDefinition</code></li>
+<li><code>TreeCrownDefinition</code></li>
 <li><code>SemanticClassDefinition</code></li>
 <li><code>ObjectFeatureDefinition</code></li>
 <li><code>WorldgenCatalogs</code></li>
@@ -257,6 +274,9 @@
 <li><code>building_roof</code></li>
 <li><code>parcel_fence</code></li>
 <li><code>fence_foundation</code></li>
+<li><code>tree</code></li>
+<li><code>tree_trunk</code></li>
+<li><code>tree_crown</code></li>
 </ul>
 <p>Чтобы добавить новый generated object feature:</p>
 <ol>
@@ -267,7 +287,17 @@
 <li>Опиши feature в <code>doc/generated_objects.md</code>.</li>
 <li>Добавь тесты для валидации catalogs, покрытия документации и metadata.</li>
 </ol>
-<h2 id="_4">Взвешенные селекторы</h2>
+<h2 id="_4">Идентификаторы форм крон</h2>
+<p>Tree crown catalog ids:</p>
+<ul>
+<li><code>round</code></li>
+<li><code>ellipsoid</code></li>
+<li><code>cone</code></li>
+<li><code>columnar</code></li>
+<li><code>umbrella</code></li>
+</ul>
+<p>Формы используются секцией <code>trees</code>: <code>crown_shape</code> может указывать конкретный id или <code>mixed</code>, а <code>trees.weights</code> задает weighted selector для смешанной посадки. Alias-значения (<code>sphere</code>, <code>oval</code>, <code>conical</code>, <code>narrow</code>, <code>wide</code> и другие) нормализуются на уровне загрузки YAML, но canonical ids в catalogs остаются стабильными.</p>
+<h2 id="_5">Взвешенные селекторы</h2>
 <p>Общий helper находится в:</p>
 <pre><code class="language-text">citygen/selectors.py
 </code></pre>
@@ -279,7 +309,7 @@
 <li>unknown ids проверяются при валидации config/catalog;</li>
 <li>RNG namespace должен быть локальным и стабильным: seed + tile coords + stage/feature id + object id.</li>
 </ul>
-<h2 id="_5">Метаданные</h2>
+<h2 id="_6">Метаданные</h2>
 <p>Metadata теперь содержит дополнительные разделы:</p>
 <ul>
 <li><code>worldgen</code>: <code>pipeline_version</code> и список stages;</li>
@@ -287,14 +317,14 @@
 <li><code>biome_catalog</code>: tags, preferred road model и road profile weights;</li>
 <li><code>object_feature_counts</code>: простые агрегаты по feature ids.</li>
 </ul>
-<p>Старые поля сохранены: <code>road_models</code>, <code>biome_counts</code>, <code>building_counts</code>, <code>parcel_counts</code>, <code>supported_footprint_types</code>, <code>supported_roof_types</code>, <code>config</code>. Новый fence layer добавляет <code>fence_counts</code> и <code>supported_fence_types</code>. Road/profile metadata (<code>road_profile_counts</code>, <code>road_widths</code>, <code>road_median</code>), parcel geometry metadata (<code>parcel_building_alignment</code>, <code>building_orientations</code>, <code>block_geometry</code>, <code>parcel_geometry</code>) и fence metadata остаются отдельными runtime-агрегатами, а не catalog definitions.</p>
+<p>Старые поля сохранены: <code>road_models</code>, <code>biome_counts</code>, <code>building_counts</code>, <code>parcel_counts</code>, <code>supported_footprint_types</code>, <code>supported_roof_types</code>, <code>config</code>. Fence layer добавляет <code>fence_counts</code> и <code>supported_fence_types</code>; tree layer добавляет <code>tree_counts</code> и <code>supported_tree_crown_shapes</code>. Road/profile metadata (<code>road_profile_counts</code>, <code>road_widths</code>, <code>road_median</code>), parcel geometry metadata (<code>parcel_building_alignment</code>, <code>building_orientations</code>, <code>block_geometry</code>, <code>parcel_geometry</code>), fence metadata и tree metadata остаются отдельными runtime-агрегатами, а не catalog definitions.</p>
 <p>Mobile LiDAR добавляет runtime-агрегаты <code>mobile_lidar</code> и <code>point_sources</code>. Они не являются catalog definitions и не добавляют новых object feature ids.</p>
 <h2 id="mvp">Ограничения MVP</h2>
 <ul>
 <li>Catalogs пока встроены в Python-код, без внешних data packs.</li>
 <li>Существующие generation functions не заменены универсальным placement engine.</li>
 <li>Biome source остается текущим <code>urban_fields</code> + thresholds.</li>
-<li>Object features описывают уже существующие сущности; новые визуальные сущности на этом этапе не добавляются.</li>
+<li>Object features описывают текущие runtime-сущности; новые слои должны добавляться отдельной стадией или понятным sampling feature id.</li>
 </ul></div>
             </div>
         </div>

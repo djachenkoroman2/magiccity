@@ -1,10 +1,10 @@
 # Справочник по биомам citygen
 
-Этот документ описывает биомы, которые используются в `citygen` для процедурного выбора характера района. Биом влияет на вероятность появления зданий, размеры footprints, высотность, отступы от дорог, road profiles и, при `roads.model: mixed`, на предпочитаемую модель дорожной сети.
+Этот документ описывает биомы, которые используются в `citygen` для процедурного выбора характера района. Биом влияет на вероятность появления зданий, размеры footprints, высотность, отступы от дорог, road profiles, плотность деревьев и, при `roads.model: mixed`, на предпочитаемую модель дорожной сети.
 
 Параметры биомов теперь описаны в едином catalog layer: `citygen/catalogs.py`, `BiomeDefinition`. Старые функции `classify_biome()`, `biome_params()` и `preferred_road_model_for_biome()` сохранены как совместимые фасады.
 
-YAML-поля `urban_fields` описаны в `doc/configuration_reference.md`. Дорожная часть подробнее описана в `doc/roads.md`, а связь биомов с generated object ids — в `doc/generated_objects.md`.
+YAML-поля `urban_fields` описаны в `doc/configuration_reference.md`. Дорожная часть подробнее описана в `doc/roads.md`, деревья — в `doc/trees.md`, а связь биомов с generated object ids — в `doc/generated_objects.md`.
 
 Текущая версия поддерживает четыре биома:
 
@@ -38,7 +38,7 @@ urban_fields:
 - генерация зданий: `build_probability`, `footprint_scale`, `height_min_multiplier`, `height_max_multiplier`, `setback_scale`;
 - дорожная сеть `mixed`: выбор road model по биому в каждой точке;
 - road profiles: выбор ширины/типа дороги по biome-aware weights;
-- generated objects: catalog хранит object weights для будущих placement stages;
+- generated objects: catalog хранит object weights, а слой `trees` использует `biome_density_multipliers` для плотности посадки;
 - metadata: распределение биомов пишется в `biome_counts`;
 - анализ сцены: биом помогает понять, почему в разных частях тайла различаются плотность, высотность и дороги.
 
@@ -98,10 +98,10 @@ else:
 
 | Биом | `build_probability` | `footprint_scale` | `height_min_multiplier` | `height_max_multiplier` | `setback_scale` | Предпочтительная модель дорог | Object weights |
 | --- | ---: | ---: | ---: | ---: | ---: | --- | --- |
-| `downtown` | `0.94` | `1.08` | `1.45` | `1.75` | `0.65` | `radial_ring` | `building`, `road_network`, `parcel_blocks` |
-| `residential` | `0.78` | `0.92` | `0.85` | `0.82` | `1.00` | `grid` | `building`, `road_network`, `parcel_blocks` |
-| `industrial` | `0.64` | `1.45` | `0.90` | `0.75` | `0.85` | `linear` | `building`, `road_network`, `parcel_blocks` |
-| `suburb` | `0.38` | `0.72` | `0.55` | `0.45` | `1.45` | `organic` | `building`, `road_network`, `parcel_blocks` |
+| `downtown` | `0.94` | `1.08` | `1.45` | `1.75` | `0.65` | `radial_ring` | `building`, `road_network`, `parcel_blocks`, `tree` |
+| `residential` | `0.78` | `0.92` | `0.85` | `0.82` | `1.00` | `grid` | `building`, `road_network`, `parcel_blocks`, `tree` |
+| `industrial` | `0.64` | `1.45` | `0.90` | `0.75` | `0.85` | `linear` | `building`, `road_network`, `parcel_blocks`, `tree` |
+| `suburb` | `0.38` | `0.72` | `0.55` | `0.45` | `1.45` | `organic` | `building`, `road_network`, `parcel_blocks`, `tree` |
 
 Пояснения к параметрам:
 
@@ -196,6 +196,25 @@ roads:
 Road profile выбирается детерминированно по seed, road model, anchor-точке primitive и биому этой anchor-точки. Это MVP-подход поверх текущих road primitives: он дает стабильную ширину у каждой primitive и избегает мелкого мерцания ширины между соседними sample points.
 
 При `parcels.oriented_blocks: true` биом через `roads.model: mixed` также может влиять на orientation квартала: `residential/grid` и `industrial/linear` используют `roads.angle_degrees`, `downtown/radial_ring` использует направление вокруг city center, а `suburb/organic` получает детерминированный jitter. Подробности — в `doc/parcels.md`.
+
+## Как биом меняет деревья
+
+Слой `trees` использует биом в точке candidate-посадки для изменения эффективной плотности:
+
+```text
+effective_density = trees.density_per_ha * trees.biome_density_multipliers[biome]
+```
+
+Default multipliers подобраны так, чтобы `suburb` был самым зеленым, `residential` умеренным, `downtown` редким, а `industrial` почти без деревьев:
+
+| Биом | `trees.biome_density_multipliers` по умолчанию |
+| --- | ---: |
+| `downtown` | `0.15` |
+| `residential` | `0.75` |
+| `industrial` | `0.05` |
+| `suburb` | `1.25` |
+
+В YAML можно явно задать `0`, чтобы запретить деревья в выбранном биоме. Подробности placement, crown shapes и sampling описаны в `doc/trees.md`.
 
 ## `downtown`
 

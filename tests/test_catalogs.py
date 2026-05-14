@@ -92,10 +92,12 @@ class CatalogTests(unittest.TestCase):
         for doc_name in (
             "index.md",
             "configuration_reference.md",
+            "terrain.md",
             "roads.md",
             "biomes.md",
             "parcels.md",
             "fences.md",
+            "trees.md",
             "sampling.md",
             "building_footprints.md",
             "building_roofs.md",

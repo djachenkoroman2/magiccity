@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="ru" data-bs-theme="light">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        
+        
+        <link rel="shortcut icon" href="img/favicon.ico">
+        <title>Деревья - Документация MagicCity</title>
+        <link href="css/bootstrap.min.css" rel="stylesheet">
+        <link href="css/fontawesome.min.css" rel="stylesheet">
+        <link href="css/brands.min.css" rel="stylesheet">
+        <link href="css/solid.min.css" rel="stylesheet">
+        <link href="css/v4-font-face.min.css" rel="stylesheet">
+        <link href="css/base.css" rel="stylesheet">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="index.html">Документация MagicCity</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#navbar-collapse" aria-controls="navbar-collapse" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="nav-item">
+                                <a href="index.html" class="nav-link">Главная</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="configuration_reference.html" class="nav-link">Конфигурация</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="terrain.html" class="nav-link">Рельеф</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="roads.html" class="nav-link">Дороги</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="biomes.html" class="nav-link">Биомы</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="parcels.html" class="nav-link">Parcels</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="fences.html" class="nav-link">Ограждения</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="trees.html" class="nav-link active" aria-current="page">Деревья</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="sampling.html" class="nav-link">Sampling pipeline</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="building_footprints.html" class="nav-link">Footprints зданий</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="building_roofs.html" class="nav-link">Крыши зданий</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="generated_objects.html" class="nav-link">Генерируемые объекты</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="worldgen_catalogs.html" class="nav-link">Worldgen catalogs</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="universal_showcase.html" class="nav-link">Universal showcase</a>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ms-md-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a rel="prev" href="fences.html" class="nav-link">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" href="sampling.html" class="nav-link">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#_1" class="nav-link">Деревья</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#_2" class="nav-link">Конфигурация</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#_3" class="nav-link">Формы крон</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#_4" class="nav-link">Размещение</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#_5" class="nav-link">Биомы</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#sampling" class="nav-link">Sampling</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#mobile-lidar" class="nav-link">Mobile LiDAR</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#metadata" class="nav-link">Metadata</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#demo" class="nav-link">Demo</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="_1">Деревья</h1>
+<p>Слой <code>trees</code> добавляет опциональные generated objects: одиночные деревья с цилиндрическим стволом и аналитической кроной. По умолчанию слой выключен, поэтому старые YAML-конфиги и PLY-outputs не получают новых объектов, пока явно не задано <code>trees.enabled: true</code>.</p>
+<p>Источник истины по реализации:</p>
+<ul>
+<li><code>citygen/trees.py</code> — размещение, dataclass <code>Tree</code>, sampling ствола/кроны и пересечения LiDAR-лучей;</li>
+<li><code>citygen/config.py</code> — секция <code>TreesConfig</code>, defaults и строгая валидация <code>trees</code>;</li>
+<li><code>citygen/generator.py</code> — отдельная стадия pipeline <code>trees</code> между <code>objects</code>/<code>fences</code> и <code>sampling</code>;</li>
+<li><code>citygen/sampling.py</code> — добавление точек <code>tree_trunk</code> и <code>tree_crown</code>;</li>
+<li><code>citygen/mobile_lidar.py</code> — попадания лучей в стволы и кроны;</li>
+<li><code>citygen/export.py</code> — <code>tree_counts</code>, class mapping и <code>object_feature_counts</code>.</li>
+</ul>
+<p>Координатная конвенция та же, что в проекте: горизонтальная плоскость <code>x/y</code>, высота <code>z</code>. Основание дерева ставится на <code>terrain_height(seed, terrain, x, y)</code>.</p>
+<h2 id="_2">Конфигурация</h2>
+<p>Минимальное включение:</p>
+<pre><code class="language-yaml">trees:
+  enabled: true
+</code></pre>
+<p>Практический пример:</p>
+<pre><code class="language-yaml">trees:
+  enabled: true
+  density_per_ha: 28
+  min_spacing_m: 7
+  height_m: 7.5
+  height_jitter_m: 1.8
+  trunk_radius_m: 0.18
+  trunk_height_ratio: 0.42
+  crown_shape: mixed
+  crown_radius_m: 2.5
+  crown_height_ratio: 0.62
+  crown_segments: 12
+  weights:
+    round: 0.28
+    ellipsoid: 0.22
+    cone: 0.20
+    columnar: 0.12
+    umbrella: 0.18
+  biome_density_multipliers:
+    downtown: 0.12
+    residential: 0.80
+    industrial: 0.0
+    suburb: 1.75
+  road_clearance_m: 3
+  building_clearance_m: 2.5
+  fence_clearance_m: 1
+  tile_margin_clearance_m: 1.5
+  sample_spacing_m: 1.8
+</code></pre>
+<p>Основные параметры:</p>
+<table>
+<thead>
+<tr>
+<th>Параметр</th>
+<th>По умолчанию</th>
+<th>Смысл</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>enabled</code></td>
+<td><code>false</code></td>
+<td>Включает слой деревьев.</td>
+</tr>
+<tr>
+<td><code>density_per_ha</code></td>
+<td><code>18.0</code></td>
+<td>Базовая плотность кандидатов на гектар до biome multiplier.</td>
+</tr>
+<tr>
+<td><code>min_spacing_m</code></td>
+<td><code>8.0</code></td>
+<td>Минимальная дистанция между принятыми деревьями.</td>
+</tr>
+<tr>
+<td><code>height_m</code>, <code>height_jitter_m</code></td>
+<td><code>7.0</code>, <code>1.5</code></td>
+<td>Базовая высота и детерминированное отклонение.</td>
+</tr>
+<tr>
+<td><code>trunk_radius_m</code></td>
+<td><code>0.18</code></td>
+<td>Радиус цилиндрического ствола.</td>
+</tr>
+<tr>
+<td><code>trunk_height_ratio</code></td>
+<td><code>0.42</code></td>
+<td>Доля высоты дерева, занятая стволом.</td>
+</tr>
+<tr>
+<td><code>crown_shape</code></td>
+<td><code>mixed</code></td>
+<td>Форма кроны или mixed selector.</td>
+</tr>
+<tr>
+<td><code>crown_radius_m</code></td>
+<td><code>2.4</code></td>
+<td>Базовый радиус кроны в плане.</td>
+</tr>
+<tr>
+<td><code>crown_height_ratio</code></td>
+<td><code>0.58</code></td>
+<td>Доля высоты дерева, занятая кроной.</td>
+</tr>
+<tr>
+<td><code>crown_segments</code></td>
+<td><code>12</code></td>
+<td>Минимальная угловая детализация sampling кроны.</td>
+</tr>
+<tr>
+<td><code>weights</code></td>
+<td>built-in mix</td>
+<td>Веса форм при <code>crown_shape: mixed</code>.</td>
+</tr>
+<tr>
+<td><code>biome_density_multipliers</code></td>
+<td>built-in multipliers</td>
+<td>Множители плотности по биомам; <code>0</code> полностью запрещает деревья в биоме.</td>
+</tr>
+<tr>
+<td><code>road_clearance_m</code></td>
+<td><code>3.0</code></td>
+<td>Минимальный отступ от road/sidewalk/median.</td>
+</tr>
+<tr>
+<td><code>building_clearance_m</code></td>
+<td><code>2.0</code></td>
+<td>Отступ от footprints зданий.</td>
+</tr>
+<tr>
+<td><code>fence_clearance_m</code></td>
+<td><code>1.0</code></td>
+<td>Отступ от fence segments и foundations.</td>
+</tr>
+<tr>
+<td><code>tile_margin_clearance_m</code></td>
+<td><code>1.0</code></td>
+<td>Отступ от границы crop bbox тайла.</td>
+</tr>
+<tr>
+<td><code>allow_road_medians</code></td>
+<td><code>false</code></td>
+<td>Разрешает посадку на <code>road_median</code>; по умолчанию medians запрещены.</td>
+</tr>
+<tr>
+<td><code>sample_spacing_m</code></td>
+<td><code>1.0</code></td>
+<td>Шаг точек ствола и кроны.</td>
+</tr>
+</tbody>
+</table>
+<p>Секция <code>trees</code> валидируется строго: неизвестное поле вызывает <code>ConfigError</code> с перечнем поддержанных ключей. Плотности, размеры, spacing и clearances должны быть неотрицательными или положительными по смыслу поля; неизвестные формы крон и биомы в multipliers также запрещены.</p>
+<h2 id="_3">Формы крон</h2>
+<p>Поддержанные формы:</p>
+<table>
+<thead>
+<tr>
+<th>Форма</th>
+<th>Геометрия sampling</th>
+<th>Типичный вид</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>round</code></td>
+<td>эллипсоид с равными радиусами</td>
+<td>округлая лиственная крона</td>
+</tr>
+<tr>
+<td><code>ellipsoid</code></td>
+<td>вытянутый эллипсоид</td>
+<td>овальная крона</td>
+</tr>
+<tr>
+<td><code>cone</code></td>
+<td>коническая поверхность</td>
+<td>хвойная крона</td>
+</tr>
+<tr>
+<td><code>columnar</code></td>
+<td>узкий вертикальный эллипсоид</td>
+<td>колонновидная посадка</td>
+</tr>
+<tr>
+<td><code>umbrella</code></td>
+<td>широкий приплюснутый эллипсоид</td>
+<td>зонтичная крона</td>
+</tr>
+</tbody>
+</table>
+<p>Aliases нормализуются при загрузке YAML:</p>
+<table>
+<thead>
+<tr>
+<th>Alias</th>
+<th>Каноническая форма</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>sphere</code>, <code>spherical</code></td>
+<td><code>round</code></td>
+</tr>
+<tr>
+<td><code>oval</code></td>
+<td><code>ellipsoid</code></td>
+</tr>
+<tr>
+<td><code>conical</code>, <code>evergreen</code></td>
+<td><code>cone</code></td>
+</tr>
+<tr>
+<td><code>narrow</code>, <code>poplar</code></td>
+<td><code>columnar</code></td>
+</tr>
+<tr>
+<td><code>wide</code>, <code>canopy</code></td>
+<td><code>umbrella</code></td>
+</tr>
+</tbody>
+</table>
+<p>При <code>crown_shape: mixed</code> форма выбирается детерминированно через <code>weights</code>. Если <code>weights</code> не заданы, используется встроенная смесь: <code>round</code>, <code>ellipsoid</code>, <code>cone</code>, <code>columnar</code>, <code>umbrella</code>.</p>
+<h2 id="_4">Размещение</h2>
+<p>Деревья размещаются отдельной стадией <code>trees</code> после зданий, parcels и fences. Алгоритм строит deterministic candidate grid по плотности, затем для каждой точки проверяет:</p>
+<ul>
+<li>точка лежит внутри crop bbox тайла с учетом <code>tile_margin_clearance_m</code>;</li>
+<li>текущий surface kind равен <code>ground</code>;</li>
+<li>точка не попадает на <code>road</code>, <code>sidewalk</code> или <code>road_median</code>, если <code>allow_road_medians: false</code>;</li>
+<li>расстояние до hardscape больше <code>road_clearance_m</code>;</li>
+<li>точка не лежит внутри footprint здания и находится дальше <code>building_clearance_m</code>;</li>
+<li>точка не ближе <code>fence_clearance_m</code> к fence segment;</li>
+<li>расстояние до уже принятых деревьев не меньше <code>min_spacing_m</code>;</li>
+<li>biome multiplier для найденного биома больше нуля.</li>
+</ul>
+<p>Все случайные решения берут namespace от <code>seed</code>, координат тайла, индексов candidate grid и локального id дерева. Один и тот же config дает одинаковые деревья, их формы и surface points.</p>
+<h2 id="_5">Биомы</h2>
+<p>Плотность вычисляется как:</p>
+<pre><code class="language-text">effective_density = trees.density_per_ha * trees.biome_density_multipliers[biome]
+</code></pre>
+<p>Значения по умолчанию делают пригород самым зеленым, жилую ткань умеренно зеленой, центр редким, а industrial почти без деревьев:</p>
+<table>
+<thead>
+<tr>
+<th>Биом</th>
+<th>Multiplier по умолчанию</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>suburb</code></td>
+<td><code>1.25</code></td>
+</tr>
+<tr>
+<td><code>residential</code></td>
+<td><code>0.75</code></td>
+</tr>
+<tr>
+<td><code>downtown</code></td>
+<td><code>0.15</code></td>
+</tr>
+<tr>
+<td><code>industrial</code></td>
+<td><code>0.05</code></td>
+</tr>
+</tbody>
+</table>
+<p>Можно явно поставить <code>0</code>, например для <code>industrial</code>, чтобы полностью запретить деревья в этом биоме.</p>
+<h2 id="sampling">Sampling</h2>
+<p>Surface sampling добавляет два semantic class:</p>
+<table>
+<thead>
+<tr>
+<th>Class id</th>
+<th>Имя</th>
+<th>RGB</th>
+<th>Источник</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>9</code></td>
+<td><code>tree_trunk</code></td>
+<td><code>111, 78, 46</code></td>
+<td>цилиндрическая поверхность ствола</td>
+</tr>
+<tr>
+<td><code>10</code></td>
+<td><code>tree_crown</code></td>
+<td><code>54, 128, 70</code></td>
+<td>поверхность кроны</td>
+</tr>
+</tbody>
+</table>
+<p><code>trees.sample_spacing_m</code> управляет плотностью точек деревьев отдельно от <code>sampling.ground_spacing_m</code>, <code>sampling.road_spacing_m</code> и <code>sampling.building_spacing_m</code>. Чтобы большие тайлы не взрывали число точек, defaults держат умеренную плотность деревьев и шаг sampling <code>1.0</code> м; для быстрых previews лучше поднимать <code>sample_spacing_m</code> до <code>1.5..2.5</code>.</p>
+<h2 id="mobile-lidar">Mobile LiDAR</h2>
+<p>Mobile LiDAR учитывает деревья вместе с terrain, roads, buildings и fences:</p>
+<ul>
+<li>ствол трассируется как цилиндр;</li>
+<li>крона трассируется как эллипсоидная аппроксимация формы;</li>
+<li>при <code>occlusions_enabled: true</code> ближайшее попадание может быть <code>tree_trunk</code> или <code>tree_crown</code> и закрывать объекты за деревом;</li>
+<li>при <code>occlusions_enabled: false</code> сохраняется существующее поведение дальнего пересечения.</li>
+</ul>
+<p>Ограничение MVP: для <code>cone</code> LiDAR использует эллипсоидную аппроксимацию конической кроны, а не точное аналитическое пересечение с конусом. Surface sampling при этом остается коническим.</p>
+<h2 id="metadata">Metadata</h2>
+<p>Metadata получает:</p>
+<ul>
+<li><code>tree_counts.total</code>;</li>
+<li><code>tree_counts.by_crown_shape</code>;</li>
+<li><code>tree_counts.by_biome</code>;</li>
+<li><code>tree_counts.average_height_m</code>, <code>min_height_m</code>, <code>max_height_m</code>;</li>
+<li><code>tree_counts.trunk_points</code>, <code>crown_points</code>;</li>
+<li><code>supported_tree_crown_shapes</code>;</li>
+<li><code>class_mapping.tree_trunk</code>, <code>class_mapping.tree_crown</code>;</li>
+<li><code>class_colors.tree_trunk</code>, <code>class_colors.tree_crown</code>;</li>
+<li><code>class_counts.tree_trunk</code>, <code>class_counts.tree_crown</code>;</li>
+<li><code>object_feature_counts.tree</code>, <code>object_feature_counts.tree_trunk</code>, <code>object_feature_counts.tree_crown</code>;</li>
+<li>resolved <code>config.trees</code> после defaults.</li>
+</ul>
+<p>Пример проверки:</p>
+<pre><code class="language-bash">jq '{tree_counts, class_counts, object_feature_counts, supported_tree_crown_shapes}' outputs/demo_trees.metadata.json
+</code></pre>
+<h2 id="demo">Demo</h2>
+<p>Запуск демонстрационного конфига:</p>
+<pre><code class="language-bash">uv run citygen --config configs/demo_trees.yaml --out outputs/demo_trees.ply
+</code></pre>
+<p><code>configs/demo_trees.yaml</code> включает mixed формы крон, разные biome multipliers, легкий рельеф, road profiles, parcels и здания. Это быстрый сценарий для проверки, что деревья стоят только на естественном грунте и добавляют точки <code>tree_trunk</code>/<code>tree_crown</code>.</p></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="js/bootstrap.bundle.min.js"></script>
+        <script>
+            var base_url = ".",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="js/base.js"></script>
+        <script src="search/main.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>

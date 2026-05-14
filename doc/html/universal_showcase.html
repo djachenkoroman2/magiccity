@@ -56,6 +56,9 @@
                                 <a href="fences.html" class="nav-link">Ограждения</a>
                             </li>
                             <li class="nav-item">
+                                <a href="trees.html" class="nav-link">Деревья</a>
+                            </li>
+                            <li class="nav-item">
                                 <a href="sampling.html" class="nav-link">Sampling pipeline</a>
                             </li>
                             <li class="nav-item">
@@ -144,7 +147,7 @@
 
 <h1 id="universal-showcase">Справочник по Universal Showcase</h1>
 <p><code>configs/demo_universal_showcase.yaml</code> — большой интеграционный showcase для проверки основных возможностей <code>citygen</code> одним запуском. Этот документ описывает не схему YAML, а то, какие участки runtime-кода и диагностические поля metadata удобно проверять этим конфигом.</p>
-<p>Полная схема YAML описана в <code>doc/configuration_reference.md</code>; отдельные подсистемы — в <code>doc/roads.md</code>, <code>doc/biomes.md</code>, <code>doc/parcels.md</code>, <code>doc/fences.md</code>, <code>doc/building_footprints.md</code> и <code>doc/building_roofs.md</code>.</p>
+<p>Полная схема YAML описана в <code>doc/configuration_reference.md</code>; отдельные подсистемы — в <code>doc/roads.md</code>, <code>doc/biomes.md</code>, <code>doc/parcels.md</code>, <code>doc/fences.md</code>, <code>doc/trees.md</code>, <code>doc/building_footprints.md</code> и <code>doc/building_roofs.md</code>.</p>
 <p>Он полезен после изменений в следующих подсистемах:</p>
 <ul>
 <li>модели дорог и <code>roads.model: mixed</code>;</li>
@@ -153,13 +156,14 @@
 <li>геометрия крыш;</li>
 <li>разбиение parcels;</li>
 <li>отдельный demo <code>configs/demo_parcel_fences.yaml</code> проверяет слой ограждений;</li>
+<li>отдельный demo <code>configs/demo_trees.yaml</code> проверяет слой деревьев;</li>
 <li>семплирование поверхностей;</li>
 <li>экспорт PLY и metadata.</li>
 </ul>
 <h2 id="_1">Что демонстрирует</h2>
 <p>Конфиг включает:</p>
 <ul>
-<li>большой тайл <code>tile.size_m: 2000</code>;</li>
+<li>большой тайл <code>tile.size_m: 1200</code>;</li>
 <li>разнообразный рельеф через <code>terrain.height_noise_m</code>, <code>terrain.mountains</code>, <code>terrain.hills</code> и <code>terrain.ravines</code>;</li>
 <li><code>urban_fields.enabled: true</code>;</li>
 <li><code>roads.model: mixed</code>;</li>
@@ -169,6 +173,7 @@
 <li><code>buildings.roof.model: mixed</code> со всеми поддержанными весами roofs;</li>
 <li><code>parcels.enabled: true</code> с размещением зданий внутри parcels;</li>
 <li>layer <code>fences</code> в этом showcase не включен, чтобы не утяжелять большой тайл; для ограждений используется отдельный <code>configs/demo_parcel_fences.yaml</code>;</li>
+<li>layer <code>trees</code> в этом showcase не включен, чтобы не утяжелять большой тайл; для деревьев используется отдельный <code>configs/demo_trees.yaml</code>;</li>
 <li>layer <code>mobile_lidar</code> в этом showcase не включен; при необходимости его можно добавить в тот же YAML;</li>
 <li>сводки <code>worldgen</code>/catalogs в metadata;</li>
 <li>RGB и поля semantic class в PLY.</li>
@@ -230,9 +235,10 @@
 <p><code>buildings.roof.model: mixed</code> выбирает геометрию крыши по weights. Конфиг задает положительные веса для всех поддержанных типов roofs.</p>
 <p><code>parcels.enabled: true</code> включает block/parcel subdivision. Этот showcase проверяет размещение с учетом parcels, <code>parcel_id</code>, проверки buildable area и <code>parcel_counts</code>. Для визуально повернутых blocks/parcels используй <code>configs/demo_oriented_parcels.yaml</code>; в showcase <code>oriented_blocks</code> не включен, чтобы сохранить более предсказуемую базовую плотность на большом тайле.</p>
 <p><code>fences</code> вынесен в отдельный demo <code>configs/demo_parcel_fences.yaml</code>. Этот слой строит заборы по границам parcels, добавляет воротные разрывы, фундаменты для кирпичных/каменных стен и metadata <code>fence_counts</code>.</p>
+<p><code>trees</code> вынесен в отдельный demo <code>configs/demo_trees.yaml</code>. Этот слой строит деревья только на natural ground, смешивает формы крон по weights, учитывает biome density multipliers и добавляет metadata <code>tree_counts</code>.</p>
 <p><code>worldgen</code> оставлен явно включенным, чтобы metadata показывала сводки catalogs/worldgen: <code>worldgen</code>, <code>catalogs</code>, <code>biome_catalog</code> и <code>object_feature_counts</code>.</p>
 <h2 id="_5">Ограничения</h2>
-<p>Showcase не добавляет сущности, которых нет в текущем генераторе: машины, деревья, фонари, материалы или LAS/LAZ. В проекте есть mobile LiDAR mode, но этот showcase оставляет его выключенным ради времени генерации.</p>
+<p>Showcase не включает все опциональные слои сразу: fences, trees и mobile LiDAR проверяются отдельными или добавляемыми конфигами ради времени генерации. Машины, фонари, материалы и LAS/LAZ в текущем MVP не реализованы.</p>
 <p>Parcel subdivision в текущем MVP — прямоугольная road-aware аппроксимация поверх road primitives. Это не полноценная GIS-полигонализация кварталов из дорожного графа.</p>
 <p>Showcase тяжелее обычных проверочных конфигов. Для быстрых итераций уменьши <code>tile.size_m</code> или увеличь <code>sampling.ground_spacing_m</code>, <code>sampling.road_spacing_m</code>, <code>sampling.building_spacing_m</code>.</p>
 <p>Mixed footprints и roofs выбираются детерминированно, но все равно через weighted sampling. Если после изменений генератора какой-то тип исчез из metadata, сначала проверь <code>seed</code>, размеры тайла, размеры parcels, <code>footprint_min_m</code>, <code>footprint_max_m</code> и weights.</p>
@@ -245,6 +251,9 @@
 </code></pre>
 <p>Посмотреть статистику ограждений в отдельном demo:</p>
 <pre><code class="language-bash">jq '.fence_counts' outputs/demo_parcel_fences.metadata.json
+</code></pre>
+<p>Посмотреть статистику деревьев в отдельном demo:</p>
+<pre><code class="language-bash">jq '.tree_counts' outputs/demo_trees.metadata.json
 </code></pre>
 <p>Посмотреть разнообразие зданий:</p>
 <pre><code class="language-bash">jq '.building_counts | {total, by_footprint, by_roof, by_parcel_biome}' outputs/demo_universal_showcase.metadata.json

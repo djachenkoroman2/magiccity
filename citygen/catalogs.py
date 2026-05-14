@@ -16,6 +16,8 @@ WORLDGEN_STAGES = (
     "roads",
     "parcels",
     "objects",
+    "fences",
+    "trees",
     "sampling",
     "export_ply",
     "export_metadata",
@@ -81,6 +83,14 @@ class FenceDefinition:
 
 
 @dataclass(frozen=True)
+class TreeCrownDefinition:
+    id: str
+    title: str
+    description: str
+    tags: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
 class SemanticClassDefinition:
     id: str
     class_id: int
@@ -110,6 +120,7 @@ class WorldgenCatalogs:
     footprint_types: dict[str, FootprintDefinition]
     roof_types: dict[str, RoofDefinition]
     fence_types: dict[str, FenceDefinition]
+    tree_crown_types: dict[str, TreeCrownDefinition]
     semantic_classes: dict[str, SemanticClassDefinition]
 
 
@@ -176,7 +187,7 @@ BIOME_DEFINITIONS: dict[str, BiomeDefinition] = {
         setback_scale=0.65,
         preferred_road_model="radial_ring",
         road_profile_weights=DEFAULT_ROAD_PROFILE_BIOME_WEIGHTS["downtown"],
-        object_weights={"building": 1.0, "road_network": 1.0, "parcel_blocks": 0.8},
+        object_weights={"building": 1.0, "road_network": 1.0, "parcel_blocks": 0.8, "tree": 0.15},
     ),
     "residential": BiomeDefinition(
         id="residential",
@@ -190,7 +201,7 @@ BIOME_DEFINITIONS: dict[str, BiomeDefinition] = {
         setback_scale=1.0,
         preferred_road_model="grid",
         road_profile_weights=DEFAULT_ROAD_PROFILE_BIOME_WEIGHTS["residential"],
-        object_weights={"building": 1.0, "road_network": 1.0, "parcel_blocks": 1.0},
+        object_weights={"building": 1.0, "road_network": 1.0, "parcel_blocks": 1.0, "tree": 0.75},
     ),
     "industrial": BiomeDefinition(
         id="industrial",
@@ -204,7 +215,7 @@ BIOME_DEFINITIONS: dict[str, BiomeDefinition] = {
         setback_scale=0.85,
         preferred_road_model="linear",
         road_profile_weights=DEFAULT_ROAD_PROFILE_BIOME_WEIGHTS["industrial"],
-        object_weights={"building": 0.85, "road_network": 1.0, "parcel_blocks": 0.7},
+        object_weights={"building": 0.85, "road_network": 1.0, "parcel_blocks": 0.7, "tree": 0.05},
     ),
     "suburb": BiomeDefinition(
         id="suburb",
@@ -218,7 +229,7 @@ BIOME_DEFINITIONS: dict[str, BiomeDefinition] = {
         setback_scale=1.45,
         preferred_road_model="organic",
         road_profile_weights=DEFAULT_ROAD_PROFILE_BIOME_WEIGHTS["suburb"],
-        object_weights={"building": 0.55, "road_network": 1.0, "parcel_blocks": 0.9},
+        object_weights={"building": 0.55, "road_network": 1.0, "parcel_blocks": 0.9, "tree": 1.25},
     ),
 }
 
@@ -377,6 +388,56 @@ DEFAULT_MIXED_FENCE_WEIGHTS = {
     "brick": 0.07,
 }
 
+TREE_CROWN_DEFINITIONS: dict[str, TreeCrownDefinition] = {
+    "round": TreeCrownDefinition("round", "Round", "Rounded broadleaf crown.", ("broadleaf", "urban")),
+    "ellipsoid": TreeCrownDefinition(
+        "ellipsoid",
+        "Ellipsoid",
+        "Oval crown with a slightly elongated canopy.",
+        ("broadleaf", "urban"),
+    ),
+    "cone": TreeCrownDefinition("cone", "Cone", "Conical evergreen crown.", ("evergreen", "suburban")),
+    "columnar": TreeCrownDefinition(
+        "columnar",
+        "Columnar",
+        "Narrow vertical crown suitable for streetside planting.",
+        ("urban", "narrow"),
+    ),
+    "umbrella": TreeCrownDefinition(
+        "umbrella",
+        "Umbrella",
+        "Wide flattened canopy with a high crown.",
+        ("broadleaf", "park"),
+    ),
+}
+
+TREE_CROWN_ALIASES = {
+    "sphere": "round",
+    "spherical": "round",
+    "oval": "ellipsoid",
+    "conical": "cone",
+    "evergreen": "cone",
+    "narrow": "columnar",
+    "poplar": "columnar",
+    "wide": "umbrella",
+    "canopy": "umbrella",
+}
+
+DEFAULT_MIXED_TREE_WEIGHTS = {
+    "round": 0.32,
+    "ellipsoid": 0.24,
+    "cone": 0.18,
+    "columnar": 0.12,
+    "umbrella": 0.14,
+}
+
+DEFAULT_TREE_BIOME_DENSITY_MULTIPLIERS = {
+    "downtown": 0.15,
+    "residential": 0.75,
+    "industrial": 0.05,
+    "suburb": 1.25,
+}
+
 SEMANTIC_CLASS_DEFINITIONS: dict[str, SemanticClassDefinition] = {
     "ground": SemanticClassDefinition("ground", 1, (107, 132, 85), "Terrain surface."),
     "road": SemanticClassDefinition("road", 2, (47, 50, 54), "Road carriageway surface."),
@@ -391,6 +452,8 @@ SEMANTIC_CLASS_DEFINITIONS: dict[str, SemanticClassDefinition] = {
         (118, 112, 103),
         "Low foundation points under heavy or explicitly configured fences.",
     ),
+    "tree_trunk": SemanticClassDefinition("tree_trunk", 9, (111, 78, 46), "Tree trunk points."),
+    "tree_crown": SemanticClassDefinition("tree_crown", 10, (54, 128, 70), "Tree crown points."),
 }
 
 OBJECT_FEATURE_DEFINITIONS: dict[str, ObjectFeatureDefinition] = {
@@ -490,7 +553,7 @@ OBJECT_FEATURE_DEFINITIONS: dict[str, ObjectFeatureDefinition] = {
         "Parcel Fence",
         "object",
         "Optional fence or wall segments generated along parcel boundaries.",
-        "objects",
+        "fences",
         ("fence",),
         "fences",
         False,
@@ -501,9 +564,40 @@ OBJECT_FEATURE_DEFINITIONS: dict[str, ObjectFeatureDefinition] = {
         "Fence Foundation",
         "object",
         "Low foundation sampled beneath massive or explicitly configured fence segments.",
-        "objects",
+        "fences",
         ("fence_foundation",),
         "fences",
+        False,
+    ),
+    "tree": ObjectFeatureDefinition(
+        "tree",
+        "Tree",
+        "object",
+        "Optional biome-aware trees placed on natural ground.",
+        "trees",
+        ("tree_trunk", "tree_crown"),
+        "trees",
+        False,
+        ("urban", "suburban", "green"),
+    ),
+    "tree_trunk": ObjectFeatureDefinition(
+        "tree_trunk",
+        "Tree Trunk",
+        "surface",
+        "Sampled cylindrical tree trunk points.",
+        "sampling",
+        ("tree_trunk",),
+        "trees",
+        False,
+    ),
+    "tree_crown": ObjectFeatureDefinition(
+        "tree_crown",
+        "Tree Crown",
+        "surface",
+        "Sampled tree crown surface points.",
+        "sampling",
+        ("tree_crown",),
+        "trees",
         False,
     ),
 }
@@ -516,6 +610,7 @@ DEFAULT_CATALOGS = WorldgenCatalogs(
     footprint_types=FOOTPRINT_DEFINITIONS,
     roof_types=ROOF_DEFINITIONS,
     fence_types=FENCE_DEFINITIONS,
+    tree_crown_types=TREE_CROWN_DEFINITIONS,
     semantic_classes=SEMANTIC_CLASS_DEFINITIONS,
 )
 
@@ -534,6 +629,7 @@ def catalog_summary(catalogs: WorldgenCatalogs = DEFAULT_CATALOGS) -> dict[str, 
         "footprint_types": sorted(catalogs.footprint_types),
         "roof_types": sorted(catalogs.roof_types),
         "fence_types": sorted(catalogs.fence_types),
+        "tree_crown_types": sorted(catalogs.tree_crown_types),
         "semantic_classes": sorted(catalogs.semantic_classes),
     }
 
@@ -566,6 +662,7 @@ def validate_catalogs(catalogs: WorldgenCatalogs = DEFAULT_CATALOGS) -> list[str
     _validate_key_matches(catalogs.footprint_types, "footprint type", issues)
     _validate_key_matches(catalogs.roof_types, "roof type", issues)
     _validate_key_matches(catalogs.fence_types, "fence type", issues)
+    _validate_key_matches(catalogs.tree_crown_types, "tree crown type", issues)
     _validate_key_matches(catalogs.semantic_classes, "semantic class", issues)
 
     for biome in catalogs.biomes.values():
@@ -598,6 +695,7 @@ def validate_catalogs(catalogs: WorldgenCatalogs = DEFAULT_CATALOGS) -> list[str
     _validate_weights(DEFAULT_MIXED_FOOTPRINT_WEIGHTS, catalogs.footprint_types, "DEFAULT_MIXED_FOOTPRINT_WEIGHTS", issues)
     _validate_weights(DEFAULT_MIXED_ROOF_WEIGHTS, catalogs.roof_types, "DEFAULT_MIXED_ROOF_WEIGHTS", issues)
     _validate_weights(DEFAULT_MIXED_FENCE_WEIGHTS, catalogs.fence_types, "DEFAULT_MIXED_FENCE_WEIGHTS", issues)
+    _validate_weights(DEFAULT_MIXED_TREE_WEIGHTS, catalogs.tree_crown_types, "DEFAULT_MIXED_TREE_WEIGHTS", issues)
 
     for feature in catalogs.object_features.values():
         if feature.stage not in WORLDGEN_STAGES:

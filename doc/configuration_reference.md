@@ -1,6 +1,6 @@
 # Справочник по конфигурации
 
-Этот документ является справочником по YAML-конфигам `citygen`, построенным от исходного кода. Источник истины: `CityGenConfig` и вложенные значения по умолчанию dataclass-ов в `citygen/config.py`, логика валидатора, каталоги в `citygen/catalogs.py`, runtime-код дорог/parcels/ограждений/зданий и экспорт metadata.
+Этот документ является справочником по YAML-конфигам `citygen`, построенным от исходного кода. Источник истины: `CityGenConfig` и вложенные значения по умолчанию dataclass-ов в `citygen/config.py`, логика валидатора, каталоги в `citygen/catalogs.py`, runtime-код дорог/parcels/ограждений/деревьев/зданий и экспорт metadata.
 
 `configs/*.yaml` остаются примерами запуска и проверочными конфигами. Они не являются источником схемы.
 
@@ -11,6 +11,7 @@
 - `doc/biomes.md` — `urban_fields`, классификация биомов и влияние биомов;
 - `doc/parcels.md` — block/parcel subdivision и oriented parcels;
 - `doc/fences.md` — ограждения участков, типы заборов, ворота, фундаменты и metadata;
+- `doc/trees.md` — деревья, формы крон, biome-aware плотность, placement clearance, sampling и LiDAR;
 - `doc/sampling.md` — стадии sampling pipeline, плотности точек, mobile LiDAR, semantic class/RGB и metadata;
 - `doc/building_footprints.md` — идентификаторы footprints, aliases и семплирование;
 - `doc/building_roofs.md` — идентификаторы roofs, aliases и функции высоты;
@@ -30,7 +31,7 @@ uv run citygen --config configs/mvp.yaml --out outputs/mvp_tile.ply
 uv run citygen --config path/to/multi_tile_config.yaml --out outputs/multi_tile
 ```
 
-CLI по умолчанию показывает preflight-сводку, progress по стадиям pipeline, внутренний progress стадии `sampling` и итоговый summary. `sampling` печатает line-based диагностику по `tile_surfaces`, `buildings`, `fences` и `mobile LiDAR rays`, если соответствующие подэтапы участвуют в генерации. Для скриптов можно оставить только финальные пути:
+CLI по умолчанию показывает preflight-сводку, progress по стадиям pipeline, внутренний progress стадии `sampling` и итоговый summary. `sampling` печатает line-based диагностику по `tile_surfaces`, `buildings`, `fences`, `trees` и `mobile LiDAR rays`, если соответствующие подэтапы участвуют в генерации. Для скриптов можно оставить только финальные пути:
 
 ```bash
 uv run citygen --config configs/mvp.yaml --out outputs/mvp_tile.ply --quiet
@@ -50,7 +51,7 @@ uv run citygen --config configs/mvp.yaml --out outputs/mvp_tile.ply --verbose
 - Все размеры и расстояния задаются в метрах.
 - Горизонтальные координаты сцены: `x` и `y`; высота: `z`.
 - Булевы значения пишутся как `true` или `false`.
-- Текущий загрузчик читает описанные ниже поля. Секции `terrain`, `parcels`, `fences`, `mobile_lidar` и `worldgen` валидируют имена параметров строго, чтобы опечатки в новых слоях не проходили молча.
+- Текущий загрузчик читает описанные ниже поля. Секции `terrain`, `parcels`, `fences`, `trees`, `mobile_lidar` и `worldgen` валидируют имена параметров строго, чтобы опечатки в новых слоях не проходили молча.
 
 Минимальный валидный конфиг:
 
@@ -178,6 +179,35 @@ fences:
   sample_spacing_m: 0.8
   openness: null
   decorative: false
+trees:
+  enabled: false
+  density_per_ha: 18
+  min_spacing_m: 8
+  height_m: 7
+  height_jitter_m: 1.5
+  trunk_radius_m: 0.18
+  trunk_height_ratio: 0.42
+  crown_shape: mixed
+  crown_radius_m: 2.4
+  crown_height_ratio: 0.58
+  crown_segments: 12
+  weights:
+    round: 0.32
+    ellipsoid: 0.24
+    cone: 0.18
+    columnar: 0.12
+    umbrella: 0.14
+  biome_density_multipliers:
+    downtown: 0.15
+    residential: 0.75
+    industrial: 0.05
+    suburb: 1.25
+  road_clearance_m: 3
+  building_clearance_m: 2
+  fence_clearance_m: 1
+  tile_margin_clearance_m: 1
+  allow_road_medians: false
+  sample_spacing_m: 1
 mobile_lidar:
   enabled: false
   output_mode: additive
@@ -230,6 +260,7 @@ worldgen:
 | `buildings` | mapping | нет | см. секцию `buildings` | Настраивает генерацию зданий. |
 | `parcels` | mapping | нет | см. секцию `parcels` | Включает прямоугольное разбиение blocks/parcels и размещение зданий внутри участков. |
 | `fences` | mapping | нет | см. секцию `fences` | Опционально добавляет заборы и ограждения по границам parcels. |
+| `trees` | mapping | нет | см. секцию `trees` | Опционально добавляет деревья на естественном грунте. |
 | `mobile_lidar` | mapping | нет | см. секцию `mobile_lidar` | Опционально включает трассировку лучей мобильного LiDAR-сенсора. |
 | `sampling` | mapping | нет | см. секцию `sampling` | Настраивает плотность и регулярность точек. |
 | `output` | mapping | нет | см. секцию `output` | Настраивает PLY-поля. |
@@ -780,6 +811,52 @@ Alias-значения нормализуются: `wood`/`wooden` -> `wood_pick
 
 Подробный тематический справочник по ограждениям находится в `doc/fences.md`.
 
+## `trees`
+
+Секция `trees` включает независимый слой деревьев. По умолчанию он выключен, поэтому существующие конфиги не меняют PLY-результат, пока не задано `trees.enabled: true`.
+
+```yaml
+trees:
+  enabled: true
+  density_per_ha: 28
+  min_spacing_m: 7
+  crown_shape: mixed
+  biome_density_multipliers:
+    downtown: 0.12
+    residential: 0.8
+    industrial: 0
+    suburb: 1.75
+  sample_spacing_m: 1.8
+```
+
+| Параметр | Тип | По умолчанию | Возможные значения | Действие |
+| --- | --- | --- | --- | --- |
+| `enabled` | boolean | `false` | `true`, `false` | Включает генерацию деревьев. |
+| `density_per_ha` | number | `18.0` | `>= 0` | Базовая плотность деревьев на гектар до biome multiplier. |
+| `min_spacing_m` | number | `8.0` | `> 0` | Минимальная дистанция между принятыми деревьями. |
+| `height_m` | number | `7.0` | `> 0` | Базовая высота дерева. |
+| `height_jitter_m` | number | `1.5` | `>= 0` | Детерминированное отклонение высоты. |
+| `trunk_radius_m` | number | `0.18` | `> 0` | Радиус цилиндрического ствола. |
+| `trunk_height_ratio` | number | `0.42` | `0..1`, не включая границы | Доля высоты, занятая стволом. |
+| `crown_shape` | string | `mixed` | `round`, `ellipsoid`, `cone`, `columnar`, `umbrella`, `mixed` | Форма кроны или weighted selector. |
+| `crown_radius_m` | number | `2.4` | `> 0` | Базовый радиус кроны. |
+| `crown_height_ratio` | number | `0.58` | `0 < value <= 1` | Доля высоты, занятая кроной. |
+| `crown_segments` | integer | `12` | `>= 6` | Минимальная угловая детализация sampling кроны. |
+| `weights` | mapping | встроенная смесь | формы крон, значения `>= 0` | Веса выбора формы при `crown_shape: mixed`. |
+| `biome_density_multipliers` | mapping | `downtown: 0.15`, `residential: 0.75`, `industrial: 0.05`, `suburb: 1.25` | known biome ids, значения `>= 0` | Множители плотности. Значение `0` запрещает деревья в биоме. |
+| `road_clearance_m` | number | `3.0` | `>= 0` | Минимальный отступ от road/sidewalk/median. |
+| `building_clearance_m` | number | `2.0` | `>= 0` | Минимальный отступ от footprints зданий. |
+| `fence_clearance_m` | number | `1.0` | `>= 0` | Минимальный отступ от fence segments. |
+| `tile_margin_clearance_m` | number | `1.0` | `>= 0` | Отступ от границы crop bbox тайла. |
+| `allow_road_medians` | boolean | `false` | `true`, `false` | Разрешает посадку на `road_median`; без этого medians считаются hardscape. |
+| `sample_spacing_m` | number | `1.0` | `> 0` | Шаг точек ствола и кроны. |
+
+Alias-значения форм крон: `sphere`/`spherical` -> `round`, `oval` -> `ellipsoid`, `conical`/`evergreen` -> `cone`, `narrow`/`poplar` -> `columnar`, `wide`/`canopy` -> `umbrella`.
+
+Деревья ставятся только на natural ground: не на дорогах, не на тротуарах, не на medians без явного `allow_road_medians`, не внутри зданий, не в clearance вокруг зданий и fences, и не за границами crop bbox. Основание берет `z` из `terrain_height`. Sampling добавляет semantic classes `tree_trunk` и `tree_crown`, а metadata получает `tree_counts`, `supported_tree_crown_shapes` и counters в `object_feature_counts`.
+
+Подробный тематический справочник по деревьям находится в `doc/trees.md`.
+
 ## `mobile_lidar`
 
 Секция `mobile_lidar` включает опциональный режим мобильного LiDAR-сканирования. В этом режиме точки создаются не по регулярному surface sampling, а по фактическим попаданиям лучей из движущегося сенсора.
@@ -832,7 +909,7 @@ mobile_lidar:
 
 Поведение:
 
-- Лучи взаимодействуют с рельефом, дорогами, тротуарами, median, фасадами, крышами и ограждениями.
+- Лучи взаимодействуют с рельефом, дорогами, тротуарами, median, фасадами, крышами, ограждениями и деревьями.
 - При `occlusions_enabled: true` сохраняется ближайшее пересечение луча; объекты за преградой не попадают в облако точек.
 - При `occlusions_enabled: false` используется дальнее пересечение по лучу, что может визуально уменьшать окклюзии.
 - Все лучи, jitter и пропуски полностью детерминированы от `seed`, координат тайла, индекса позиции и индексов углов.
@@ -873,6 +950,7 @@ sampling:
 - Увеличение spacing ускоряет предварительный просмотр и уменьшает файлы.
 - Для ground/road/road_median/sidewalk сначала берется минимальный шаг из `ground_spacing_m` и `road_spacing_m`, затем лишние точки прореживаются под нужный класс.
 - `building_spacing_m` отдельно применяется к крышам и фасадам.
+- `trees.sample_spacing_m` отдельно применяется к стволам и кронам деревьев.
 - Jitter детерминирован от `seed`, поэтому не ломает воспроизводимость.
 
 Подробный справочник по стадиям `sampling`, входным/выходным структурам, влиянию настроек, примерам и диагностике находится в `doc/sampling.md`.
@@ -918,6 +996,8 @@ x y z
 | `6` | `road_median` | `118, 128, 84` |
 | `7` | `fence` | `130, 101, 72` |
 | `8` | `fence_foundation` | `118, 112, 103` |
+| `9` | `tree_trunk` | `111, 78, 46` |
+| `10` | `tree_crown` | `54, 128, 70` |
 
 Для каждого PLY также пишется metadata-файл рядом с ним:
 
@@ -926,7 +1006,7 @@ outputs/example.ply
 outputs/example.metadata.json
 ```
 
-Metadata содержит `seed`, bbox тайла, количество точек, распределение классов, mapping классов, использованные модели дорог, `road_profile_counts`, `road_profile_counts_by_biome`, `road_widths`, `road_median`, counts по биомам, `building_counts`, `parcel_counts`, `fence_counts`, `mobile_lidar`, `point_sources`, `parcel_building_alignment`, `building_orientations`, `block_geometry`, `parcel_geometry`, списки поддержанных типов footprint/roof/fence и полный конфиг после применения значений по умолчанию.
+Metadata содержит `seed`, bbox тайла, количество точек, распределение классов, mapping классов, RGB-палитру `class_colors`, использованные модели дорог, `road_profile_counts`, `road_profile_counts_by_biome`, `road_widths`, `road_median`, counts по биомам, `building_counts`, `parcel_counts`, `fence_counts`, `tree_counts`, `mobile_lidar`, `point_sources`, `parcel_building_alignment`, `building_orientations`, `block_geometry`, `parcel_geometry`, списки поддержанных типов footprint/roof/fence/tree crowns и полный конфиг после применения значений по умолчанию.
 
 ## `worldgen`
 
@@ -1014,6 +1094,16 @@ worldgen:
 | `fences.foundation` неизвестен | поддерживаются `auto`, `always`, `never` |
 | `fences.height_jitter_m`, `boundary_offset_m` или `road_clearance_m < 0` | значения не могут быть отрицательными |
 | `fences.coverage_ratio`, `gate_probability` или `openness` вне `0..1` | доли должны быть в допустимом диапазоне |
+| Неизвестный ключ в `trees` | имена параметров `trees` валидируются строго |
+| `trees.density_per_ha < 0` | плотность не может быть отрицательной |
+| `trees.min_spacing_m`, `height_m`, `trunk_radius_m`, `crown_radius_m` или `sample_spacing_m <= 0` | размеры и spacing должны быть положительными |
+| `trees.height_jitter_m` или clearance-поля `< 0` | jitter и clearances не могут быть отрицательными |
+| `trees.trunk_height_ratio` или `crown_height_ratio` вне допустимого диапазона | ratios должны задавать осмысленную долю высоты дерева |
+| `trees.crown_segments < 6` | крона должна иметь минимальную угловую детализацию |
+| `trees.crown_shape` неизвестен | поддерживаются `round`, `ellipsoid`, `cone`, `columnar`, `umbrella`, `mixed` и aliases |
+| `trees.weights.*` содержит неизвестную форму или отрицательный вес | веса должны ссылаться на поддержанные формы крон |
+| `trees.crown_shape: mixed` и сумма weights `<= 0` | для mixed нужна положительная сумма весов |
+| `trees.biome_density_multipliers.*` содержит неизвестный биом или отрицательное значение | multipliers должны ссылаться на поддержанные биомы |
 | Неизвестный ключ в `mobile_lidar` | имена параметров `mobile_lidar` валидируются строго |
 | `mobile_lidar.output_mode` неизвестен | поддерживаются `additive`, `lidar_only` |
 | `mobile_lidar.trajectory` неизвестен | поддерживаются `centerline`, `line`, `road` |
@@ -1039,6 +1129,7 @@ worldgen:
 | `configs/demo_road_profiles.yaml` | `roads.model: mixed`, road profiles, `road_median`, веса profiles по биомам; здания выключены. |
 | `configs/demo_parcels.yaml` | Parcel subdivision и здания, привязанные к parcels, на легком тайле. |
 | `configs/demo_parcel_fences.yaml` | Parcel subdivision с разными ограждениями, воротными разрывами и фундаментами. |
+| `configs/demo_trees.yaml` | Опциональный слой деревьев: mixed кроны, biome-aware density, natural-ground placement и tree classes. |
 | `configs/demo_parcel_alignment.yaml` | Выравнивание зданий по parcels, mixed roads, profiles, footprints и roofs. |
 | `configs/demo_oriented_parcels.yaml` | Oriented block/parcel subdivision, orientation context от road model и выровненные здания. |
 | `configs/demo_universal_showcase.yaml` | Большой интеграционный демонстрационный сценарий: mixed roads, profiles, биомы, parcels, mixed footprints, mixed roofs. См. `doc/universal_showcase.md`. |

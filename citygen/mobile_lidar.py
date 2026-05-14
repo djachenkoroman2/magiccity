@@ -11,6 +11,7 @@ from .fences import FenceSegment
 from .geometry import BBox, Building, Point, Rect, stable_rng, terrain_height
 from .roads import InfiniteLinePrimitive, PolylinePrimitive, RingPrimitive, SegmentPrimitive
 from .roofs import default_flat_roof
+from .trees import tree_ray_hits
 
 
 @dataclass(frozen=True)
@@ -208,6 +209,11 @@ def _trace_ray(
             fence_hit = _intersect_fence(config, fence, origin, direction)
             if fence_hit is not None:
                 hits.append(fence_hit)
+
+    for tree in getattr(scene, "trees", ()):
+        for distance, class_name in tree_ray_hits(config, tree, origin, direction):
+            x, y, z = _point_on_ray(origin, direction, distance)
+            hits.append(RayHit(distance, class_name, x, y, z))
 
     if not hits:
         return None
